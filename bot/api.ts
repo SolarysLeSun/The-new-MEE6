@@ -1,9 +1,9 @@
 
 import express from 'express';
 import cors from 'cors';
-import { Client, CategoryChannel, ChannelType, REST, Routes } from 'discord.js';
+import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, TextChannel } from 'discord.js';
 import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem } from '@/lib/db';
-import { verifyAndConsumeAuthToken, getBotAccessToken } from './auth';
+import { verifyAndConsumeAuthToken, getBotAccessToken, generateAuthTokenForPanel, verifyPanelToken } from './auth';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { updateGuildCommands } from './handlers/commandHandler';
@@ -62,6 +62,22 @@ export function startApi(client: Client) {
         next();
     };
 
+    // --- Panel Authentication & Logging Middleware ---
+    const verifyPanelRequest = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Unauthorized: No token provided.' });
+        }
+        const token = authHeader.split(' ')[1];
+        const payload = verifyPanelToken(token);
+        if (!payload) {
+            return res.status(401).json({ error: 'Unauthorized: Invalid token.' });
+        }
+        // Attach user info to the request object for later use
+        (req as any).user = { id: payload.userId };
+        next();
+    };
+
 
     /**
      * Endpoint for the panel to verify a user's auth token.
@@ -79,26 +95,50 @@ export function startApi(client: Client) {
             return res.status(401).json({ error: 'Invalid or expired token.' });
         }
         
-        // In a real app, you would generate a session token (e.g., JWT) here
-        // and return it to the client to store in a cookie.
-        // For simplicity, we'll just return the guildId directly.
-        res.status(200).json({ success: true, guildId: authResult.guildId });
+        // Generate a long-lived JWT-like token for the panel session
+        const panelToken = generateAuthTokenForPanel(authResult.userId, authResult.guildId);
+        
+        res.status(200).json({ success: true, guildId: authResult.guildId, panelToken: panelToken, userId: authResult.userId });
     });
 
     /**
      * Endpoint pour mettre à jour la configuration d'un module pour un serveur.
      */
-    app.post('/api/update-config/:guildId/:module', async (req, res) => {
+    app.post('/api/update-config/:guildId/:module', verifyPanelRequest, async (req, res) => {
         const { guildId, module } = req.params;
         const configData = req.body;
+        const performingUser = (req as any).user;
 
         if (!guildId || !module || !configData) {
             return res.status(400).json({ error: 'Guild ID, module et données de configuration sont requis.' });
         }
 
         try {
-            console.log(`[Bot API] Mise à jour de la config pour le serveur ${guildId}, module ${module}`);
+            console.log(`[Bot API] Mise à jour de la config pour le serveur ${guildId}, module ${module} par l'utilisateur ${performingUser.id}`);
+            
+            const oldConfig = await getServerConfig(guildId, module as any);
             await updateServerConfig(guildId, module as any, configData);
+
+             // Log the action
+            const logsConfig = await getServerConfig(guildId, 'logs');
+            if (logsConfig?.enabled && logsConfig.log_settings?.panel?.enabled) {
+                const logChannelId = logsConfig.log_settings.panel.channel_id || logsConfig.main_channel_id;
+                if (logChannelId) {
+                    const logChannel = await client.channels.fetch(logChannelId).catch(() => null) as TextChannel;
+                    if (logChannel) {
+                        // For simplicity, we just log that the module was updated.
+                        // A more advanced version could show a diff of the old and new config.
+                        const logEmbed = new EmbedBuilder()
+                            .setColor(0xFEE75C) // Yellow
+                            .setTitle('Panel de Configuration Modifié')
+                            .setDescription(`Le module **${module}** a été mis à jour.`)
+                            .addFields({ name: 'Auteur de l\'action', value: `<@${performingUser.id}> (${performingUser.id})`})
+                            .setTimestamp();
+                        await logChannel.send({ embeds: [logEmbed] });
+                    }
+                }
+            }
+
 
             // Trigger command update for the guild
             // This needs to be asynchronous and not block the response
@@ -303,8 +343,10 @@ export function startApi(client: Client) {
         }
     });
 
-    app.post('/api/personas/create', checkGlobalAiStatus, async (req, res) => {
-        const { guild_id, name, persona_prompt, creator_id } = req.body;
+    app.post('/api/personas/create', verifyPanelRequest, checkGlobalAiStatus, async (req, res) => {
+        const { guild_id, name, persona_prompt } = req.body;
+        const creator_id = (req as any).user.id;
+
          if (!guild_id || !name || !persona_prompt || !creator_id) {
             return res.status(400).json({ error: 'Missing required fields for persona creation.' });
         }
@@ -350,7 +392,7 @@ export function startApi(client: Client) {
         }
     });
 
-    app.patch('/api/personas/:personaId', (req, res) => {
+    app.patch('/api/personas/:personaId', verifyPanelRequest, (req, res) => {
         const { personaId } = req.params;
         const updates = req.body;
         try {
@@ -361,7 +403,7 @@ export function startApi(client: Client) {
         }
     });
 
-    app.delete('/api/personas/:personaId', async (req, res) => {
+    app.delete('/api/personas/:personaId', verifyPanelRequest, async (req, res) => {
         const { personaId } = req.params;
         try {
             // Optional: Find persona to get role_id and delete it
@@ -378,7 +420,7 @@ export function startApi(client: Client) {
     });
 
     // --- Keyword Generation API for Auto-Mod ---
-    app.post('/api/generate-keywords', checkGlobalAiStatus, async (req, res) => {
+    app.post('/api/generate-keywords', verifyPanelRequest, checkGlobalAiStatus, async (req, res) => {
         const { prompt } = req.body;
         if (!prompt) {
             return res.status(400).json({ error: 'Prompt is required.' });
@@ -392,7 +434,7 @@ export function startApi(client: Client) {
         }
     });
 
-    app.post('/api/add-knowledge-item/:guildId', checkGlobalAiStatus, async (req, res) => {
+    app.post('/api/add-knowledge-item/:guildId', verifyPanelRequest, checkGlobalAiStatus, async (req, res) => {
         const { guildId } = req.params;
         const { userQuestion, agentResponse } = req.body;
 

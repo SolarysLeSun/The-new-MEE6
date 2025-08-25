@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, User, Hash, Tag, Hammer, Voicemail, Server } from 'lucide-react';
+import { MessageSquare, User, Hash, Tag, Hammer, Voicemail, Server, Monitor } from 'lucide-react';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
 
 
@@ -35,6 +35,7 @@ interface LogsConfig {
       moderation: LogSetting;
       voice: LogSetting;
       server: LogSetting;
+      panel: LogSetting;
   }
 }
 
@@ -56,6 +57,7 @@ const logOptions = [
     { id: "moderation", label: "Logs de modération", description: "Bans, kicks, mutes, etc.", icon: Hammer },
     { id: "voice", label: "Logs vocaux", description: "Connexions, mutes, etc.", icon: Voicemail },
     { id: "server", label: "Logs du serveur", description: "Changements de nom, d'icône, etc.", icon: Server },
+    { id: "panel", label: "Logs du Panel Web", description: "Modifications de configuration.", icon: Monitor },
 ];
 
 
@@ -106,9 +108,13 @@ export default function LogsPage() {
     const saveConfig = async (newConfig: LogsConfig) => {
         setConfig(newConfig); // Optimistic update
         try {
+            const panelToken = localStorage.getItem(`panel_token_${serverId}`);
             const response = await fetch(`${API_URL}/update-config/${serverId}/logs`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${panelToken}`
+                },
                 body: JSON.stringify(newConfig),
             });
             if (!response.ok) throw new Error('Failed to save config');

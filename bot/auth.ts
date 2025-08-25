@@ -1,6 +1,9 @@
 
 import fetch from 'node-fetch';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHmac } from 'crypto';
+
+// This secret should be in your .env file and be a long, random string.
+const PANEL_JWT_SECRET = process.env.PANEL_JWT_SECRET || 'default-super-secret-for-dev-only';
 
 // --- Bot Authentication with Discord API ---
 
@@ -108,6 +111,7 @@ export function verifyAndConsumeAuthToken(token: string): { guildId: string; use
     return { guildId: tokenData.guildId, userId: tokenData.userId };
 }
 
+
 // Periodically clean up expired tokens to prevent memory leaks
 setInterval(() => {
     const now = Date.now();
@@ -118,3 +122,48 @@ setInterval(() => {
         }
     }
 }, 60 * 1000); // Run every minute
+
+// --- Panel Session Token (JWT-like) ---
+
+function base64url(source: Buffer): string {
+  return source.toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+export function generateAuthTokenForPanel(userId: string, guildId: string): string {
+    const header = { alg: 'HS256', typ: 'JWT' };
+    const payload = { userId, guildId, iat: Date.now() }; // No expiry, it's a long-lived session
+
+    const encodedHeader = base64url(Buffer.from(JSON.stringify(header)));
+    const encodedPayload = base64url(Buffer.from(JSON.stringify(payload)));
+
+    const signature = createHmac('sha256', PANEL_JWT_SECRET)
+      .update(`${encodedHeader}.${encodedPayload}`)
+      .digest();
+      
+    const encodedSignature = base64url(signature);
+
+    return `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
+}
+
+export function verifyPanelToken(token: string): { userId: string; guildId: string } | null {
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+        return null; // Invalid token format
+    }
+
+    const [encodedHeader, encodedPayload, encodedSignature] = parts;
+    
+    const signature = createHmac('sha256', PANEL_JWT_SECRET)
+      .update(`${encodedHeader}.${encodedPayload}`)
+      .digest();
+      
+    const expectedSignature = base64url(signature);
+
+    if (encodedSignature !== expectedSignature) {
+        console.warn('[Auth] Panel token verification failed: Invalid signature.');
+        return null; // Invalid signature
+    }
+
+    const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString());
+    return { userId: payload.userId, guildId: payload.guildId };
+}

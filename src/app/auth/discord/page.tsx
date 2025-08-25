@@ -39,7 +39,11 @@ function AuthProcessor() {
                     throw new Error(errorData.error || 'Token invalide ou expiré.');
                 }
 
-                const { guildId } = await response.json();
+                const { guildId, panelToken, userId } = await response.json();
+
+                // Store the persistent panel token and user ID
+                localStorage.setItem(`panel_token_${guildId}`, panelToken);
+                localStorage.setItem(`user_id_${guildId}`, userId);
 
                 // Get existing authed guilds from localStorage, or initialize a new array
                 const authedGuilds = JSON.parse(localStorage.getItem('authed_guilds') || '[]');
