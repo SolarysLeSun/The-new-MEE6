@@ -3,9 +3,10 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { Client } from 'discord.js';
+import { Client, Guild, User } from 'discord.js';
 import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel } from '../types';
 import { randomBytes } from 'crypto';
+import { handleLevelUp } from '../../bot/events/leveling/levelUp';
 
 // Assurez-vous que le répertoire de la base de données existe
 const dbDir = path.resolve(process.cwd(), 'database');
@@ -439,11 +440,14 @@ const defaultConfigs: DefaultConfigs = {
     'leveling': {
         enabled: true,
         xp_per_message: 15,
+        xp_per_reaction: 5,
         xp_per_minute_in_voice: 10,
         cooldown_seconds: 60,
         level_up_message: 'Félicitations {user}, vous avez atteint le niveau {level} !',
         level_up_channel_id: null,
         level_card_background_url: null,
+        level_card_bar_color: '#FFFFFF',
+        level_card_text_color: '#FFFFFF',
         ignored_channels: [],
         role_rewards: [],
         xp_boost_roles: [],
@@ -806,6 +810,11 @@ export function unlockChannel(channelId: string): string | null {
 }
 
 // --- Leveling System ---
+let clientInstance: Client | null = null;
+export function setClientInstance(client: Client) {
+    clientInstance = client;
+}
+
 const calculateRequiredXp = (level: number) => 5 * (level ** 2) + 50 * level + 100;
 
 export function getUserLevel(userId: string, guildId: string): UserLevel {
@@ -822,7 +831,7 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
     };
 }
 
-export function updateUserXP(userId: string, guildId: string, xpToAdd: number) {
+export const updateUserXP = db.transaction((userId: string, guildId: string, xpToAdd: number) => {
     const stmt = db.prepare(`
         INSERT INTO user_levels (user_id, guild_id, xp, level)
         VALUES (?, ?, ?, 0)
@@ -833,28 +842,38 @@ export function updateUserXP(userId: string, guildId: string, xpToAdd: number) {
 
     // Check for level up
     const { xp, level } = getUserLevel(userId, guildId);
-    const requiredXp = calculateRequiredXp(level);
+    let requiredXp = calculateRequiredXp(level);
     
     if (xp >= requiredXp) {
         let newLevel = level;
-        let currentXp = xp;
-        while(currentXp >= calculateRequiredXp(newLevel)) {
+        while (xp >= requiredXp) {
             newLevel++;
+            requiredXp = calculateRequiredXp(newLevel);
         }
         
         const updateLevelStmt = db.prepare('UPDATE user_levels SET level = ? WHERE user_id = ? AND guild_id = ?');
         updateLevelStmt.run(newLevel, userId, guildId);
-
-        // TODO: Trigger level up event
+        
         console.log(`[Leveling] ${userId} has leveled up to level ${newLevel} in guild ${guildId}!`);
+        if (clientInstance) {
+            Promise.all([
+                clientInstance.users.fetch(userId),
+                clientInstance.guilds.fetch(guildId)
+            ]).then(([user, guild]) => {
+                handleLevelUp(user, guild, newLevel);
+            }).catch(console.error);
+        }
     }
-}
+});
+
 
 export function getUserRank(userId: string, guildId: string): number {
     const stmt = db.prepare(`
-        SELECT COUNT(*) + 1 as rank FROM user_levels
-        WHERE guild_id = ? AND (xp > (SELECT xp FROM user_levels WHERE user_id = ? AND guild_id = ?))
+        SELECT rank FROM (
+            SELECT user_id, RANK() OVER (ORDER BY xp DESC) as rank 
+            FROM user_levels WHERE guild_id = ?
+        ) WHERE user_id = ?
     `);
-    const result = stmt.get(guildId, userId, guildId) as { rank: number } | undefined;
+    const result = stmt.get(guildId, userId) as { rank: number } | undefined;
     return result?.rank || 1;
 }

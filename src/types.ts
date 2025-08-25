@@ -131,8 +131,8 @@ export interface RoleReward {
 }
 
 export interface XPBoost {
-    role_id: string;
-    channel_id: string;
+    role_id?: string;
+    channel_id?: string;
     multiplier: number;
 }
 

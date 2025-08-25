@@ -38,27 +38,40 @@ const LevelCommand: Command = {
             const levelInfo = getUserLevel(targetUser.id, interaction.guild.id);
             const rank = getUserRank(targetUser.id, interaction.guild.id);
 
-            const progressBarLength = 10;
-            const progress = Math.floor((levelInfo.xp / levelInfo.requiredXp) * progressBarLength);
-            const progressBar = '🟩'.repeat(progress) + '⬛'.repeat(progressBarLength - progress);
+            const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/card/${interaction.guild.id}/${targetUser.id}`);
+            cardUrl.searchParams.append('displayName', member.displayName);
+            cardUrl.searchParams.append('avatarUrl', targetUser.displayAvatarURL({ extension: 'png', size: 256 }));
+            cardUrl.searchParams.append('level', levelInfo.level.toString());
+            cardUrl.searchParams.append('xp', levelInfo.xp.toString());
+            cardUrl.searchParams.append('requiredXp', levelInfo.requiredXp.toString());
+            cardUrl.searchParams.append('rank', rank.toString());
+            if (config.level_card_background_url) {
+                 cardUrl.searchParams.append('backgroundUrl', config.level_card_background_url);
+            }
+             if (config.level_card_bar_color) {
+                cardUrl.searchParams.append('barColor', config.level_card_bar_color);
+            }
+            if (config.level_card_text_color) {
+                cardUrl.searchParams.append('textColor', config.level_card_text_color);
+            }
 
             const embed = new EmbedBuilder()
-                .setColor(0x3498DB)
-                .setAuthor({ name: `Statistiques de ${member.displayName}`, iconURL: targetUser.displayAvatarURL() })
-                .setThumbnail(targetUser.displayAvatarURL())
-                .addFields(
-                    { name: 'Niveau', value: `**${levelInfo.level}**`, inline: true },
-                    { name: 'Classement', value: `#**${rank}**`, inline: true },
-                    { name: 'Progression', value: `\`${levelInfo.xp} / ${levelInfo.requiredXp} XP\``, inline: false },
-                    { name: 'Barre de progression', value: progressBar, inline: false }
-                )
-                .setFooter({ text: `ID: ${targetUser.id}`})
-                .setTimestamp();
+                .setColor(config.level_card_bar_color ? parseInt(config.level_card_bar_color.replace('#', ''), 16) : 0x3498DB)
+                .setAuthor({ name: `Statistiques de ${member.displayName}`, iconURL: targetUser.displayAvatarURL() || undefined })
+                .setImage(`attachment://level-card.png`);
 
-            await interaction.editReply({ embeds: [embed] });
+            // We need to fetch the image from our card URL and send it as an attachment.
+            // This is a workaround for Discord's caching behavior with dynamic images.
+            const response = await fetch(cardUrl.toString());
+            if (!response.ok) throw new Error('Failed to fetch level card image.');
+            const imageBuffer = await response.arrayBuffer();
+
+            const attachment = new AttachmentBuilder(Buffer.from(imageBuffer), { name: 'level-card.png' });
+
+            await interaction.editReply({ embeds: [embed], files: [attachment] });
 
         } catch (error) {
-            console.error('[LevelCommand] Error displaying level embed:', error);
+            console.error('[LevelCommand] Error displaying level card:', error);
             await interaction.editReply({ content: 'Une erreur est survenue lors de l\'affichage de votre niveau.' });
         }
     },
