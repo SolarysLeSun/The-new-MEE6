@@ -48,6 +48,7 @@ export type Module =
     | 'moveall'
     | 'manual-voice-control'
     | 'announcements'
+    | 'annonce-bienvenue'
     | 'leveling';
 
 export interface ModuleConfig {
@@ -131,7 +132,13 @@ export interface RoleReward {
 }
 
 export interface XPBoost {
-    role_id: string;
-    channel_id: string;
+    role_id?: string;
+    channel_id?: string;
     multiplier: number;
+}
+
+export interface UserLevel {
+    xp: number;
+    level: number;
+    requiredXp: number;
 }

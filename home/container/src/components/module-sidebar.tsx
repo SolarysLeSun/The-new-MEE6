@@ -58,6 +58,7 @@ const navCategories = [
             { href: 'assistant-communautaire', label: 'Assistant Communautaire', icon: MessageSquare, isPremium: true },
             { href: 'suggestions', label: 'Suggestions', icon: Lightbulb },
             { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages },
+            { href: 'annonces-bienvenue', label: 'Annonces Bienvenue', icon: Megaphone },
         ]
     },
     {
