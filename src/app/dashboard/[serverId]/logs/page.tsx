@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,11 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { MessageSquare, User, Hash, Tag, Hammer, Voicemail, Server, Monitor } from 'lucide-react';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
+import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
+import { Combobox } from '@/components/ui/combobox';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -65,31 +65,22 @@ export default function LogsPage() {
     const params = useParams();
     const serverId = params.serverId as string;
     const { toast } = useToast();
+    const { authenticatedFetch, isReady } = useAuthenticatedFetch();
 
     const [config, setConfig] = useState<LogsConfig | null>(null);
     const [channels, setChannels] = useState<DiscordChannel[]>([]);
     const [roles, setRoles] = useState<DiscordRole[]>([]);
     const [loading, setLoading] = useState(true);
-    const [authHeader, setAuthHeader] = useState('');
 
     useEffect(() => {
-        const token = localStorage.getItem(`panel_token_${serverId}`);
-        if (token) {
-            setAuthHeader(`Bearer ${token}`);
-        }
-    }, [serverId]);
-
-
-    useEffect(() => {
-        if (!serverId || !authHeader) return;
+        if (!serverId || !isReady) return;
 
         const fetchData = async () => {
             setLoading(true);
             try {
-                const headers = { 'Authorization': authHeader };
                 const [configRes, serverDetailsRes] = await Promise.all([
-                    fetch(`${API_URL}/get-config/${serverId}/logs`, { headers }),
-                    fetch(`${API_URL}/get-server-details/${serverId}`, { headers })
+                    authenticatedFetch(`${API_URL}/get-config/${serverId}/logs`),
+                    authenticatedFetch(`${API_URL}/get-server-details/${serverId}`)
                 ]);
 
                 if (!configRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch data');
@@ -113,18 +104,14 @@ export default function LogsPage() {
         };
 
         fetchData();
-    }, [serverId, toast, authHeader]);
+    }, [serverId, toast, authenticatedFetch, isReady]);
 
     const saveConfig = async (newConfig: LogsConfig) => {
-        if (!authHeader) return;
+        if (!isReady) return;
         setConfig(newConfig); // Optimistic update
         try {
-            await fetch(`${API_URL}/update-config/${serverId}/logs`, {
+            const response = await authenticatedFetch(`${API_URL}/update-config/${serverId}/logs`, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': authHeader,
-                },
                 body: JSON.stringify(newConfig),
             });
             if (!response.ok) throw new Error('Failed to save config');
@@ -152,6 +139,10 @@ export default function LogsPage() {
     if (loading || !config) {
         return <PageSkeleton />;
     }
+    
+    const textChannelOptions = channels.filter(c => c.type === 0).map(c => ({ value: c.id, label: `# ${c.name}`}));
+    const roleOptions = roles.map(r => ({ value: r.id, label: r.name }));
+
 
   return (
     <div className="space-y-8 text-white max-w-4xl">
@@ -186,23 +177,15 @@ export default function LogsPage() {
                             Canal par défaut si aucun canal dédié n'est spécifié ci-dessous.
                         </p>
                     </div>
-                    <Select 
+                    <Combobox
+                        options={[{value: 'none', label: 'Aucun'}, ...textChannelOptions]}
                         value={config.main_channel_id || 'none'}
-                        onValueChange={(value) => handleValueChange('main_channel_id', value === 'none' ? null : value)}
-                    >
-                        <SelectTrigger className="w-full md:w-[280px]">
-                            <SelectValue placeholder="Sélectionner un salon" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectGroup>
-                                <SelectLabel>Salons textuels</SelectLabel>
-                                <SelectItem value="none">Aucun</SelectItem>
-                                {channels.filter(c => c.type === 0).map(channel => (
-                                    <SelectItem key={channel.id} value={channel.id}># {channel.name}</SelectItem>
-                                ))}
-                            </SelectGroup>
-                        </SelectContent>
-                    </Select>
+                        onChange={(value) => handleValueChange('main_channel_id', value === 'none' ? null : value)}
+                        placeholder="Sélectionner un salon"
+                        searchPlaceholder="Rechercher..."
+                        emptyPlaceholder="Aucun salon trouvé"
+                        className="w-full md:w-[280px]"
+                    />
                 </div>
                 <Separator />
 
@@ -221,7 +204,7 @@ export default function LogsPage() {
                         <div className="space-y-2">
                             <Label>Rôles à ignorer</Label>
                              <MultiSelectCombobox
-                                options={roles.map(r => ({ value: r.id, label: r.name }))}
+                                options={roleOptions}
                                 selected={config.exempt_roles || []}
                                 onSelectedChange={(selected) => handleValueChange('exempt_roles', selected)}
                                 placeholder="Sélectionner des rôles..."
@@ -258,20 +241,14 @@ export default function LogsPage() {
                 </CardHeader>
                 <CardContent>
                     <Label className="text-xs uppercase text-muted-foreground">Salon dédié</Label>
-                    <Select
+                    <Combobox
+                        options={[{value: 'main', label: 'Utiliser le salon principal'}, ...textChannelOptions]}
                         value={config.log_settings[option.id as keyof typeof config.log_settings].channel_id || 'main'}
-                        onValueChange={(val) => handleLogSettingChange(option.id as keyof typeof config.log_settings, 'channel_id', val === 'main' ? null : val)}
-                    >
-                        <SelectTrigger>
-                            <SelectValue/>
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="main">Utiliser le salon principal</SelectItem>
-                            {channels.filter(c => c.type === 0).map(channel => (
-                                <SelectItem key={channel.id} value={channel.id}># {channel.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                        onChange={(val) => handleLogSettingChange(option.id as keyof typeof config.log_settings, 'channel_id', val === 'main' ? null : val)}
+                        placeholder="Sélectionner un salon"
+                        searchPlaceholder="Rechercher..."
+                        emptyPlaceholder="Aucun salon trouvé"
+                    />
                 </CardContent>
             </Card>
         ))}

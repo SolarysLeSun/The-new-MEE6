@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -7,13 +6,6 @@ import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -32,6 +24,7 @@ import {
 } from "@/components/ui/dialog"
 import { Switch } from '@/components/ui/switch';
 import { v4 as uuidv4 } from 'uuid';
+import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -84,28 +77,20 @@ export default function AutoModerationPage() {
     const params = useParams();
     const serverId = params.serverId as string;
     const { toast } = useToast();
+    const { authenticatedFetch, isReady } = useAuthenticatedFetch();
 
     const [config, setConfig] = useState<AutoModConfig | null>(null);
     const [roles, setRoles] = useState<DiscordRole[]>([]);
     const [channels, setChannels] = useState<DiscordChannel[]>([]);
     const [loading, setLoading] = useState(true);
-    const [authHeader, setAuthHeader] = useState('');
-
-    useEffect(() => {
-        const token = localStorage.getItem(`panel_token_${serverId}`);
-        if(token) {
-            setAuthHeader(`Bearer ${token}`);
-        }
-    }, [serverId]);
 
     const fetchConfig = async () => {
-        if (!serverId || !authHeader) return;
+        if (!serverId || !isReady) return;
         setLoading(true);
         try {
-            const headers = { 'Authorization': authHeader };
             const [configRes, serverDetailsRes] = await Promise.all([
-                fetch(`${API_URL}/get-config/${serverId}/auto-moderation`, { headers }),
-                fetch(`${API_URL}/get-server-details/${serverId}`, { headers }),
+                authenticatedFetch(`${API_URL}/get-config/${serverId}/auto-moderation`),
+                authenticatedFetch(`${API_URL}/get-server-details/${serverId}`),
             ]);
             if (!configRes.ok || !serverDetailsRes.ok) throw new Error("Impossible de récupérer les données.");
             
@@ -123,21 +108,17 @@ export default function AutoModerationPage() {
     };
     
     useEffect(() => {
-        if (serverId && authHeader) {
+        if (serverId && isReady) {
             fetchConfig();
         }
-    }, [serverId, authHeader]);
+    }, [serverId, isReady]);
 
     const saveConfig = async (newConfig: AutoModConfig) => {
-        if (!authHeader) return;
+        if (!isReady) return;
         setConfig(newConfig); // Optimistic update
          try {
-            await fetch(`${API_URL}/update-config/${serverId}/auto-moderation`, {
+            await authenticatedFetch(`${API_URL}/update-config/${serverId}/auto-moderation`, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': authHeader 
-                },
                 body: JSON.stringify(newConfig),
             });
         } catch (error) {
@@ -216,7 +197,6 @@ export default function AutoModerationPage() {
                         channels={channels.filter(c => c.type === 0)} // Only text channels
                         onUpdate={handleUpdateRule}
                         onDelete={() => handleDeleteRule(rule.id)}
-                        authHeader={authHeader}
                     />
                 ))}
             </div>
@@ -226,10 +206,12 @@ export default function AutoModerationPage() {
 }
 
 // --- RuleCard Component ---
-function RuleCard({ rule, roles, channels, onUpdate, onDelete, authHeader }: { rule: AutoModRule, roles: DiscordRole[], channels: DiscordChannel[], onUpdate: (rule: AutoModRule) => void, onDelete: () => void, authHeader: string }) {
+function RuleCard({ rule, roles, channels, onUpdate, onDelete }: { rule: AutoModRule, roles: DiscordRole[], channels: DiscordChannel[], onUpdate: (rule: AutoModRule) => void, onDelete: () => void }) {
     
     const [name, setName] = useState(rule.name);
     const [keywords, setKeywords] = useState(rule.keywords.join(', '));
+    const { authenticatedFetch, isReady } = useAuthenticatedFetch();
+
 
     const handleBlur = () => {
         onUpdate({ ...rule, name, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean) });
@@ -258,7 +240,7 @@ function RuleCard({ rule, roles, channels, onUpdate, onDelete, authHeader }: { r
                         const updatedKeywords = [...new Set([...keywords.split(',').map(k => k.trim()).filter(Boolean), ...newKeywords])];
                         setKeywords(updatedKeywords.join(', '));
                         onUpdate({ ...rule, name, keywords: updatedKeywords });
-                    }} authHeader={authHeader}/>
+                    }}/>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                      <div className="space-y-2">
@@ -286,22 +268,19 @@ function RuleCard({ rule, roles, channels, onUpdate, onDelete, authHeader }: { r
 }
 
 // --- KeywordGenerator Dialog ---
-function KeywordGenerator({ onGenerate, authHeader }: { onGenerate: (keywords: string[]) => void, authHeader: string }) {
+function KeywordGenerator({ onGenerate }: { onGenerate: (keywords: string[]) => void }) {
     const [prompt, setPrompt] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const { toast } = useToast();
+    const { authenticatedFetch, isReady } = useAuthenticatedFetch();
 
     const handleGenerate = async () => {
-        if (!prompt) return;
+        if (!prompt || !isReady) return;
         setIsLoading(true);
         try {
-            const response = await fetch(`${API_URL}/generate-keywords`, {
+            const response = await authenticatedFetch(`${API_URL}/generate-keywords`, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': authHeader
-                },
                 body: JSON.stringify({ prompt }),
             });
             if (!response.ok) {

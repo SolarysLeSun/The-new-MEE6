@@ -1,11 +1,9 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Lock } from 'lucide-react';
@@ -13,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
+import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
+import { Combobox } from '@/components/ui/combobox';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -67,19 +67,20 @@ export default function LockPage() {
     const params = useParams();
     const serverId = params.serverId as string;
     const { toast } = useToast();
+    const { authenticatedFetch, isReady } = useAuthenticatedFetch();
 
     const [config, setConfig] = useState<LockConfig | null>(null);
     const [roles, setRoles] = useState<DiscordRole[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!serverId) return;
+        if (!serverId || !isReady) return;
         const fetchData = async () => {
             setLoading(true);
             try {
                 const [configRes, serverDetailsRes] = await Promise.all([
-                    fetch(`${API_URL}/get-config/${serverId}/lock`),
-                    fetch(`${API_URL}/get-server-details/${serverId}`)
+                    authenticatedFetch(`${API_URL}/get-config/${serverId}/lock`),
+                    authenticatedFetch(`${API_URL}/get-server-details/${serverId}`)
                 ]);
                 if (!configRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch data');
                 
@@ -95,14 +96,13 @@ export default function LockPage() {
             }
         };
         fetchData();
-    }, [serverId, toast]);
+    }, [serverId, toast, authenticatedFetch, isReady]);
 
     const saveConfig = async (newConfig: LockConfig) => {
         setConfig(newConfig); // Optimistic update
         try {
-            await fetch(`${API_URL}/update-config/${serverId}/lock`, {
+            await authenticatedFetch(`${API_URL}/update-config/${serverId}/lock`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newConfig),
             });
         } catch (error) {
@@ -120,6 +120,12 @@ export default function LockPage() {
         const newPermissions = { ...config.command_permissions, [commandKey]: roleId === 'none' ? null : roleId };
         handleValueChange('command_permissions', newPermissions);
     };
+    
+    const roleOptions = [
+        { value: 'none', label: 'Admin seulement' },
+        ...roles.map(r => ({ value: r.id, label: r.name }))
+    ];
+
 
     if (loading || !config) {
         return <LockPageSkeleton />;
@@ -137,7 +143,7 @@ export default function LockPage() {
             <Separator />
             
             <Card>
-                <CardHeader>
+                 <CardHeader>
                     <div className="flex items-center justify-between">
                          <CardTitle>Configuration Générale</CardTitle>
                         <Switch id="enable-module" checked={config.enabled} onCheckedChange={(val) => handleValueChange('enabled', val)} />
@@ -193,22 +199,14 @@ export default function LockPage() {
                             <CardContent>
                                 <div className="space-y-2">
                                     <Label htmlFor={`role-select-${command.key}`} className="text-sm font-medium">Rôle minimum requis</Label>
-                                    <Select 
+                                    <Combobox
+                                        options={roleOptions}
                                         value={config.command_permissions[command.key] || 'none'}
-                                        onValueChange={(value) => handlePermissionChange(command.key, value)}
-                                    >
-                                        <SelectTrigger id={`role-select-${command.key}`} className="w-full">
-                                            <SelectValue placeholder="Sélectionner un rôle" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectGroup>
-                                                <SelectItem value="none">Admin seulement</SelectItem>
-                                                {roles.map(role => (
-                                                    <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                                                ))}
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
+                                        onChange={(value) => handlePermissionChange(command.key, value)}
+                                        placeholder="Sélectionner un rôle..."
+                                        searchPlaceholder="Rechercher..."
+                                        emptyPlaceholder='Aucun rôle'
+                                    />
                                 </div>
                             </CardContent>
                         </Card>

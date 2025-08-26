@@ -7,13 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Shield, Settings, PlusCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Combobox } from '@/components/ui/combobox';
+import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -54,12 +54,15 @@ const moderationCommands = [
     { name: '/mute', key: 'mute', description: 'Rend un utilisateur muet.' },
     { name: '/warn', key: 'warn', description: 'Avertit un utilisateur.' },
     { name: '/listwarns', key: 'listwarns', description: "Liste les avertissements d'un utilisateur." },
+    { name: '/loginban', key: 'loginban', description: "Interdit à un utilisateur d'accéder au panel."},
+    { name: '/loginunban', key: 'loginunban', description: "Autorise de nouveau un utilisateur à accéder au panel."}
 ];
 
 export default function ModerationPage() {
   const params = useParams();
   const serverId = params.serverId as string;
   const { toast } = useToast();
+  const { authenticatedFetch, isReady } = useAuthenticatedFetch();
 
   const [config, setConfig] = useState<ModerationConfig | null>(null);
   const [channels, setChannels] = useState<DiscordChannel[]>([]);
@@ -68,13 +71,13 @@ export default function ModerationPage() {
 
   // --- Data Fetching ---
   useEffect(() => {
-    if (!serverId) return;
+    if (!serverId || !isReady) return;
     const fetchData = async () => {
       setLoading(true);
       try {
         const [configRes, serverDetailsRes] = await Promise.all([
-          fetch(`${API_URL}/get-config/${serverId}/moderation`),
-          fetch(`${API_URL}/get-server-details/${serverId}`)
+          authenticatedFetch(`${API_URL}/get-config/${serverId}/moderation`),
+          authenticatedFetch(`${API_URL}/get-server-details/${serverId}`)
         ]);
         if (!configRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch data');
         const configData = await configRes.json();
@@ -89,14 +92,13 @@ export default function ModerationPage() {
       }
     };
     fetchData();
-  }, [serverId, toast]);
+  }, [serverId, toast, authenticatedFetch, isReady]);
 
   const saveConfig = async (newConfig: ModerationConfig) => {
     setConfig(newConfig); // Optimistic update
     try {
-      await fetch(`${API_URL}/update-config/${serverId}/moderation`, {
+      await authenticatedFetch(`${API_URL}/update-config/${serverId}/moderation`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newConfig),
       });
     } catch (error) {

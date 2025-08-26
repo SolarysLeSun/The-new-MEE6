@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
+import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -29,17 +29,20 @@ interface DiscordChannel {
 
 function AutoTranslatePageContent({ serverId }: { serverId: string }) {
     const { toast } = useToast();
+    const { authenticatedFetch, isReady } = useAuthenticatedFetch();
     const [config, setConfig] = useState<AutoTranslateConfig | null>(null);
     const [allChannels, setAllChannels] = useState<DiscordChannel[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (!serverId || !isReady) return;
+
         const fetchData = async () => {
             setLoading(true);
             try {
                 const [configRes, serverDetailsRes] = await Promise.all([
-                    fetch(`${API_URL}/get-config/${serverId}/auto-translation`),
-                    fetch(`${API_URL}/get-server-details/${serverId}`)
+                    authenticatedFetch(`${API_URL}/get-config/${serverId}/auto-translation`),
+                    authenticatedFetch(`${API_URL}/get-server-details/${serverId}`)
                 ]);
 
                 if (!configRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch initial data');
@@ -56,14 +59,14 @@ function AutoTranslatePageContent({ serverId }: { serverId: string }) {
             }
         };
         fetchData();
-    }, [serverId, toast]);
+    }, [serverId, toast, authenticatedFetch, isReady]);
     
     const saveConfig = async (newConfig: AutoTranslateConfig) => {
+        if (!isReady) return;
         setConfig(newConfig); // Optimistic update
         try {
-            await fetch(`${API_URL}/update-config/${serverId}/auto-translation`, {
+            await authenticatedFetch(`${API_URL}/update-config/${serverId}/auto-translation`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newConfig),
             });
         } catch (error) {

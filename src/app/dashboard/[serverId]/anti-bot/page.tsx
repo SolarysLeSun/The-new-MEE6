@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Combobox } from '@/components/ui/combobox';
+import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -66,19 +67,20 @@ export default function AntiBotPage() {
     const params = useParams();
     const serverId = params.serverId as string;
     const { toast } = useToast();
+    const { authenticatedFetch, isReady } = useAuthenticatedFetch();
 
     const [config, setConfig] = useState<AntiBotConfig | null>(null);
     const [channels, setChannels] = useState<DiscordChannel[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!serverId) return;
+        if (!serverId || !isReady) return;
         const fetchData = async () => {
             setLoading(true);
             try {
                 const [configRes, serverDetailsRes] = await Promise.all([
-                    fetch(`${API_URL}/get-config/${serverId}/anti-bot`),
-                    fetch(`${API_URL}/get-server-details/${serverId}`)
+                    authenticatedFetch(`${API_URL}/get-config/${serverId}/anti-bot`),
+                    authenticatedFetch(`${API_URL}/get-server-details/${serverId}`)
                 ]);
                 if (!configRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch data');
                 
@@ -93,14 +95,13 @@ export default function AntiBotPage() {
             }
         };
         fetchData();
-    }, [serverId, toast]);
+    }, [serverId, toast, authenticatedFetch, isReady]);
 
     const saveConfig = async (newConfig: AntiBotConfig) => {
         setConfig(newConfig); // Optimistic update
         try {
-            await fetch(`${API_URL}/update-config/${serverId}/anti-bot`, {
+            await authenticatedFetch(`${API_URL}/update-config/${serverId}/anti-bot`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newConfig),
             });
         } catch (error) {

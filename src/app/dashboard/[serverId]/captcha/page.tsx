@@ -7,12 +7,13 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
 import { useServerInfo } from '@/hooks/use-server-info';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { Combobox } from '@/components/ui/combobox';
+import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -54,6 +55,7 @@ function CaptchaPageContent({ isPremium }: { isPremium: boolean }) {
     const params = useParams();
     const serverId = params.serverId as string;
     const { toast } = useToast();
+    const { authenticatedFetch, isReady } = useAuthenticatedFetch();
 
     const [config, setConfig] = useState<CaptchaConfig | null>(null);
     const [channels, setChannels] = useState<DiscordChannel[]>([]);
@@ -61,13 +63,13 @@ function CaptchaPageContent({ isPremium }: { isPremium: boolean }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!serverId) return;
+        if (!serverId || !isReady) return;
         const fetchData = async () => {
             setLoading(true);
             try {
                 const [configRes, serverDetailsRes] = await Promise.all([
-                    fetch(`${API_URL}/get-config/${serverId}/captcha`),
-                    fetch(`${API_URL}/get-server-details/${serverId}`)
+                    authenticatedFetch(`${API_URL}/get-config/${serverId}/captcha`),
+                    authenticatedFetch(`${API_URL}/get-server-details/${serverId}`)
                 ]);
                 if (!configRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch data');
                 
@@ -84,14 +86,13 @@ function CaptchaPageContent({ isPremium }: { isPremium: boolean }) {
             }
         };
         fetchData();
-    }, [serverId, toast]);
+    }, [serverId, toast, authenticatedFetch, isReady]);
     
     const saveConfig = async (newConfig: CaptchaConfig) => {
         setConfig(newConfig); // Optimistic update
         try {
-            await fetch(`${API_URL}/update-config/${serverId}/captcha`, {
+            await authenticatedFetch(`${API_URL}/update-config/${serverId}/captcha`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newConfig),
             });
         } catch (error) {
@@ -107,6 +108,16 @@ function CaptchaPageContent({ isPremium }: { isPremium: boolean }) {
     if (loading || !config) {
         return <CaptchaPageSkeleton />;
     }
+    
+    const channelOptions = [
+        { value: 'none', label: 'Aucun' },
+        ...channels.map(c => ({ value: c.id, label: `# ${c.name}` }))
+    ];
+    
+    const roleOptions = [
+        { value: 'none', label: 'Aucun' },
+        ...roles.filter(r => r.name !== '@everyone').map(r => ({ value: r.id, label: r.name }))
+    ];
 
     return (
         <PremiumFeatureWrapper isPremium={isPremium}>
@@ -135,20 +146,15 @@ function CaptchaPageContent({ isPremium }: { isPremium: boolean }) {
                             Le salon où les nouveaux membres effectueront la vérification.
                         </p>
                         </div>
-                        <Select value={config.verification_channel || 'none'} onValueChange={(val) => handleValueChange('verification_channel', val === 'none' ? null : val)}>
-                            <SelectTrigger id="verification-channel" className="w-full md:w-[280px]">
-                                <SelectValue placeholder="Sélectionner un salon" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectLabel>Salons textuels</SelectLabel>
-                                    <SelectItem value="none">Aucun</SelectItem>
-                                    {channels.map(channel => (
-                                        <SelectItem key={channel.id} value={channel.id}># {channel.name}</SelectItem>
-                                    ))}
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                            options={channelOptions}
+                            value={config.verification_channel || 'none'}
+                            onChange={(value) => handleValueChange('verification_channel', value === 'none' ? null : value)}
+                            placeholder="Sélectionner un salon"
+                            searchPlaceholder="Rechercher un salon..."
+                            emptyPlaceholder="Aucun salon trouvé."
+                            className="w-full md:w-[280px]"
+                        />
                     </div>
                     <Separator />
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
@@ -158,20 +164,15 @@ function CaptchaPageContent({ isPremium }: { isPremium: boolean }) {
                             Ce rôle est attribué après une vérification réussie.
                         </p>
                         </div>
-                        <Select value={config.verified_role_id || 'none'} onValueChange={(val) => handleValueChange('verified_role_id', val === 'none' ? null : val)}>
-                            <SelectTrigger id="verified-role" className="w-full md:w-[280px]">
-                                <SelectValue placeholder="Sélectionner un rôle" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectLabel>Rôles</SelectLabel>
-                                     <SelectItem value="none">Aucun</SelectItem>
-                                    {roles.filter(r => r.name !== '@everyone').map(role => (
-                                        <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                                    ))}
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                            options={roleOptions}
+                            value={config.verified_role_id || 'none'}
+                            onChange={(value) => handleValueChange('verified_role_id', value === 'none' ? null : value)}
+                            placeholder="Sélectionner un rôle"
+                            searchPlaceholder="Rechercher un rôle..."
+                            emptyPlaceholder="Aucun rôle trouvé."
+                            className="w-full md:w-[280px]"
+                        />
                     </div>
                 </CardContent>
             </Card>

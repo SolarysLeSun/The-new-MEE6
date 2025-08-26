@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,10 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
-import { Lightbulb, Settings } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
+import { Combobox } from '@/components/ui/combobox';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -83,6 +83,7 @@ export default function SuggestionsPage() {
     const params = useParams();
     const serverId = params.serverId as string;
     const { toast } = useToast();
+    const { authenticatedFetch, isReady } = useAuthenticatedFetch();
 
     const [config, setConfig] = useState<SuggestionsConfig | null>(null);
     const [channels, setChannels] = useState<DiscordChannel[]>([]);
@@ -90,13 +91,13 @@ export default function SuggestionsPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!serverId) return;
+        if (!serverId || !isReady) return;
         const fetchData = async () => {
             setLoading(true);
             try {
                 const [configRes, serverDetailsRes] = await Promise.all([
-                    fetch(`${API_URL}/get-config/${serverId}/suggestions`),
-                    fetch(`${API_URL}/get-server-details/${serverId}`)
+                    authenticatedFetch(`${API_URL}/get-config/${serverId}/suggestions`),
+                    authenticatedFetch(`${API_URL}/get-server-details/${serverId}`)
                 ]);
                 if (!configRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch data');
 
@@ -114,14 +115,13 @@ export default function SuggestionsPage() {
             }
         };
         fetchData();
-    }, [serverId, toast]);
+    }, [serverId, toast, authenticatedFetch, isReady]);
     
     const saveConfig = async (newConfig: SuggestionsConfig) => {
         setConfig(newConfig); // Optimistic update
         try {
-            await fetch(`${API_URL}/update-config/${serverId}/suggestions`, {
+            await authenticatedFetch(`${API_URL}/update-config/${serverId}/suggestions`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newConfig),
             });
         } catch (error) {
@@ -143,6 +143,10 @@ export default function SuggestionsPage() {
     if (loading || !config) {
         return <SuggestionsPageSkeleton />;
     }
+
+    const channelOptions = channels.map(c => ({ value: c.id, label: `# ${c.name}` }));
+    const roleOptions = roles.filter(r => r.name !== '@everyone').map(r => ({ value: r.id, label: r.name }));
+
 
   return (
     <div className="space-y-8 text-white max-w-4xl">
@@ -181,28 +185,15 @@ export default function SuggestionsPage() {
                 Le salon où les nouvelles suggestions pour le serveur seront publiées.
               </p>
             </div>
-            <Select 
+            <Combobox 
+                options={[{value: 'none', label: 'Désactivé'}, ...channelOptions]}
                 value={config.suggestion_channel_id || 'none'} 
-                onValueChange={(val) => handleValueChange('suggestion_channel_id', val === 'none' ? null : val)}
-            >
-              <SelectTrigger
-                id="suggestion-channel"
+                onChange={(val) => handleValueChange('suggestion_channel_id', val === 'none' ? null : val)}
+                placeholder="Sélectionner un salon"
+                searchPlaceholder="Rechercher..."
+                emptyPlaceholder="Aucun salon"
                 className="w-full md:w-[280px]"
-              >
-                <SelectValue placeholder="Sélectionner un salon" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Salons textuels</SelectLabel>
-                  <SelectItem value="none">Désactivé</SelectItem>
-                  {channels.map((channel) => (
-                    <SelectItem key={channel.id} value={channel.id}>
-                      # {channel.name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+            />
           </div>
         </CardContent>
       </Card>
@@ -235,22 +226,17 @@ export default function SuggestionsPage() {
                   >
                     Rôle minimum requis
                   </Label>
-                  <Select
+                  <Combobox
+                    options={[
+                        { value: 'none', label: command.key === 'suggest' ? "@everyone" : "Admin seulement" },
+                        ...roleOptions
+                    ]}
                     value={config.command_permissions?.[command.key] || 'none'}
-                    onValueChange={(val) => handlePermissionChange(command.key, val)}
-                  >
-                    <SelectTrigger id={`role-select-${command.key}`} className="w-full">
-                      <SelectValue placeholder="Sélectionner un rôle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectGroup>
-                            <SelectItem value="none">{command.key === 'suggest' ? "@everyone" : "Admin seulement"}</SelectItem>
-                            {roles.filter(r => r.name !== '@everyone').map(role => (
-                                <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                            ))}
-                        </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                    onChange={(val) => handlePermissionChange(command.key, val)}
+                    placeholder="Sélectionner un rôle"
+                    searchPlaceholder="Rechercher..."
+                    emptyPlaceholder="Aucun rôle"
+                  />
                   {command.key === 'suggest' && <p className="text-xs text-muted-foreground pt-1">La sous-commande `/suggest bot` est toujours disponible pour tout le monde.</p>}
                 </div>
               </CardContent>
