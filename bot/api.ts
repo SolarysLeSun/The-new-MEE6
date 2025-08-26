@@ -1,4 +1,5 @@
 
+
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, TextChannel } from 'discord.js';
@@ -164,7 +165,7 @@ export function startApi(client: Client) {
     /**
      * Endpoint pour récupérer la configuration d'un module pour un serveur.
      */
-    app.get('/api/get-config/:guildId/:module', async (req, res) => {
+    app.get('/api/get-config/:guildId/:module', verifyPanelRequest, async (req, res) => {
         const { guildId, module } = req.params;
         try {
             const config = await getServerConfig(guildId, module as any);
@@ -201,7 +202,7 @@ export function startApi(client: Client) {
     /**
      * Endpoint pour récupérer les données d'un serveur (nom, icône, rôles, salons, statut premium).
      */
-     app.get('/api/get-server-details/:guildId', async (req, res) => {
+     app.get('/api/get-server-details/:guildId', verifyPanelRequest, async (req, res) => {
         const { guildId } = req.params;
         try {
             const guild = await client.guilds.fetch(guildId).catch(() => null);
@@ -231,7 +232,7 @@ export function startApi(client: Client) {
     /**
      * Endpoint to get details for multiple servers from a list of IDs.
      */
-    app.post('/api/get-servers-details', async (req, res) => {
+    app.post('/api/get-servers-details', verifyPanelRequest, async (req, res) => {
         const { guildIds } = req.body;
         if (!Array.isArray(guildIds)) {
             return res.status(400).json({ error: 'guildIds must be an array.' });
@@ -259,7 +260,7 @@ export function startApi(client: Client) {
     /**
      * Endpoint to export server structure as JSON for the backup module.
      */
-    app.get('/api/backup/:guildId/export', async (req, res) => {
+    app.get('/api/backup/:guildId/export', verifyPanelRequest, async (req, res) => {
         const { guildId } = req.params;
         const guild = await client.guilds.fetch(guildId).catch(() => null);
         if (!guild) {
@@ -467,3 +468,5 @@ export function startApi(client: Client) {
         console.log(`[Bot API] Le serveur API interne écoute sur le port ${API_PORT}`);
     });
 }
+
+    

@@ -33,8 +33,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { v4 as uuidv4 } from 'uuid';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
-
-const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
+import { useAuthenticatedFetch } from '@/hooks/use-authenticated-fetch';
 
 // --- Types ---
 interface AutoModRule {
@@ -84,61 +83,43 @@ export default function AutoModerationPage() {
     const params = useParams();
     const serverId = params.serverId as string;
     const { toast } = useToast();
+    const authenticatedFetch = useAuthenticatedFetch();
 
     const [config, setConfig] = useState<AutoModConfig | null>(null);
     const [roles, setRoles] = useState<DiscordRole[]>([]);
     const [channels, setChannels] = useState<DiscordChannel[]>([]);
     const [loading, setLoading] = useState(true);
-    const [authHeader, setAuthHeader] = useState('');
 
     useEffect(() => {
-        const token = localStorage.getItem(`panel_token_${serverId}`);
-        if(token) {
-            setAuthHeader(`Bearer ${token}`);
-        }
-    }, [serverId]);
+        if (!serverId || !authenticatedFetch) return;
 
-    const fetchConfig = async () => {
-        if (!serverId || !authHeader) return;
-        setLoading(true);
-        try {
-            const headers = { 'Authorization': authHeader };
-            const [configRes, serverDetailsRes] = await Promise.all([
-                fetch(`${API_URL}/get-config/${serverId}/auto-moderation`, { headers }),
-                fetch(`${API_URL}/get-server-details/${serverId}`, { headers }),
-            ]);
-            if (!configRes.ok || !serverDetailsRes.ok) throw new Error("Impossible de récupérer les données.");
-            
-            const configData = await configRes.json();
-            const serverDetailsData = await serverDetailsRes.json();
-
-            setConfig(configData);
-            setRoles(serverDetailsData.roles);
-            setChannels(serverDetailsData.channels);
-        } catch (error: any) {
-            toast({ title: "Erreur", description: error.message, variant: "destructive" });
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    useEffect(() => {
-        if (serverId && authHeader) {
-            fetchConfig();
-        }
-    }, [serverId, authHeader]);
+        const fetchConfig = async () => {
+            setLoading(true);
+            try {
+                const [configData, serverDetailsData] = await Promise.all([
+                    authenticatedFetch(`/get-config/${serverId}/auto-moderation`),
+                    authenticatedFetch(`/get-server-details/${serverId}`),
+                ]);
+                
+                setConfig(configData);
+                setRoles(serverDetailsData.roles);
+                setChannels(serverDetailsData.channels);
+            } catch (error: any) {
+                toast({ title: "Erreur", description: error.message, variant: "destructive" });
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchConfig();
+    }, [serverId, authenticatedFetch, toast]);
 
     const saveConfig = async (newConfig: AutoModConfig) => {
-        if (!authHeader) return;
         setConfig(newConfig); // Optimistic update
          try {
-            await fetch(`${API_URL}/update-config/${serverId}/auto-moderation`, {
+            await authenticatedFetch(`/update-config/${serverId}/auto-moderation`, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': authHeader 
-                },
-                body: JSON.stringify(newConfig),
+                body: newConfig,
             });
         } catch (error) {
             toast({ title: "Erreur de sauvegarde", variant: "destructive" });
@@ -216,7 +197,6 @@ export default function AutoModerationPage() {
                         channels={channels.filter(c => c.type === 0)} // Only text channels
                         onUpdate={handleUpdateRule}
                         onDelete={() => handleDeleteRule(rule.id)}
-                        authHeader={authHeader}
                     />
                 ))}
             </div>
@@ -226,10 +206,11 @@ export default function AutoModerationPage() {
 }
 
 // --- RuleCard Component ---
-function RuleCard({ rule, roles, channels, onUpdate, onDelete, authHeader }: { rule: AutoModRule, roles: DiscordRole[], channels: DiscordChannel[], onUpdate: (rule: AutoModRule) => void, onDelete: () => void, authHeader: string }) {
+function RuleCard({ rule, roles, channels, onUpdate, onDelete }: { rule: AutoModRule, roles: DiscordRole[], channels: DiscordChannel[], onUpdate: (rule: AutoModRule) => void, onDelete: () => void }) {
     
     const [name, setName] = useState(rule.name);
     const [keywords, setKeywords] = useState(rule.keywords.join(', '));
+    const authenticatedFetch = useAuthenticatedFetch();
 
     const handleBlur = () => {
         onUpdate({ ...rule, name, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean) });
@@ -258,7 +239,7 @@ function RuleCard({ rule, roles, channels, onUpdate, onDelete, authHeader }: { r
                         const updatedKeywords = [...new Set([...keywords.split(',').map(k => k.trim()).filter(Boolean), ...newKeywords])];
                         setKeywords(updatedKeywords.join(', '));
                         onUpdate({ ...rule, name, keywords: updatedKeywords });
-                    }} authHeader={authHeader}/>
+                    }} authenticatedFetch={authenticatedFetch}/>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                      <div className="space-y-2">
@@ -286,7 +267,7 @@ function RuleCard({ rule, roles, channels, onUpdate, onDelete, authHeader }: { r
 }
 
 // --- KeywordGenerator Dialog ---
-function KeywordGenerator({ onGenerate, authHeader }: { onGenerate: (keywords: string[]) => void, authHeader: string }) {
+function KeywordGenerator({ onGenerate, authenticatedFetch }: { onGenerate: (keywords: string[]) => void, authenticatedFetch: Function }) {
     const [prompt, setPrompt] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
@@ -296,19 +277,10 @@ function KeywordGenerator({ onGenerate, authHeader }: { onGenerate: (keywords: s
         if (!prompt) return;
         setIsLoading(true);
         try {
-            const response = await fetch(`${API_URL}/generate-keywords`, {
+            const result = await authenticatedFetch(`/generate-keywords`, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': authHeader
-                },
-                body: JSON.stringify({ prompt }),
+                body: { prompt },
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Keyword generation failed');
-            }
-            const result = await response.json();
             onGenerate(result.keywords);
             setIsOpen(false);
             setPrompt('');
@@ -347,5 +319,6 @@ function KeywordGenerator({ onGenerate, authHeader }: { onGenerate: (keywords: s
 if (typeof window !== 'undefined') {
     (window as any).uuidv4 = uuidv4;
 }
+
 
     

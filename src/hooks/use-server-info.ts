@@ -1,10 +1,10 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-
-const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
+import { useAuthenticatedFetch } from './use-authenticated-fetch';
 
 interface ServerInfo {
   id: string;
@@ -18,14 +18,15 @@ interface ServerInfo {
 export function useServerInfo() {
   const params = useParams();
   const serverId = params.serverId as string;
+  const authenticatedFetch = useAuthenticatedFetch();
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!serverId) {
+    if (!serverId || !authenticatedFetch) {
         setLoading(false);
-        setError("No server ID provided.");
+        setError("Server ID or auth method not available.");
         return;
     };
 
@@ -33,11 +34,7 @@ export function useServerInfo() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`${API_URL}/get-server-details/${serverId}`);
-        if (!res.ok) {
-          throw new Error('Failed to fetch server details');
-        }
-        const data = await res.json();
+        const data = await authenticatedFetch(`/get-server-details/${serverId}`);
         setServerInfo(data);
       } catch (err: any) {
         setError(err.message || "An unknown error occurred");
@@ -48,7 +45,9 @@ export function useServerInfo() {
     };
 
     fetchServerInfo();
-  }, [serverId]);
+  }, [serverId, authenticatedFetch]);
 
   return { serverInfo, loading, error };
 }
+
+    

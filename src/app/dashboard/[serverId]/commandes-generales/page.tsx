@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -11,10 +12,8 @@ import { Wrench } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Combobox } from '@/components/ui/combobox';
+import { useAuthenticatedFetch } from '@/hooks/use-authenticated-fetch';
 
-const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
-
-// Types
 interface GeneralCommandsConfig {
   enabled: boolean;
   command_permissions: { [key: string]: string | null };
@@ -40,26 +39,22 @@ export default function GeneralCommandsPage() {
     const params = useParams();
     const serverId = params.serverId as string;
     const { toast } = useToast();
+    const authenticatedFetch = useAuthenticatedFetch();
 
     const [config, setConfig] = useState<GeneralCommandsConfig | null>(null);
     const [serverData, setServerData] = useState<ServerData | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!serverId) return;
+        if (!serverId || !authenticatedFetch) return;
 
         const fetchData = async () => {
             setLoading(true);
             try {
-                const [configRes, serverDetailsRes] = await Promise.all([
-                    fetch(`${API_URL}/get-config/${serverId}/general-commands`),
-                    fetch(`${API_URL}/get-server-details/${serverId}`)
+                const [configData, serverDetailsData] = await Promise.all([
+                    authenticatedFetch(`/get-config/${serverId}/general-commands`),
+                    authenticatedFetch(`/get-server-details/${serverId}`)
                 ]);
-
-                if (!configRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch data');
-                
-                const configData = await configRes.json();
-                const serverDetailsData = await serverDetailsRes.json();
                 
                 setConfig(configData);
                 setServerData(serverDetailsData);
@@ -76,17 +71,15 @@ export default function GeneralCommandsPage() {
         };
 
         fetchData();
-    }, [serverId, toast]);
+    }, [serverId, toast, authenticatedFetch]);
 
     const saveConfig = async (newConfig: GeneralCommandsConfig) => {
         setConfig(newConfig); // Optimistic update
         try {
-            const response = await fetch(`${API_URL}/update-config/${serverId}/general-commands`, {
+            await authenticatedFetch(`/update-config/${serverId}/general-commands`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newConfig),
+                body: newConfig,
             });
-            if (!response.ok) throw new Error('Failed to save config');
         } catch (error) {
             console.error('Failed to update config', error);
             toast({
@@ -233,5 +226,7 @@ function PageSkeleton() {
         </div>
     );
 }
+
+    
 
     

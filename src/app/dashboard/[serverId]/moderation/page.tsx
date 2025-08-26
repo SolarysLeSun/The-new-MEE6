@@ -7,15 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Shield, Settings, PlusCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Combobox } from '@/components/ui/combobox';
-
-const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
+import { useAuthenticatedFetch } from '@/hooks/use-authenticated-fetch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // --- Types ---
 interface SanctionPreset {
@@ -60,6 +59,7 @@ export default function ModerationPage() {
   const params = useParams();
   const serverId = params.serverId as string;
   const { toast } = useToast();
+  const authenticatedFetch = useAuthenticatedFetch();
 
   const [config, setConfig] = useState<ModerationConfig | null>(null);
   const [channels, setChannels] = useState<DiscordChannel[]>([]);
@@ -68,17 +68,14 @@ export default function ModerationPage() {
 
   // --- Data Fetching ---
   useEffect(() => {
-    if (!serverId) return;
+    if (!serverId || !authenticatedFetch) return;
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [configRes, serverDetailsRes] = await Promise.all([
-          fetch(`${API_URL}/get-config/${serverId}/moderation`),
-          fetch(`${API_URL}/get-server-details/${serverId}`)
+        const [configData, serverDetailsData] = await Promise.all([
+          authenticatedFetch(`/get-config/${serverId}/moderation`),
+          authenticatedFetch(`/get-server-details/${serverId}`)
         ]);
-        if (!configRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch data');
-        const configData = await configRes.json();
-        const serverDetailsData = await serverDetailsRes.json();
         setConfig(configData);
         setChannels(serverDetailsData.channels.filter((c: DiscordChannel) => c.type === 0));
         setRoles(serverDetailsData.roles);
@@ -89,14 +86,13 @@ export default function ModerationPage() {
       }
     };
     fetchData();
-  }, [serverId, toast]);
+  }, [serverId, toast, authenticatedFetch]);
 
   const saveConfig = async (newConfig: ModerationConfig) => {
     setConfig(newConfig); // Optimistic update
     try {
-      await fetch(`${API_URL}/update-config/${serverId}/moderation`, {
+      await authenticatedFetch(`/update-config/${serverId}/moderation`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newConfig),
       });
     } catch (error) {
@@ -295,3 +291,5 @@ function ModerationPageSkeleton() {
     </div>
   )
 }
+
+    

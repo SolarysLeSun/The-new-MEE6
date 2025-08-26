@@ -1,4 +1,5 @@
 
+
 'use client';
 import type { ReactNode } from 'react';
 import { ModuleSidebar } from '@/components/module-sidebar';
@@ -6,8 +7,9 @@ import { ServerSidebar } from '@/components/server-sidebar';
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, Menu, X } from 'lucide-react';
+import { Loader2, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuthenticatedFetch } from '@/hooks/use-authenticated-fetch';
 
 const RippleGrid = dynamic(() => import('@/components/ripple-grid'), {
   ssr: false,
@@ -27,11 +29,16 @@ function AuthGuard({ children }: { children: ReactNode }) {
     }
 
     const storedGuilds = JSON.parse(localStorage.getItem('authed_guilds') || '[]');
+    const token = localStorage.getItem(`panel_token_${serverId}`);
     
-    if (storedGuilds.includes(serverId)) {
+    if (storedGuilds.includes(serverId) && token) {
       setIsVerified(true);
     } else {
       console.warn(`Accès non autorisé refusé pour le serveur : ${serverId}. Redirection.`);
+      // Clear potentially stale data
+      localStorage.removeItem(`panel_token_${serverId}`);
+      const newGuilds = storedGuilds.filter((id: string) => id !== serverId);
+      localStorage.setItem('authed_guilds', JSON.stringify(newGuilds));
       router.push('/dashboard');
     }
     setLoading(false);
@@ -46,11 +53,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
   }
 
   if (!isVerified) {
-     return (
-        <div className="flex h-full w-full items-center justify-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary" />
-        </div>
-      );
+     return null;
   }
 
   return <>{children}</>;
@@ -101,3 +104,5 @@ export default function DashboardLayout({
     </div>
   );
 }
+
+    

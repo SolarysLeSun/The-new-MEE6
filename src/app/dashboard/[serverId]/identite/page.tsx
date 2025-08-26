@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -13,9 +14,8 @@ import { useServerInfo } from '@/hooks/use-server-info';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { useAuthenticatedFetch } from '@/hooks/use-authenticated-fetch';
 
-
-const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
 // Types
 interface IdentityConfig {
@@ -52,18 +52,17 @@ export default function IdentityPage() {
     const serverId = params.serverId as string;
     const { toast } = useToast();
     const { serverInfo, loading: serverLoading } = useServerInfo();
+    const authenticatedFetch = useAuthenticatedFetch();
 
     const [config, setConfig] = useState<IdentityConfig | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!serverId) return;
+        if (!serverId || !authenticatedFetch) return;
         const fetchData = async () => {
             setLoading(true);
             try {
-                const configRes = await fetch(`${API_URL}/get-config/${serverId}/server-identity`);
-                if (!configRes.ok) throw new Error('Failed to fetch config');
-                const configData = await configRes.json();
+                const configData = await authenticatedFetch(`/get-config/${serverId}/server-identity`);
                 setConfig(configData);
             } catch (error) {
                 toast({ title: "Erreur", description: "Impossible de charger la configuration.", variant: "destructive" });
@@ -72,15 +71,14 @@ export default function IdentityPage() {
             }
         };
         fetchData();
-    }, [serverId, toast]);
+    }, [serverId, toast, authenticatedFetch]);
     
     const handleSave = async () => {
         if (!config) return;
         try {
-            await fetch(`${API_URL}/update-config/${serverId}/server-identity`, {
+            await authenticatedFetch(`/update-config/${serverId}/server-identity`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(config),
+                body: config,
             });
             toast({ title: "Succès", description: "Identité mise à jour. Le changement peut prendre un instant." });
         } catch (error) {
@@ -158,3 +156,5 @@ export default function IdentityPage() {
         </div>
     );
 }
+
+    
