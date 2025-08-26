@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
@@ -36,6 +37,10 @@ function AuthProcessor() {
 
                 if (!response.ok) {
                     const errorData = await response.json();
+                    if(response.status === 401) {
+                         router.push('/banned');
+                         return;
+                    }
                     throw new Error(errorData.error || 'Token invalide ou expiré.');
                 }
 

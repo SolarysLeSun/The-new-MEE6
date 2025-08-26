@@ -1,6 +1,7 @@
 
 import fetch from 'node-fetch';
 import { randomBytes, createHmac } from 'crypto';
+import { isUserBannedFromPanel } from '@/lib/db';
 
 // This secret should be in your .env file and be a long, random string.
 const PANEL_JWT_SECRET = process.env.PANEL_JWT_SECRET || 'default-super-secret-for-dev-only';
@@ -76,7 +77,10 @@ const TOKEN_EXPIRATION_MS = 5 * 60 * 1000; // 5 minutes
 /**
  * Generates a single-use authentication token for a user and guild.
  */
-export function generateAuthToken(userId: string, guildId: string): string {
+export function generateAuthToken(userId: string, guildId: string): { token: string; error: string | null } {
+    if (isUserBannedFromPanel(guildId, userId)) {
+        return { token: '', error: 'User is banned from panel access.' };
+    }
     const token = randomBytes(32).toString('hex');
     activeTokens.set(token, {
         userId,
@@ -84,7 +88,7 @@ export function generateAuthToken(userId: string, guildId: string): string {
         expires: Date.now() + TOKEN_EXPIRATION_MS,
     });
     console.log(`[Auth] Generated token for user ${userId} on guild ${guildId}`);
-    return token;
+    return { token, error: null };
 }
 
 /**
@@ -105,6 +109,11 @@ export function verifyAndConsumeAuthToken(token: string): { guildId: string; use
     if (Date.now() > tokenData.expires) {
         console.warn(`[Auth] Verification failed: Token expired for user ${tokenData.userId}.`);
         return null;
+    }
+
+    if (isUserBannedFromPanel(tokenData.guildId, tokenData.userId)) {
+        console.warn(`[Auth] Verification failed: User ${tokenData.userId} is banned from panel.`);
+        return null; // Explicitly fail if user is banned
     }
     
     console.log(`[Auth] Successfully verified token for user ${tokenData.userId} on guild ${tokenData.guildId}.`);
@@ -165,5 +174,11 @@ export function verifyPanelToken(token: string): { userId: string; guildId: stri
     }
 
     const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString());
+
+    if (isUserBannedFromPanel(payload.guildId, payload.userId)) {
+        console.warn(`[Auth] Panel token verification failed: User ${payload.userId} is banned.`);
+        return null;
+    }
+
     return { userId: payload.userId, guildId: payload.guildId };
 }

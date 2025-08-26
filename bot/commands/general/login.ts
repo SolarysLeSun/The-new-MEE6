@@ -19,7 +19,12 @@ const LoginCommand: Command = {
         const guild = interaction.guild;
 
         try {
-            const token = generateAuthToken(user.id, guild.id);
+            const { token, error } = generateAuthToken(user.id, guild.id);
+
+            if (error) {
+                await interaction.reply({ content: 'Vous n\'êtes pas autorisé à accéder au panel de ce serveur.', flags: MessageFlags.Ephemeral });
+                return;
+            }
             
             const panelUrl = process.env.PANEL_BASE_URL || 'http://localhost:9002';
             const loginUrl = `${panelUrl}/auth/discord?token=${token}`;
