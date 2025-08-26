@@ -45,6 +45,7 @@ const LevelCommand: Command = {
             cardUrl.searchParams.append('xp', levelInfo.xp.toString());
             cardUrl.searchParams.append('requiredXp', levelInfo.requiredXp.toString());
             cardUrl.searchParams.append('rank', rank.toString());
+            
             if (config.level_card_background_url) {
                  cardUrl.searchParams.append('backgroundUrl', config.level_card_background_url);
             }
@@ -54,21 +55,16 @@ const LevelCommand: Command = {
             if (config.level_card_text_color) {
                 cardUrl.searchParams.append('textColor', config.level_card_text_color);
             }
-
+            
+            // It's better to just send the URL directly in an embed's image field.
+            // Discord will proxy and cache it, which is much faster than fetching it ourselves.
             const embed = new EmbedBuilder()
                 .setColor(config.level_card_bar_color ? parseInt(config.level_card_bar_color.replace('#', ''), 16) : 0x3498DB)
                 .setAuthor({ name: `Statistiques de ${member.displayName}`, iconURL: targetUser.displayAvatarURL() || undefined })
-                .setImage(`attachment://level-card.png`);
-
-            // We need to fetch the image from our card URL and send it as an attachment.
-            // This is a workaround for Discord's caching behavior with dynamic images.
-            const response = await fetch(cardUrl.toString());
-            if (!response.ok) throw new Error('Failed to fetch level card image.');
-            const imageBuffer = await response.arrayBuffer();
-
-            const attachment = new AttachmentBuilder(Buffer.from(imageBuffer), { name: 'level-card.png' });
-
-            await interaction.editReply({ embeds: [embed], files: [attachment] });
+                .setImage(cardUrl.toString())
+                .setTimestamp();
+            
+            await interaction.editReply({ embeds: [embed] });
 
         } catch (error) {
             console.error('[LevelCommand] Error displaying level card:', error);
