@@ -1,7 +1,9 @@
 
+
 import { Events, MessageReaction, User } from 'discord.js';
 import { getServerConfig, updateUserXP } from '@/lib/db';
 import { Collection } from 'discord.js';
+import { handleLevelUp } from './levelUp';
 
 const userCooldowns = new Collection<string, number>();
 
@@ -29,5 +31,9 @@ export async function execute(reaction: MessageReaction, user: User) {
 
     userCooldowns.set(cooldownKey, now + cooldownTime);
 
-    updateUserXP(user.id, reaction.message.guild.id, config.xp_per_reaction);
+    const { leveledUp, newLevel } = updateUserXP(user.id, reaction.message.guild.id, config.xp_per_reaction);
+
+    if(leveledUp) {
+        await handleLevelUp(user, reaction.message.guild, newLevel);
+    }
 }

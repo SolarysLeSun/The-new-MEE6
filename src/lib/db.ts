@@ -1,4 +1,5 @@
 
+
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -862,11 +863,6 @@ export function unlockChannel(channelId: string): string | null {
 }
 
 // --- Leveling System ---
-let clientInstance: Client | null = null;
-export function setClientInstance(client: Client) {
-    clientInstance = client;
-}
-
 const calculateRequiredXp = (level: number) => 5 * (level ** 2) + 50 * level + 100;
 
 export function getUserLevel(userId: string, guildId: string): UserLevel {
@@ -883,22 +879,23 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
     };
 }
 
-export const updateUserXP = db.transaction((userId: string, guildId: string, xpToAdd: number) => {
+export function updateUserXP(userId: string, guildId: string, xpToAdd: number): { leveledUp: boolean, newLevel: number } {
     const stmt = db.prepare(`
         INSERT INTO user_levels (user_id, guild_id, xp, level)
         VALUES (?, ?, ?, 0)
         ON CONFLICT(user_id, guild_id) DO UPDATE SET
-        xp = xp + excluded.xp;
+        xp = xp + excluded.xp RETURNING xp, level;
     `);
-    stmt.run(userId, guildId, xpToAdd);
+    
+    const { xp: newXp, level: currentLevel } = stmt.get(userId, guildId, xpToAdd) as { xp: number, level: number };
 
     // Check for level up
-    const { xp, level } = getUserLevel(userId, guildId);
-    let requiredXp = calculateRequiredXp(level);
-    
-    if (xp >= requiredXp) {
-        let newLevel = level;
-        while (xp >= requiredXp) {
+    let requiredXp = calculateRequiredXp(currentLevel);
+    let leveledUp = false;
+    let newLevel = currentLevel;
+
+    if (newXp >= requiredXp) {
+        while (newXp >= requiredXp) {
             newLevel++;
             requiredXp = calculateRequiredXp(newLevel);
         }
@@ -907,17 +904,11 @@ export const updateUserXP = db.transaction((userId: string, guildId: string, xpT
         updateLevelStmt.run(newLevel, userId, guildId);
         
         console.log(`[Leveling] ${userId} has leveled up to level ${newLevel} in guild ${guildId}!`);
-        if (clientInstance) {
-            Promise.all([
-                clientInstance.users.fetch(userId),
-                clientInstance.guilds.fetch(guildId)
-            ]).then(([user, guild]) => {
-                handleLevelUp(user, guild, newLevel);
-            }).catch(console.error);
-        }
+        leveledUp = true;
     }
-});
 
+    return { leveledUp, newLevel };
+}
 
 export function getUserRank(userId: string, guildId: string): number {
     const stmt = db.prepare(`

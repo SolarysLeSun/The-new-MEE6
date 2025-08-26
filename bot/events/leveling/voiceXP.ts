@@ -1,6 +1,8 @@
 
+
 import { Client } from 'discord.js';
 import { getServerConfig, updateUserXP } from '@/lib/db';
+import { handleLevelUp } from './levelUp';
 
 const INTERVAL = 60 * 1000; // 1 minute
 
@@ -37,7 +39,10 @@ export function startVoiceXPInterval(client: Client) {
                     });
                     xpToGive *= highestRoleMultiplier;
 
-                    updateUserXP(vs.member.id, guild.id, Math.round(xpToGive));
+                    const { leveledUp, newLevel } = updateUserXP(vs.member.id, guild.id, Math.round(xpToGive));
+                    if(leveledUp) {
+                        await handleLevelUp(vs.member.user, guild, newLevel);
+                    }
                 }
             }
         }
