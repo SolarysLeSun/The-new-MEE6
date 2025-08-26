@@ -41,7 +41,7 @@ export function startVoiceXPInterval(client: Client) {
 
                     const { leveledUp, newLevel } = updateUserXP(vs.member.id, guild.id, Math.round(xpToGive));
                     
-                    if(leveledUp && newLevel) {
+                    if(leveledUp && newLevel > 0) {
                         await handleLevelUp(vs.member.user, guild, newLevel);
                     }
                 }

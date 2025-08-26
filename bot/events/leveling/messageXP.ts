@@ -47,7 +47,7 @@ export async function execute(message: Message) {
 
     const { leveledUp, newLevel } = updateUserXP(message.author.id, message.guild.id, Math.round(xpToGive));
 
-    if(leveledUp && newLevel) {
+    if(leveledUp && newLevel > 0) {
         await handleLevelUp(message.author, message.guild, newLevel);
     }
 }
