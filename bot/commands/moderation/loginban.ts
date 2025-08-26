@@ -1,4 +1,5 @@
 
+
 import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, GuildMember } from 'discord.js';
 import type { Command } from '@/types';
 import { banUserFromPanel, isUserBannedFromPanel } from '@/lib/db';
@@ -6,11 +7,11 @@ import { banUserFromPanel, isUserBannedFromPanel } from '@/lib/db';
 const LoginbanCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('loginban')
-        .setDescription('Interdit à un utilisateur d\'accéder au panel de configuration.')
+        .setDescription("Interdit à un utilisateur d'accéder au panel de configuration.")
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addUserOption(option =>
             option.setName('utilisateur')
-                .setDescription('L\'utilisateur à bannir du panel.')
+                .setDescription("L'utilisateur à bannir du panel.")
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('raison')
@@ -41,7 +42,7 @@ const LoginbanCommand: Command = {
         if (targetMember) {
              const moderatorMember = interaction.member as GuildMember;
              if(targetMember.roles.highest.position >= moderatorMember.roles.highest.position) {
-                 await interaction.reply({ content: 'Vous ne pouvez pas interdire l'accès au panel à un membre de rang égal ou supérieur.', flags: MessageFlags.Ephemeral });
+                 await interaction.reply({ content: "Vous ne pouvez pas interdire l'accès au panel à un membre de rang égal ou supérieur.", flags: MessageFlags.Ephemeral });
                  return;
              }
         }
@@ -69,7 +70,7 @@ const LoginbanCommand: Command = {
 
         } catch (error) {
             console.error('[Loginban] Error:', error);
-            await interaction.reply({ content: 'Une erreur est survenue lors de l\'interdiction d\'accès au panel.', flags: MessageFlags.Ephemeral });
+            await interaction.reply({ content: "Une erreur est survenue lors de l'interdiction d'accès au panel.", flags: MessageFlags.Ephemeral });
         }
     },
 };
