@@ -14,6 +14,7 @@ import { BookCopy, Bot, Brush, Code, Eye, Hash, PlusCircle, Save, Sparkles, Tras
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const componentTools = [
   { id: 'switch', name: 'Interrupteur', icon: Switch, defaultProps: { label: 'Nouvel Interrupteur', description: 'Active ou désactive une option.' } },
@@ -170,7 +171,7 @@ export default function ModuleEditorPage() {
              <Card>
                 <CardHeader>
                     <CardTitle>Boîte à Outils</CardTitle>
-                    <CardDescription>Ajoutez des composants à votre panel.</CardDescription>
+                    <CardDescription>Ajoutez des composants au panel de votre module.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-2">
                     {componentTools.map(tool => (
@@ -181,45 +182,67 @@ export default function ModuleEditorPage() {
                     ))}
                 </CardContent>
             </Card>
-
-             <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Sparkles/>Assistant IA</CardTitle>
-                    <CardDescription>Décrivez ce que le panel de votre module doit faire.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <Textarea placeholder="Ex: 'Je veux un interrupteur pour activer le module, et un sélecteur de salon pour définir où envoyer les alertes.'" />
-                    <Button className="w-full" disabled>Générer l'interface (Bientôt)</Button>
-                </CardContent>
-            </Card>
         </div>
         
         {/* --- Colonne de Droite: Prévisualisation & Actions --- */}
         <div className="lg:col-span-2 space-y-6">
-            <Card>
+             <Card>
                 <CardHeader>
                     <div className="flex justify-between items-center">
-                         <CardTitle className="flex items-center gap-2"><Eye/>Prévisualisation du Panel</CardTitle>
+                         <CardTitle className="flex items-center gap-2"><Eye/>Éditeur</CardTitle>
                          <Button disabled><Save className="mr-2"/>Sauvegarder le Module</Button>
                     </div>
-                    <CardDescription>Voici à quoi ressemblera la page de configuration de votre module.</CardDescription>
+                    <CardDescription>Construisez l'interface et la logique de votre module ici.</CardDescription>
                 </CardHeader>
-                <CardContent className="min-h-96 p-6 border-dashed border-2 rounded-lg space-y-4">
-                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                        <SortableContext items={components.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                            {components.map(component => (
-                                <SortableComponent key={component.id} id={component.id} component={component} onRemove={removeComponent}>
-                                    {renderComponentPreview(component)}
-                                </SortableComponent>
-                            ))}
-                        </SortableContext>
-                    </DndContext>
-                     {components.length === 0 && (
-                        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-                            <Brush className="w-12 h-12 mb-4"/>
-                            <p>Commencez à construire votre interface en ajoutant des composants depuis la boîte à outils.</p>
-                        </div>
-                    )}
+                <CardContent>
+                    <Tabs defaultValue="panel">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="panel">Interface du Panel</TabsTrigger>
+                            <TabsTrigger value="bot">Logique du Bot</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="panel" className="min-h-[500px] p-6 border-dashed border-2 rounded-b-lg border-t-0 space-y-4">
+                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                <SortableContext items={components.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                                    {components.map(component => (
+                                        <SortableComponent key={component.id} id={component.id} component={component} onRemove={removeComponent}>
+                                            {renderComponentPreview(component)}
+                                        </SortableComponent>
+                                    ))}
+                                </SortableContext>
+                            </DndContext>
+                            {components.length === 0 && (
+                                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-16">
+                                    <Brush className="w-12 h-12 mb-4"/>
+                                    <p>Commencez à construire votre interface en ajoutant des composants depuis la boîte à outils.</p>
+                                </div>
+                            )}
+                        </TabsContent>
+                        <TabsContent value="bot" className="min-h-[500px] p-6 border-dashed border-2 rounded-b-lg border-t-0 space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="ai-prompt" className="text-lg font-semibold">Assistant de code IA</Label>
+                                <p className="text-sm text-muted-foreground">Décrivez la fonctionnalité de votre module (commande, événement, etc.). L'IA générera le code nécessaire. Soyez aussi descriptif que possible.</p>
+                                <Textarea 
+                                    id="ai-prompt" 
+                                    rows={5}
+                                    placeholder="Ex: 'Crée une commande /profil qui montre l'avatar, le nom, l'ID et la date d'arrivée de l'utilisateur mentionné dans un embed. La commande ne doit être utilisable que par les modérateurs, en utilisant la variable de configuration 'moderator_role_id' que j'ai créée dans l'interface.'" 
+                                />
+                                <Button className="w-full" disabled>
+                                    <Sparkles className="mr-2"/>
+                                    Générer le code (Bientôt)
+                                </Button>
+                            </div>
+                            <Separator/>
+                             <div className="space-y-2">
+                                <Label className="text-lg font-semibold">Code Généré</Label>
+                                <Textarea 
+                                    readOnly 
+                                    className="font-mono text-xs bg-muted/50" 
+                                    rows={15} 
+                                    placeholder="// Le code de votre commande ou événement apparaîtra ici..."
+                                />
+                             </div>
+                        </TabsContent>
+                    </Tabs>
                 </CardContent>
             </Card>
         </div>
@@ -227,4 +250,3 @@ export default function ModuleEditorPage() {
     </div>
   );
 }
-
