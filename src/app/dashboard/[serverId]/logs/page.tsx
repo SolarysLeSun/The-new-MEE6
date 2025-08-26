@@ -70,16 +70,26 @@ export default function LogsPage() {
     const [channels, setChannels] = useState<DiscordChannel[]>([]);
     const [roles, setRoles] = useState<DiscordRole[]>([]);
     const [loading, setLoading] = useState(true);
+    const [authHeader, setAuthHeader] = useState('');
 
     useEffect(() => {
-        if (!serverId) return;
+        const token = localStorage.getItem(`panel_token_${serverId}`);
+        if (token) {
+            setAuthHeader(`Bearer ${token}`);
+        }
+    }, [serverId]);
+
+
+    useEffect(() => {
+        if (!serverId || !authHeader) return;
 
         const fetchData = async () => {
             setLoading(true);
             try {
+                const headers = { 'Authorization': authHeader };
                 const [configRes, serverDetailsRes] = await Promise.all([
-                    fetch(`${API_URL}/get-config/${serverId}/logs`),
-                    fetch(`${API_URL}/get-server-details/${serverId}`)
+                    fetch(`${API_URL}/get-config/${serverId}/logs`, { headers }),
+                    fetch(`${API_URL}/get-server-details/${serverId}`, { headers })
                 ]);
 
                 if (!configRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch data');
@@ -103,17 +113,17 @@ export default function LogsPage() {
         };
 
         fetchData();
-    }, [serverId, toast]);
+    }, [serverId, toast, authHeader]);
 
     const saveConfig = async (newConfig: LogsConfig) => {
+        if (!authHeader) return;
         setConfig(newConfig); // Optimistic update
         try {
-            const panelToken = localStorage.getItem(`panel_token_${serverId}`);
-            const response = await fetch(`${API_URL}/update-config/${serverId}/logs`, {
+            await fetch(`${API_URL}/update-config/${serverId}/logs`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${panelToken}`
+                    'Authorization': authHeader,
                 },
                 body: JSON.stringify(newConfig),
             });

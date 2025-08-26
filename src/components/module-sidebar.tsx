@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -56,15 +57,21 @@ const navCategories = [
             { href: 'commandes-generales', label: 'Commandes Générales', icon: Wrench },
             { href: 'identite', label: 'Identité du Bot', icon: UserSquare },
             { href: 'annonces', label: 'Annonces', icon: Megaphone },
-            { href: 'assistant-communautaire', label: 'Assistant Communautaire', icon: MessageSquare, isPremium: true },
             { href: 'suggestions', label: 'Suggestions', icon: Lightbulb },
-            { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages },
+        ]
+    },
+    {
+        name: 'Automatisation',
+        items: [
+            { href: 'autoroles', label: 'Autoroles', icon: BadgePlus },
+            { href: 'salons-prives', label: 'Salons Privés', icon: Ticket },
         ]
     },
     {
         name: 'Engagement',
         items: [
             { href: 'niveaux', label: 'Niveaux & XP', icon: Award },
+            { href: 'evenements', label: 'Événements', icon: Calendar, isPremium: true },
         ]
     },
     {
@@ -80,46 +87,35 @@ const navCategories = [
         name: 'Sécurité',
         items: [
             { href: 'anti-bot', label: 'Anti-Bot', icon: ShieldCheck },
-            { href: 'filtre-image-ia', label: 'Filtre d\'Image IA', icon: ScanSearch, isPremium: true },
-            { href: 'anti-raid', label: 'Anti-Raid & Liens', icon: Fingerprint, isPremium: true },
+            { href: 'securite-avancee', label: 'Sécurité Avancée', icon: ShieldAlert },
             { href: 'captcha', label: 'Captcha', icon: Fingerprint, isPremium: true },
             { href: 'backup', label: 'Backup', icon: DatabaseBackup },
-            { href: 'securite-avancee', label: 'Sécurité Avancée', icon: ShieldAlert },
-        ]
-    },
-    {
-        name: 'Automatisation',
-        items: [
-            { href: 'salons-prives', label: 'Salons Privés', icon: Ticket },
-            { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, isPremium: true },
-            { href: 'autoroles', label: 'Autoroles', icon: BadgePlus },
-            { href: 'accueil-integration', label: 'Accueil & Intégration', icon: UserPlus },
         ]
     },
     {
         name: 'Vocaux',
         items: [
              { href: 'controle-manuel', label: 'Contrôle manuel', icon: Voicemail },
-             { href: 'vocaux-ia', label: 'IA Vocaux', icon: Mic, isPremium: true },
              { href: 'webcam-control', label: 'Contrôle Vidéo', icon: Camera },
+             { href: 'vocaux-ia', label: 'IA Vocaux', icon: Mic, isPremium: true },
         ]
     },
      {
         name: 'Outils IA',
         items: [
-            { href: 'constructeur-serveur-ia', label: 'Server Builder IA', icon: ToyBrick, isPremium: true },
-            { href: 'assistant-moderation-ia', label: 'Assistant Modération IA', icon: Sparkles, isPremium: true },
-            { href: 'createur-contenu-ia', label: 'Créateur de Contenu IA', icon: Palette, isPremium: true },
+            { href: 'assistant-moderation-ia', label: 'Assistant Modération', icon: Sparkles, isPremium: true },
+            { href: 'filtre-image-ia', label: 'Filtre d\'Image', icon: ScanSearch, isPremium: true },
             { href: 'agent-conversationnel', label: 'Agent Conversationnel', icon: MessageCircleQuestion, isPremium: true },
             { href: 'personnages-ia', label: 'Personnages IA', icon: Users, isPremium: true },
-            { href: 'commandes-testeurs', label: 'Commandes Testeurs', icon: TestTubeDiagonal, isPremium: true },
+            { href: 'createur-contenu-ia', label: 'Créateur de Contenu', icon: Palette, isPremium: true },
+            { href: 'constructeur-serveur-ia', label: 'Server Builder', icon: ToyBrick, isPremium: true },
+            { href: 'commandes-testeurs', label: 'Commandes Spéciales', icon: TestTubeDiagonal },
         ]
     },
-    {
+     {
         name: 'Modules',
         items: [
             { href: 'community-modules', label: 'Modules Communautaires', icon: BookCopy },
-            { href: 'annonce-bienvenue', label: 'Annonces Bienvenue', icon: Megaphone },
         ]
     }
 ];

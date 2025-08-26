@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -57,9 +58,11 @@ function ModuleCard({ module, isInstalled, onAdd, onManage }: { module: any, isI
             </CardContent>
             <CardContent>
                 {isInstalled ? (
-                     <Button variant="outline" className="w-full" onClick={() => onManage(module.id)}>
-                        <Settings className="mr-2 h-4 w-4" />
-                        Gérer
+                     <Button variant="outline" className="w-full" asChild>
+                        <Link href={`/dashboard/${useParams().serverId}/${module.id}`}>
+                            <Settings className="mr-2 h-4 w-4" />
+                            Gérer
+                        </Link>
                     </Button>
                 ) : (
                     <Button className="w-full" onClick={handleAdd} disabled={loading}>
@@ -149,20 +152,6 @@ export default function CommunityModulesPage() {
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input placeholder="Rechercher des modules..." className="pl-10" />
-                </div>
-                <div className="flex gap-2">
-                     <Button variant="outline" disabled>
-                        Trier par...
-                    </Button>
-                    <Button variant="outline" disabled>
-                       Certifiés seulement
-                    </Button>
-                     <Link href={`/dashboard/${serverId}/module-editor`}>
-                        <Button>
-                            <PlusCircle className="mr-2" />
-                            Créer un module
-                        </Button>
-                     </Link>
                 </div>
             </div>
 

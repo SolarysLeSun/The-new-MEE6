@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -80,20 +81,29 @@ export default function AnnouncementsPage() {
     const params = useParams();
     const serverId = params.serverId as string;
     const { toast } = useToast();
+    const [authHeader, setAuthHeader] = useState('');
 
     const [config, setConfig] = useState<AnnouncementsConfig | null>(null);
     const [channels, setChannels] = useState<DiscordChannel[]>([]);
     const [roles, setRoles] = useState<DiscordRole[]>([]);
     const [loading, setLoading] = useState(true);
 
+     useEffect(() => {
+        const token = localStorage.getItem(`panel_token_${serverId}`);
+        if(token) {
+            setAuthHeader(`Bearer ${token}`);
+        }
+    }, [serverId]);
+
     useEffect(() => {
-        if (!serverId) return;
+        if (!serverId || !authHeader) return;
         const fetchData = async () => {
             setLoading(true);
             try {
+                const headers = { 'Authorization': authHeader };
                 const [configRes, serverDetailsRes] = await Promise.all([
-                    fetch(`${API_URL}/get-config/${serverId}/announcements`),
-                    fetch(`${API_URL}/get-server-details/${serverId}`)
+                    fetch(`${API_URL}/get-config/${serverId}/announcements`, { headers }),
+                    fetch(`${API_URL}/get-server-details/${serverId}`, { headers })
                 ]);
                 if (!configRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch data');
 
@@ -111,14 +121,18 @@ export default function AnnouncementsPage() {
             }
         };
         fetchData();
-    }, [serverId, toast]);
+    }, [serverId, toast, authHeader]);
     
     const saveConfig = async (newConfig: AnnouncementsConfig) => {
+        if (!authHeader) return;
         setConfig(newConfig); // Optimistic update
         try {
             await fetch(`${API_URL}/update-config/${serverId}/announcements`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': authHeader
+                },
                 body: JSON.stringify(newConfig),
             });
         } catch (error) {

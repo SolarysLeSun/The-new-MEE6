@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -40,20 +41,29 @@ export default function GeneralCommandsPage() {
     const params = useParams();
     const serverId = params.serverId as string;
     const { toast } = useToast();
+    const [authHeader, setAuthHeader] = useState('');
 
     const [config, setConfig] = useState<GeneralCommandsConfig | null>(null);
     const [serverData, setServerData] = useState<ServerData | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!serverId) return;
+        const token = localStorage.getItem(`panel_token_${serverId}`);
+        if(token) {
+            setAuthHeader(`Bearer ${token}`);
+        }
+    }, [serverId]);
+
+    useEffect(() => {
+        if (!serverId || !authHeader) return;
 
         const fetchData = async () => {
             setLoading(true);
             try {
+                const headers = { 'Authorization': authHeader };
                 const [configRes, serverDetailsRes] = await Promise.all([
-                    fetch(`${API_URL}/get-config/${serverId}/general-commands`),
-                    fetch(`${API_URL}/get-server-details/${serverId}`)
+                    fetch(`${API_URL}/get-config/${serverId}/general-commands`, { headers }),
+                    fetch(`${API_URL}/get-server-details/${serverId}`, { headers })
                 ]);
 
                 if (!configRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch data');
@@ -76,17 +86,20 @@ export default function GeneralCommandsPage() {
         };
 
         fetchData();
-    }, [serverId, toast]);
+    }, [serverId, toast, authHeader]);
 
     const saveConfig = async (newConfig: GeneralCommandsConfig) => {
+        if(!authHeader) return;
         setConfig(newConfig); // Optimistic update
         try {
-            const response = await fetch(`${API_URL}/update-config/${serverId}/general-commands`, {
+            await fetch(`${API_URL}/update-config/${serverId}/general-commands`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': authHeader
+                },
                 body: JSON.stringify(newConfig),
             });
-            if (!response.ok) throw new Error('Failed to save config');
         } catch (error) {
             console.error('Failed to update config', error);
             toast({
@@ -233,5 +246,3 @@ function PageSkeleton() {
         </div>
     );
 }
-
-    

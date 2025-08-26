@@ -53,6 +53,7 @@ export type Module =
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale
+  category?: 'community' | 'hidden';
 }
 
 export type DefaultConfigs = {

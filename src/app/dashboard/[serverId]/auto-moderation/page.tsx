@@ -347,5 +347,3 @@ function KeywordGenerator({ onGenerate, authHeader }: { onGenerate: (keywords: s
 if (typeof window !== 'undefined') {
     (window as any).uuidv4 = uuidv4;
 }
-
-    

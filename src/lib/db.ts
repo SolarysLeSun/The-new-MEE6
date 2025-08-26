@@ -370,11 +370,13 @@ const defaultConfigs: DefaultConfigs = {
         enabled: false,
         welcome_channel_id: null,
         welcome_message: 'Bienvenue sur le serveur, {user} ! 🎉',
+        category: 'hidden', // This module is now managed by "Accueil & Intégration"
     },
     'annonce-bienvenue': {
         enabled: false,
         welcome_channel_id: null,
         welcome_message: "Bienvenue sur le serveur, {user} ! 🎉",
+        category: 'community',
     },
     'tester-commands': {
         enabled: true,
@@ -903,12 +905,12 @@ export function updateUserXP(userId: string, guildId: string, xpToAdd: number): 
         const updateLevelStmt = db.prepare('UPDATE user_levels SET level = ? WHERE user_id = ? AND guild_id = ?');
         updateLevelStmt.run(newLevel, userId, guildId);
         
-        console.log(`[Leveling] ${userId} has leveled up to level ${newLevel} in guild ${guildId}!`);
         leveledUp = true;
     }
 
     return { leveledUp, newLevel };
 }
+
 
 export function getUserRank(userId: string, guildId: string): number {
     const stmt = db.prepare(`
