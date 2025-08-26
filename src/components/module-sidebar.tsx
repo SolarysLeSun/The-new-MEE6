@@ -34,15 +34,17 @@ import {
   X,
   UserPlus,
   Megaphone,
+  Award,
+  BookCopy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from './ui/badge';
+import { Badge } from '@/components/ui/badge';
 import { useEffect, useState } from 'react';
-import { Skeleton } from './ui/skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useServerInfo } from '@/hooks/use-server-info';
-import GradientText from './ui/gradient-text';
+import GradientText from '@/components/ui/gradient-text';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -57,6 +59,12 @@ const navCategories = [
             { href: 'assistant-communautaire', label: 'Assistant Communautaire', icon: MessageSquare, isPremium: true },
             { href: 'suggestions', label: 'Suggestions', icon: Lightbulb },
             { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages },
+        ]
+    },
+    {
+        name: 'Engagement',
+        items: [
+            { href: 'niveaux', label: 'Niveaux & XP', icon: Award },
         ]
     },
     {
@@ -105,6 +113,12 @@ const navCategories = [
             { href: 'agent-conversationnel', label: 'Agent Conversationnel', icon: MessageCircleQuestion, isPremium: true },
             { href: 'personnages-ia', label: 'Personnages IA', icon: Users, isPremium: true },
             { href: 'commandes-testeurs', label: 'Commandes Testeurs', icon: TestTubeDiagonal, isPremium: true },
+        ]
+    },
+    {
+        name: 'Modules',
+        items: [
+            { href: 'community-modules', label: 'Modules Communautaires', icon: BookCopy },
         ]
     }
 ];

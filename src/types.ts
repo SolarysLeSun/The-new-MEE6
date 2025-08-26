@@ -48,7 +48,8 @@ export type Module =
     | 'moveall'
     | 'manual-voice-control'
     | 'announcements'
-    | 'leveling';
+    | 'leveling'
+    | 'annonce-bienvenue';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale

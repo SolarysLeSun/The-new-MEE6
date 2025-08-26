@@ -2,7 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, TextChannel } from 'discord.js';
-import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem } from '@/lib/db';
+import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, getAllModuleConfigsForGuild } from '@/lib/db';
 import { verifyAndConsumeAuthToken, getBotAccessToken, generateAuthTokenForPanel, verifyPanelToken } from './auth';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
@@ -174,6 +174,17 @@ export function startApi(client: Client) {
             res.json(config);
         } catch (error) {
             console.error(`[Bot API] Erreur lors de la récupération de la config pour ${guildId}:`, error);
+            res.status(500).json({ error: 'Erreur interne du serveur.' });
+        }
+    });
+
+    app.get('/api/get-all-module-configs/:guildId', verifyPanelRequest, async (req, res) => {
+        const { guildId } = req.params;
+        try {
+            const configs = await getAllModuleConfigsForGuild(guildId);
+            res.json(configs);
+        } catch (error) {
+            console.error(`[Bot API] Erreur lors de la récupération de toutes les configs pour ${guildId}:`, error);
             res.status(500).json({ error: 'Erreur interne du serveur.' });
         }
     });
@@ -456,5 +467,3 @@ export function startApi(client: Client) {
         console.log(`[Bot API] Le serveur API interne écoute sur le port ${API_PORT}`);
     });
 }
-
-    

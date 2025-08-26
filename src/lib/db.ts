@@ -1,5 +1,4 @@
 
-
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -371,7 +370,7 @@ const defaultConfigs: DefaultConfigs = {
         welcome_channel_id: null,
         welcome_message: 'Bienvenue sur le serveur, {user} ! 🎉',
     },
-     'annonce-bienvenue': {
+    'annonce-bienvenue': {
         enabled: false,
         welcome_channel_id: null,
         welcome_message: "Bienvenue sur le serveur, {user} ! 🎉",
@@ -546,6 +545,20 @@ export function getServerConfig(guildId: string, module: Module): ModuleConfig |
     } catch (error) {
         console.error(`[Database] Erreur lors de la récupération de la config pour ${guildId} (module: ${module}):`, error);
         return defaultConfigs[module] || null;
+    }
+}
+
+export function getAllModuleConfigsForGuild(guildId: string): { module: Module, config: ModuleConfig }[] {
+    try {
+        const stmt = db.prepare('SELECT module, config FROM server_configs WHERE guild_id = ?');
+        const results = stmt.all(guildId) as { module: Module, config: string }[];
+        return results.map(row => ({
+            module: row.module,
+            config: JSON.parse(row.config)
+        }));
+    } catch (error) {
+        console.error(`[Database] Error fetching all module configs for guild ${guildId}:`, error);
+        return [];
     }
 }
 
