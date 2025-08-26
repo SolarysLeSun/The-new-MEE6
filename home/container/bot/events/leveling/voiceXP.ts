@@ -1,6 +1,7 @@
 
 import { Client } from 'discord.js';
 import { getServerConfig, updateUserXP } from '@/lib/db';
+import { handleLevelUp } from '@/../bot/events/leveling/levelUp';
 
 const INTERVAL = 60 * 1000; // 1 minute
 
@@ -23,21 +24,25 @@ export function startVoiceXPInterval(client: Client) {
                     let xpToGive = config.xp_per_minute_in_voice;
 
                     // Apply channel/role boosts
-                    const channelBoost = config.xp_boost_channels?.find(c => c.channel_id === vs.channelId);
+                    const channelBoost = config.xp_boost_channels?.find((c:any) => c.channel_id === vs.channelId);
                     if (channelBoost) {
                         xpToGive *= channelBoost.multiplier;
                     }
                     
                     let highestRoleMultiplier = 1;
                     vs.member.roles.cache.forEach(role => {
-                         const roleBoost = config.xp_boost_roles?.find(b => b.role_id === role.id);
+                         const roleBoost = config.xp_boost_roles?.find((b:any) => b.role_id === role.id);
                          if (roleBoost && roleBoost.multiplier > highestRoleMultiplier) {
                              highestRoleMultiplier = roleBoost.multiplier;
                          }
                     });
                     xpToGive *= highestRoleMultiplier;
 
-                    updateUserXP(vs.member.id, guild.id, Math.round(xpToGive));
+                    const { leveledUp, newLevel } = updateUserXP(vs.member.id, guild.id, Math.round(xpToGive));
+                    
+                    if(leveledUp && newLevel > 0) {
+                        await handleLevelUp(vs.member.user, guild, newLevel);
+                    }
                 }
             }
         }
