@@ -76,13 +76,13 @@ Le projet nécessite de lancer deux processus en parallèle : le **bot** et le *
   ```bash
   npm run bot:dev
   ```
-  Le bot se connectera à Discord et son API interne démarrera sur le port 3001.
+  Le bot se connectera à Discord et son API interne démarrera sur le port 25873.
 
 - **Pour lancer le panel web** (l'interface de configuration) dans un autre terminal :
   ```bash
-  npm run dev
+  npm run build
   ```
-  Le panel sera accessible à l'adresse `http://localhost:9002`.
+  Le panel sera accessible à l'adresse `http://localhost:25872` (run build = next build && next start).
 
 ---
 
