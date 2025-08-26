@@ -18,7 +18,6 @@ import {
   Ticket,
   Calendar,
   ToyBrick,
-  GraduationCap,
   Wrench,
   MessageSquare,
   Voicemail,
@@ -65,6 +64,7 @@ const navCategories = [
         name: 'Engagement',
         items: [
             { href: 'niveaux', label: 'Niveaux & XP', icon: Award },
+            { href: 'welcome-message', label: 'Message de Bienvenue', icon: UserPlus },
         ]
     },
     {
@@ -93,7 +93,6 @@ const navCategories = [
             { href: 'salons-prives', label: 'Salons Privés', icon: Ticket },
             { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, isPremium: true },
             { href: 'autoroles', label: 'Autoroles', icon: BadgePlus },
-            { href: 'accueil-integration', label: 'Accueil & Intégration', icon: UserPlus },
         ]
     },
     {
@@ -112,16 +111,15 @@ const navCategories = [
             { href: 'createur-contenu-ia', label: 'Créateur de Contenu IA', icon: Palette, isPremium: true },
             { href: 'agent-conversationnel', label: 'Agent Conversationnel', icon: MessageCircleQuestion, isPremium: true },
             { href: 'personnages-ia', label: 'Personnages IA', icon: Users, isPremium: true },
-            { href: 'commandes-testeurs', label: 'Commandes Testeurs', icon: TestTubeDiagonal, isPremium: true },
+            { href: 'commandes-testeurs', label: 'Commandes Spéciales', icon: TestTubeDiagonal },
         ]
     },
-    {
-        name: 'Modules',
-        items: [
-            { href: 'community-modules', label: 'Modules Communautaires', icon: BookCopy },
-        ]
-    }
 ];
+
+const communityNavItems = [
+    { href: 'community-modules', label: 'Gérer les Modules', icon: BookCopy, isBase: true },
+    { href: 'annonce-bienvenue', label: 'Annonces Bienvenue', icon: Megaphone, id: 'annonce-bienvenue' },
+]
 
 function SidebarHeaderSkeleton() {
     return (
@@ -210,6 +208,27 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
                 </div>
             </div>
         ))}
+         <div>
+            <h3 className="px-3 py-2 text-xs font-bold uppercase text-muted-foreground">Communauté</h3>
+            <div className="flex flex-col gap-1">
+                {communityNavItems.map((item) => {
+                  const fullPath = serverId ? `/dashboard/${serverId}/${item.href}` : '#';
+                  const isActive = pathname === fullPath;
+                  return (
+                    <Link key={item.label} href={fullPath} className={!serverId ? 'pointer-events-none' : ''}>
+                        <Button
+                            variant={isActive ? 'secondary' : 'ghost'}
+                            className={cn('w-full justify-start gap-3', { 'bg-secondary text-white': isActive, 'text-muted-foreground hover:text-white': !isActive})}
+                            disabled={!serverId}
+                        >
+                            <item.icon className={cn('h-5 w-5', { 'text-primary': isActive })} />
+                            <span>{item.label}</span>
+                        </Button>
+                    </Link>
+                  );
+                })}
+            </div>
+        </div>
       </nav>
       <div className="mt-auto pt-4 text-center">
           <a href="https://forgenet.fr" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-white transition-colors">

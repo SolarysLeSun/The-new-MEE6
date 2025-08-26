@@ -1,5 +1,4 @@
 
-
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -177,7 +176,7 @@ const createConfigTable = () => {
 };
 
 // --- Configurations par défaut pour les nouveaux serveurs ---
-const defaultConfigs: DefaultConfigs = {
+export const defaultConfigs: DefaultConfigs = {
     'moderation': { 
         enabled: true, 
         log_channel_id: null, 
@@ -191,8 +190,6 @@ const defaultConfigs: DefaultConfigs = {
             mute: null,
             warn: null,
             listwarns: null,
-            loginban: null,
-            loginunban: null,
         }
     },
     'general-commands': {
@@ -367,7 +364,7 @@ const defaultConfigs: DefaultConfigs = {
         }
     },
     'welcome-message': {
-        enabled: false,
+        enabled: true,
         welcome_channel_id: null,
         welcome_message: 'Bienvenue sur le serveur, {user} ! 🎉',
     },
@@ -375,6 +372,7 @@ const defaultConfigs: DefaultConfigs = {
         enabled: false,
         welcome_channel_id: null,
         welcome_message: "Bienvenue sur le serveur, {user} ! 🎉",
+        category: 'community',
     },
     'tester-commands': {
         enabled: true,
@@ -382,11 +380,6 @@ const defaultConfigs: DefaultConfigs = {
             mp: null,
             webhook: null,
             tester: null,
-            givepremium: null,
-            genpremium: null,
-            giverole: null,
-            disableia: null,
-            enableia: null,
         },
     },
     'conversational-agent': {
@@ -454,7 +447,6 @@ const defaultConfigs: DefaultConfigs = {
         bot_announcement_channel_id: null,
         command_permissions: {
             announce: null,
-            adminannounce: null,
         }
     },
     'leveling': {

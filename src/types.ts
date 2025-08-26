@@ -1,5 +1,4 @@
 
-
 import type {
   SlashCommandBuilder,
   CommandInteraction,
@@ -37,7 +36,6 @@ export type Module =
     | 'lock'
     | 'backup'
     | 'webcam'
-    | 'welcome-message'
     | 'tester-commands'
     | 'conversational-agent'
     | 'suggestions'
@@ -49,10 +47,12 @@ export type Module =
     | 'manual-voice-control'
     | 'announcements'
     | 'leveling'
+    | 'welcome-message'
     | 'annonce-bienvenue';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale
+  category?: 'community' | 'hidden';
 }
 
 export type DefaultConfigs = {
