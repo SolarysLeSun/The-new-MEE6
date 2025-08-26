@@ -119,6 +119,7 @@ const navCategories = [
         name: 'Modules',
         items: [
             { href: 'community-modules', label: 'Modules Communautaires', icon: BookCopy },
+            { href: 'annonce-bienvenue', label: 'Annonces Bienvenue', icon: Megaphone },
         ]
     }
 ];
