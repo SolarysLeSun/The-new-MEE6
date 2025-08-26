@@ -34,6 +34,7 @@ const knowledgeCreationPrompt = ai.definePrompt({
   name: 'knowledgeCreationPrompt',
   input: { schema: KnowledgeCreationInputSchema },
   output: { schema: z.object({ question: z.string(), answer: z.string() }) },
+  model: 'googleai/gemini-2.0-flash',
   prompt: `You are a data entry specialist. Your task is to take a user's question and an AI's answer, and format them into a concise and reusable knowledge base entry.
 
 - The 'question' field should capture the essence of the user's query. It can be a direct summary or a more general rephrasing.
