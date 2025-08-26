@@ -1,5 +1,4 @@
 
-
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -33,6 +32,18 @@ const upgradeSchema = () => {
         `);
         db.exec(`INSERT OR IGNORE INTO global_settings (key, value) VALUES ('ai_disabled', '0');`);
         console.log('[Database] La table "global_settings" est prête.');
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS panel_bans (
+                guild_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                banned_by_id TEXT NOT NULL,
+                reason TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (guild_id, user_id)
+            );
+        `);
+        console.log('[Database] La table "panel_bans" est prête.');
 
         db.exec(`
             CREATE TABLE IF NOT EXISTS locked_channels (
@@ -179,6 +190,8 @@ const defaultConfigs: DefaultConfigs = {
             mute: null,
             warn: null,
             listwarns: null,
+            loginban: null,
+            loginunban: null,
         }
     },
     'general-commands': {
@@ -352,15 +365,11 @@ const defaultConfigs: DefaultConfigs = {
             iaresetserv: null,
         }
     },
-    'welcome-message': {
-        enabled: false,
-        welcome_channel_id: null,
-        welcome_message: 'Bienvenue sur le serveur, {user} ! 🎉',
-    },
-     'annonce-bienvenue': {
+    'annonce-bienvenue': {
         enabled: false,
         welcome_channel_id: null,
         welcome_message: "Bienvenue sur le serveur, {user} ! 🎉",
+        category: 'community'
     },
     'tester-commands': {
         enabled: true,
@@ -532,6 +541,20 @@ export function getServerConfig(guildId: string, module: Module): ModuleConfig |
     } catch (error) {
         console.error(`[Database] Erreur lors de la récupération de la config pour ${guildId} (module: ${module}):`, error);
         return defaultConfigs[module] || null;
+    }
+}
+
+export function getAllModuleConfigsForGuild(guildId: string): { module: Module, config: ModuleConfig }[] {
+    try {
+        const stmt = db.prepare('SELECT module, config FROM server_configs WHERE guild_id = ?');
+        const results = stmt.all(guildId) as { module: Module, config: string }[];
+        return results.map(row => ({
+            module: row.module,
+            config: JSON.parse(row.config)
+        }));
+    } catch (error) {
+        console.error(`[Database] Error fetching all module configs for guild ${guildId}:`, error);
+        return [];
     }
 }
 
@@ -764,6 +787,25 @@ export function redeemPremiumKey(key: string, guildId: string): { success: boole
     return { success: true, message: 'Clé premium activée avec succès !' };
 }
 
+// --- Panel Ban System ---
+export function banUserFromPanel(guildId: string, userId: string, bannedById: string, reason: string): void {
+    const stmt = db.prepare(`
+        INSERT INTO panel_bans (guild_id, user_id, banned_by_id, reason) VALUES (?, ?, ?, ?)
+    `);
+    stmt.run(guildId, userId, bannedById, reason);
+}
+
+export function unbanUserFromPanel(guildId: string, userId: string): void {
+    const stmt = db.prepare('DELETE FROM panel_bans WHERE guild_id = ? AND user_id = ?');
+    stmt.run(guildId, userId);
+}
+
+export function isUserBannedFromPanel(guildId: string, userId: string): boolean {
+    const stmt = db.prepare('SELECT 1 FROM panel_bans WHERE guild_id = ? AND user_id = ?');
+    return !!stmt.get(guildId, userId);
+}
+
+
 // --- Sanction History ---
 
 export function recordSanction(sanction: Omit<SanctionHistoryEntry, 'id' | 'timestamp'>) {
@@ -816,11 +858,6 @@ export function unlockChannel(channelId: string): string | null {
 }
 
 // --- Leveling System ---
-let clientInstance: Client | null = null;
-export function setClientInstance(client: Client) {
-    clientInstance = client;
-}
-
 const calculateRequiredXp = (level: number) => 5 * (level ** 2) + 50 * level + 100;
 
 export function getUserLevel(userId: string, guildId: string): UserLevel {
@@ -837,22 +874,23 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
     };
 }
 
-export const updateUserXP = db.transaction((userId: string, guildId: string, xpToAdd: number) => {
+export function updateUserXP(userId: string, guildId: string, xpToAdd: number): { leveledUp: boolean, newLevel: number } {
     const stmt = db.prepare(`
         INSERT INTO user_levels (user_id, guild_id, xp, level)
         VALUES (?, ?, ?, 0)
         ON CONFLICT(user_id, guild_id) DO UPDATE SET
-        xp = xp + excluded.xp;
+        xp = xp + excluded.xp RETURNING xp, level;
     `);
-    stmt.run(userId, guildId, xpToAdd);
+    
+    const { xp: newXp, level: currentLevel } = stmt.get(userId, guildId, xpToAdd) as { xp: number, level: number };
 
     // Check for level up
-    const { xp, level } = getUserLevel(userId, guildId);
-    let requiredXp = calculateRequiredXp(level);
-    
-    if (xp >= requiredXp) {
-        let newLevel = level;
-        while (xp >= requiredXp) {
+    let requiredXp = calculateRequiredXp(currentLevel);
+    let leveledUp = false;
+    let newLevel = currentLevel;
+
+    if (newXp >= requiredXp) {
+        while (newXp >= requiredXp) {
             newLevel++;
             requiredXp = calculateRequiredXp(newLevel);
         }
@@ -861,17 +899,11 @@ export const updateUserXP = db.transaction((userId: string, guildId: string, xpT
         updateLevelStmt.run(newLevel, userId, guildId);
         
         console.log(`[Leveling] ${userId} has leveled up to level ${newLevel} in guild ${guildId}!`);
-        if (clientInstance) {
-            Promise.all([
-                clientInstance.users.fetch(userId),
-                clientInstance.guilds.fetch(guildId)
-            ]).then(([user, guild]) => {
-                handleLevelUp(user, guild, newLevel);
-            }).catch(console.error);
-        }
+        leveledUp = true;
     }
-});
 
+    return { leveledUp, newLevel };
+}
 
 export function getUserRank(userId: string, guildId: string): number {
     const stmt = db.prepare(`

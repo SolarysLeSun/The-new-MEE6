@@ -35,6 +35,7 @@ import {
   UserPlus,
   Megaphone,
   Award,
+  BookCopy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -58,7 +59,6 @@ const navCategories = [
             { href: 'assistant-communautaire', label: 'Assistant Communautaire', icon: MessageSquare, isPremium: true },
             { href: 'suggestions', label: 'Suggestions', icon: Lightbulb },
             { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages },
-            { href: 'annonces-bienvenue', label: 'Annonces Bienvenue', icon: Megaphone },
         ]
     },
     {
@@ -93,7 +93,6 @@ const navCategories = [
             { href: 'salons-prives', label: 'Salons Privés', icon: Ticket },
             { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, isPremium: true },
             { href: 'autoroles', label: 'Autoroles', icon: BadgePlus },
-            { href: 'accueil-integration', label: 'Accueil & Intégration', icon: UserPlus },
         ]
     },
     {
@@ -113,6 +112,13 @@ const navCategories = [
             { href: 'agent-conversationnel', label: 'Agent Conversationnel', icon: MessageCircleQuestion, isPremium: true },
             { href: 'personnages-ia', label: 'Personnages IA', icon: Users, isPremium: true },
             { href: 'commandes-testeurs', label: 'Commandes Testeurs', icon: TestTubeDiagonal, isPremium: true },
+        ]
+    },
+    {
+        name: 'Modules Communautaires',
+        isCommunity: true,
+        items: [
+            { href: 'annonce-bienvenue', label: 'Annonces Bienvenue', icon: Megaphone },
         ]
     }
 ];
