@@ -10,18 +10,20 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { BookCopy, Bot, Brush, Code, Eye, Hash, PlusCircle, Save, Sparkles, Trash2, type LucideIcon } from 'lucide-react';
+import { BookCopy, Bot, Brush, Code, Eye, Hash, PlusCircle, Save, Sparkles, Trash2, type LucideIcon, User } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+const RoleIcon = () => <User className="w-4 h-4" />;
 
 const componentTools = [
   { id: 'switch', name: 'Interrupteur', icon: Switch, defaultProps: { label: 'Nouvel Interrupteur', description: 'Active ou désactive une option.' } },
   { id: 'text_input', name: 'Champ de Texte', icon: Input, defaultProps: { label: 'Nouveau Champ', placeholder: 'Entrez du texte...' } },
   { id: 'textarea', name: 'Zone de Texte', icon: Textarea, defaultProps: { label: 'Nouvelle Zone', placeholder: 'Entrez un texte plus long...' } },
   { id: 'channel_select', name: 'Sélecteur de Salon', icon: Hash, defaultProps: { label: 'Sélecteur de Salon' } },
-  { id: 'role_select', name: 'Sélecteur de Rôle', icon: () => '@', defaultProps: { label: 'Sélecteur de Rôle' } },
+  { id: 'role_select', name: 'Sélecteur de Rôle', icon: RoleIcon, defaultProps: { label: 'Sélecteur de Rôle' } },
 ];
 
 function SortableComponent({ id, component, onRemove, children }: { id: string, component: any, onRemove: (id: string) => void, children: React.ReactNode }) {
@@ -174,12 +176,15 @@ export default function ModuleEditorPage() {
                     <CardDescription>Ajoutez des composants au panel de votre module.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-2">
-                    {componentTools.map(tool => (
-                        <Button key={tool.id} variant="outline" onClick={() => addComponent(tool.id)}>
-                            <tool.icon className="mr-2" />
-                            {tool.name}
-                        </Button>
-                    ))}
+                    {componentTools.map(tool => {
+                        const Icon = tool.icon;
+                        return (
+                            <Button key={tool.id} variant="outline" onClick={() => addComponent(tool.id)}>
+                                <Icon className="mr-2" />
+                                {tool.name}
+                            </Button>
+                        )
+                    })}
                 </CardContent>
             </Card>
         </div>

@@ -31,6 +31,7 @@ const communityModules = [
 
 function ModuleCard({ module, isInstalled, onAdd, onManage }: { module: any, isInstalled: boolean, onAdd: (id: Module) => void, onManage: (id: Module) => void }) {
     const [loading, setLoading] = useState(false);
+    const IconComponent = module.icon;
 
     const handleAdd = async () => {
         setLoading(true);
@@ -42,7 +43,7 @@ function ModuleCard({ module, isInstalled, onAdd, onManage }: { module: any, isI
             <CardHeader>
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                        <module.icon className="w-8 h-8 text-primary" />
+                        <IconComponent className="w-8 h-8 text-primary" />
                         <div>
                             <CardTitle>{module.name}</CardTitle>
                             <CardDescription>par {module.creator}</CardDescription>
