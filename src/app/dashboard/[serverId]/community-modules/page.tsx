@@ -10,9 +10,9 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Check, Loader2, Megaphone, PlusCircle, Search, Settings } from 'lucide-react';
+import { Check, Loader2, Megaphone, PlusCircle, Search, Settings, BookCopy } from 'lucide-react';
 import type { Module } from '@/types';
-import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -78,12 +78,24 @@ export default function CommunityModulesPage() {
     const { toast } = useToast();
     const [installedModules, setInstalledModules] = useState<Module[]>([]);
     const [loading, setLoading] = useState(true);
+    const [authHeader, setAuthHeader] = useState('');
+
+    useEffect(() => {
+        const token = localStorage.getItem(`panel_token_${serverId}`);
+        if (token) {
+            setAuthHeader(`Bearer ${token}`);
+        } else {
+            // Handle case where token is not found, maybe redirect to login
+            toast({ title: "Erreur d'authentification", description: "Token non trouvé.", variant: "destructive"});
+            setLoading(false);
+        }
+    }, [serverId, toast]);
 
     const fetchInstalledModules = useCallback(async () => {
+        if (!authHeader) return;
          try {
-            const panelToken = localStorage.getItem(`panel_token_${serverId}`);
             const res = await fetch(`${API_URL}/get-all-module-configs/${serverId}`, {
-                headers: { 'Authorization': `Bearer ${panelToken}` }
+                headers: { 'Authorization': authHeader }
             });
             if (!res.ok) throw new Error('Failed to fetch installed modules');
             const data: {module: Module, config: any}[] = await res.json();
@@ -91,20 +103,22 @@ export default function CommunityModulesPage() {
         } catch (error) {
             toast({ title: "Erreur", description: "Impossible de récupérer les modules installés.", variant: "destructive" });
         }
-    }, [serverId, toast]);
+    }, [serverId, toast, authHeader]);
 
     useEffect(() => {
-        setLoading(true);
-        fetchInstalledModules().finally(() => setLoading(false));
-    }, [fetchInstalledModules]);
+        if(authHeader) {
+            setLoading(true);
+            fetchInstalledModules().finally(() => setLoading(false));
+        }
+    }, [authHeader, fetchInstalledModules]);
 
     const handleAddModule = async (moduleId: Module) => {
+        if (!authHeader) return;
         try {
-            const panelToken = localStorage.getItem(`panel_token_${serverId}`);
             // Simply call the get-config endpoint for a module that doesn't exist.
             // The backend is designed to create a default config if one isn't found.
             await fetch(`${API_URL}/get-config/${serverId}/${moduleId}`, {
-                 headers: { 'Authorization': `Bearer ${panelToken}` }
+                 headers: { 'Authorization': authHeader }
             });
             toast({
                 title: "Module Ajouté !",

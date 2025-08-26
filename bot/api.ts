@@ -164,7 +164,7 @@ export function startApi(client: Client) {
     /**
      * Endpoint pour récupérer la configuration d'un module pour un serveur.
      */
-    app.get('/api/get-config/:guildId/:module', async (req, res) => {
+    app.get('/api/get-config/:guildId/:module', verifyPanelRequest, async (req, res) => {
         const { guildId, module } = req.params;
         try {
             const config = await getServerConfig(guildId, module as any);
@@ -259,7 +259,7 @@ export function startApi(client: Client) {
     /**
      * Endpoint to export server structure as JSON for the backup module.
      */
-    app.get('/api/backup/:guildId/export', async (req, res) => {
+    app.get('/api/backup/:guildId/export', verifyPanelRequest, async (req, res) => {
         const { guildId } = req.params;
         const guild = await client.guilds.fetch(guildId).catch(() => null);
         if (!guild) {
