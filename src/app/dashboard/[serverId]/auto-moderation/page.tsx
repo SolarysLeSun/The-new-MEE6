@@ -7,6 +7,13 @@ import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -82,14 +89,23 @@ export default function AutoModerationPage() {
     const [roles, setRoles] = useState<DiscordRole[]>([]);
     const [channels, setChannels] = useState<DiscordChannel[]>([]);
     const [loading, setLoading] = useState(true);
+    const [authHeader, setAuthHeader] = useState('');
+
+    useEffect(() => {
+        const token = localStorage.getItem(`panel_token_${serverId}`);
+        if(token) {
+            setAuthHeader(`Bearer ${token}`);
+        }
+    }, [serverId]);
 
     const fetchConfig = async () => {
-        if (!serverId) return;
+        if (!serverId || !authHeader) return;
         setLoading(true);
         try {
+            const headers = { 'Authorization': authHeader };
             const [configRes, serverDetailsRes] = await Promise.all([
-                fetch(`${API_URL}/get-config/${serverId}/auto-moderation`),
-                fetch(`${API_URL}/get-server-details/${serverId}`),
+                fetch(`${API_URL}/get-config/${serverId}/auto-moderation`, { headers }),
+                fetch(`${API_URL}/get-server-details/${serverId}`, { headers }),
             ]);
             if (!configRes.ok || !serverDetailsRes.ok) throw new Error("Impossible de récupérer les données.");
             
@@ -107,15 +123,21 @@ export default function AutoModerationPage() {
     };
     
     useEffect(() => {
-        fetchConfig();
-    }, [serverId]);
+        if (serverId && authHeader) {
+            fetchConfig();
+        }
+    }, [serverId, authHeader]);
 
     const saveConfig = async (newConfig: AutoModConfig) => {
+        if (!authHeader) return;
         setConfig(newConfig); // Optimistic update
          try {
             await fetch(`${API_URL}/update-config/${serverId}/auto-moderation`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': authHeader 
+                },
                 body: JSON.stringify(newConfig),
             });
         } catch (error) {
@@ -194,6 +216,7 @@ export default function AutoModerationPage() {
                         channels={channels.filter(c => c.type === 0)} // Only text channels
                         onUpdate={handleUpdateRule}
                         onDelete={() => handleDeleteRule(rule.id)}
+                        authHeader={authHeader}
                     />
                 ))}
             </div>
@@ -203,7 +226,7 @@ export default function AutoModerationPage() {
 }
 
 // --- RuleCard Component ---
-function RuleCard({ rule, roles, channels, onUpdate, onDelete }: { rule: AutoModRule, roles: DiscordRole[], channels: DiscordChannel[], onUpdate: (rule: AutoModRule) => void, onDelete: () => void }) {
+function RuleCard({ rule, roles, channels, onUpdate, onDelete, authHeader }: { rule: AutoModRule, roles: DiscordRole[], channels: DiscordChannel[], onUpdate: (rule: AutoModRule) => void, onDelete: () => void, authHeader: string }) {
     
     const [name, setName] = useState(rule.name);
     const [keywords, setKeywords] = useState(rule.keywords.join(', '));
@@ -235,7 +258,7 @@ function RuleCard({ rule, roles, channels, onUpdate, onDelete }: { rule: AutoMod
                         const updatedKeywords = [...new Set([...keywords.split(',').map(k => k.trim()).filter(Boolean), ...newKeywords])];
                         setKeywords(updatedKeywords.join(', '));
                         onUpdate({ ...rule, name, keywords: updatedKeywords });
-                    }}/>
+                    }} authHeader={authHeader}/>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                      <div className="space-y-2">
@@ -263,7 +286,7 @@ function RuleCard({ rule, roles, channels, onUpdate, onDelete }: { rule: AutoMod
 }
 
 // --- KeywordGenerator Dialog ---
-function KeywordGenerator({ onGenerate }: { onGenerate: (keywords: string[]) => void }) {
+function KeywordGenerator({ onGenerate, authHeader }: { onGenerate: (keywords: string[]) => void, authHeader: string }) {
     const [prompt, setPrompt] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
@@ -275,16 +298,22 @@ function KeywordGenerator({ onGenerate }: { onGenerate: (keywords: string[]) => 
         try {
             const response = await fetch(`${API_URL}/generate-keywords`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': authHeader
+                },
                 body: JSON.stringify({ prompt }),
             });
-            if (!response.ok) throw new Error('Keyword generation failed');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Keyword generation failed');
+            }
             const result = await response.json();
             onGenerate(result.keywords);
             setIsOpen(false);
             setPrompt('');
-        } catch (error) {
-            toast({ title: "Erreur de génération IA", variant: "destructive" });
+        } catch (error: any) {
+            toast({ title: "Erreur de génération IA", description: error.message, variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
@@ -318,3 +347,5 @@ function KeywordGenerator({ onGenerate }: { onGenerate: (keywords: string[]) => 
 if (typeof window !== 'undefined') {
     (window as any).uuidv4 = uuidv4;
 }
+
+    

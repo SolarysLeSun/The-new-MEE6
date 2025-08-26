@@ -320,7 +320,7 @@ export function startApi(client: Client) {
 
     // --- AI Personas API ---
 
-    app.get('/api/personas/:guildId', (req, res) => {
+    app.get('/api/personas/:guildId', verifyPanelRequest, (req, res) => {
         const { guildId } = req.params;
         try {
             const personas = getPersonasForGuild(guildId);
@@ -330,7 +330,7 @@ export function startApi(client: Client) {
         }
     });
 
-    app.post('/api/personas/generate-prompt', checkGlobalAiStatus, async (req, res) => {
+    app.post('/api/personas/generate-prompt', verifyPanelRequest, checkGlobalAiStatus, async (req, res) => {
         const { name, instructions } = req.body;
         if (!name || !instructions) {
             return res.status(400).json({ error: 'Name and instructions are required.' });
@@ -456,3 +456,5 @@ export function startApi(client: Client) {
         console.log(`[Bot API] Le serveur API interne écoute sur le port ${API_PORT}`);
     });
 }
+
+    
