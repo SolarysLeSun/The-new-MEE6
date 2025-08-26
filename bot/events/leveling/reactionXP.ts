@@ -33,7 +33,8 @@ export async function execute(reaction: MessageReaction, user: User) {
 
     const { leveledUp, newLevel } = updateUserXP(user.id, reaction.message.guild.id, config.xp_per_reaction);
 
-    if(leveledUp) {
-        await handleLevelUp(user, reaction.message.guild, newLevel);
+    if(leveledUp && newLevel) {
+        const member = await reaction.message.guild.members.fetch(user.id);
+        await handleLevelUp(member.user, reaction.message.guild, newLevel);
     }
 }

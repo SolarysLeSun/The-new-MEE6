@@ -40,7 +40,8 @@ export function startVoiceXPInterval(client: Client) {
                     xpToGive *= highestRoleMultiplier;
 
                     const { leveledUp, newLevel } = updateUserXP(vs.member.id, guild.id, Math.round(xpToGive));
-                    if(leveledUp) {
+                    
+                    if(leveledUp && newLevel) {
                         await handleLevelUp(vs.member.user, guild, newLevel);
                     }
                 }
