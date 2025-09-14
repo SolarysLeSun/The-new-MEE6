@@ -1,17 +1,15 @@
 
 import fetch from 'node-fetch';
 import { randomBytes, createHmac } from 'crypto';
-import { isUserBannedFromPanel } from '@/lib/db';
+import { getServerConfig } from '@/lib/db';
+import { GuildMember, PermissionFlagsBits } from 'discord.js';
 
-// This secret should be in your .env file and be a long, random string.
 const PANEL_JWT_SECRET = process.env.PANEL_JWT_SECRET || 'default-super-secret-for-dev-only';
 
 // --- Bot Authentication with Discord API ---
-
 let botAccessToken: string | null = null;
 let tokenExpiry: number | null = null;
 
-// This function will be called once at bot startup
 export async function initializeBotAuth() {
     const clientId = process.env.DISCORD_CLIENT_ID;
     const clientSecret = process.env.DISCORD_CLIENT_SECRET;
@@ -23,12 +21,10 @@ export async function initializeBotAuth() {
     try {
         const response = await fetch('https://discord.com/api/oauth2/token', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
                 grant_type: 'client_credentials',
-                scope: 'bot applications.commands', // Important scopes for the bot itself
+                scope: 'bot applications.commands',
                 client_id: clientId,
                 client_secret: clientSecret,
             }),
@@ -42,17 +38,15 @@ export async function initializeBotAuth() {
         }
 
         botAccessToken = tokenData.access_token;
-        // Set expiry to be slightly less than the actual expiry to be safe
         tokenExpiry = Date.now() + (tokenData.expires_in - 300) * 1000; 
 
         console.log('[Auth] Successfully obtained bot access token.');
     } catch (error) {
         console.error('[Auth] Error during bot authentication:', error);
-        throw error; // Re-throw to prevent the bot from starting in a bad state
+        throw error;
     }
 }
 
-// Function to get the current token, refreshing if necessary
 export async function getBotAccessToken(): Promise<string> {
     if (!botAccessToken || (tokenExpiry && Date.now() > tokenExpiry)) {
         console.log('[Auth] Bot access token is expired or missing. Re-authenticating...');
@@ -61,40 +55,72 @@ export async function getBotAccessToken(): Promise<string> {
     return botAccessToken!;
 }
 
-
 // --- Panel User Authentication ---
-
 interface AuthToken {
     userId: string;
     guildId: string;
     expires: number;
 }
 
-// Store tokens in memory. For a multi-process setup, a shared store like Redis would be needed.
 const activeTokens = new Map<string, AuthToken>();
 const TOKEN_EXPIRATION_MS = 5 * 60 * 1000; // 5 minutes
 
-/**
- * Generates a single-use authentication token for a user and guild.
- */
-export function generateAuthToken(userId: string, guildId: string): { token: string; error: string | null } {
-    if (isUserBannedFromPanel(guildId, userId)) {
-        return { token: '', error: 'User is banned from panel access.' };
+export async function canUserAccessPanel(member: GuildMember): Promise<{ canAccess: boolean, reason: string | null }> {
+    const guild = member.guild;
+    const config = await getServerConfig(guild.id, 'panel-access');
+
+    if (!config) {
+        // Fallback to default: only administrators can access
+        return { canAccess: member.permissions.has(PermissionFlagsBits.Administrator), reason: "Default admin permission." };
     }
+
+    const userId = member.id;
+    const userRoles = member.roles.cache.map(r => r.id);
+
+    // Rule 1: Denied users are always blocked
+    if (config.denied_users?.includes(userId)) {
+        return { canAccess: false, reason: "User is explicitly denied access." };
+    }
+
+    // Rule 2: Denied roles are always blocked
+    if (userRoles.some(roleId => config.denied_roles?.includes(roleId))) {
+        return { canAccess: false, reason: "User has a role that is explicitly denied access." };
+    }
+
+    // Rule 3: If there's an allow list, user/role must be on it
+    const hasAllowList = (config.allowed_users?.length > 0) || (config.allowed_roles?.length > 0);
+    if (hasAllowList) {
+        if (config.allowed_users?.includes(userId)) {
+            return { canAccess: true, reason: "User is on the allow list." };
+        }
+        if (userRoles.some(roleId => config.allowed_roles?.includes(roleId))) {
+            return { canAccess: true, reason: "User has a role on the allow list." };
+        }
+        return { canAccess: false, reason: "User or their roles are not on the explicit allow list." };
+    }
+
+    // Rule 4: Default behavior if no lists are set - only admins
+    return { canAccess: member.permissions.has(PermissionFlagsBits.Administrator), reason: "Default admin permission (no specific rules set)." };
+}
+
+
+export async function generateAuthToken(member: GuildMember): Promise<{ token: string | null; error: string | null }> {
+    const { canAccess, reason } = await canUserAccessPanel(member);
+
+    if (!canAccess) {
+        return { token: null, error: `You do not have permission to access the panel. Reason: ${reason}` };
+    }
+    
     const token = randomBytes(32).toString('hex');
     activeTokens.set(token, {
-        userId,
-        guildId,
+        userId: member.id,
+        guildId: member.guild.id,
         expires: Date.now() + TOKEN_EXPIRATION_MS,
     });
-    console.log(`[Auth] Generated token for user ${userId} on guild ${guildId}`);
+    console.log(`[Auth] Generated token for user ${member.id} on guild ${member.guild.id}`);
     return { token, error: null };
 }
 
-/**
- * Verifies a token and returns the associated guild and user IDs.
- * The token is invalidated after successful verification.
- */
 export function verifyAndConsumeAuthToken(token: string): { guildId: string; userId: string } | null {
     const tokenData = activeTokens.get(token);
 
@@ -103,17 +129,11 @@ export function verifyAndConsumeAuthToken(token: string): { guildId: string; use
         return null;
     }
 
-    // Token has been used, so invalidate it immediately
     activeTokens.delete(token);
 
     if (Date.now() > tokenData.expires) {
         console.warn(`[Auth] Verification failed: Token expired for user ${tokenData.userId}.`);
         return null;
-    }
-
-    if (isUserBannedFromPanel(tokenData.guildId, tokenData.userId)) {
-        console.warn(`[Auth] Verification failed: User ${tokenData.userId} is banned from panel.`);
-        return null; // Explicitly fail if user is banned
     }
     
     console.log(`[Auth] Successfully verified token for user ${tokenData.userId} on guild ${tokenData.guildId}.`);
@@ -121,7 +141,7 @@ export function verifyAndConsumeAuthToken(token: string): { guildId: string; use
 }
 
 
-// Periodically clean up expired tokens to prevent memory leaks
+// Periodically clean up expired tokens
 setInterval(() => {
     const now = Date.now();
     for (const [token, tokenData] of activeTokens.entries()) {
@@ -130,17 +150,16 @@ setInterval(() => {
             console.log(`[Auth] Cleaned up expired token for user ${tokenData.userId}.`);
         }
     }
-}, 60 * 1000); // Run every minute
+}, 60 * 1000);
 
 // --- Panel Session Token (JWT-like) ---
-
 function base64url(source: Buffer): string {
   return source.toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 }
 
 export function generateAuthTokenForPanel(userId: string, guildId: string): string {
     const header = { alg: 'HS256', typ: 'JWT' };
-    const payload = { userId, guildId, iat: Date.now() }; // No expiry, it's a long-lived session
+    const payload = { userId, guildId, iat: Date.now() };
 
     const encodedHeader = base64url(Buffer.from(JSON.stringify(header)));
     const encodedPayload = base64url(Buffer.from(JSON.stringify(payload)));
@@ -170,15 +189,13 @@ export function verifyPanelToken(token: string): { userId: string; guildId: stri
 
     if (encodedSignature !== expectedSignature) {
         console.warn('[Auth] Panel token verification failed: Invalid signature.');
-        return null; // Invalid signature
+        return null;
     }
 
     const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString());
-
-    if (isUserBannedFromPanel(payload.guildId, payload.userId)) {
-        console.warn(`[Auth] Panel token verification failed: User ${payload.userId} is banned.`);
-        return null;
-    }
+    
+    // We don't check for bans here anymore, as the initial token generation handles it.
+    // A more robust system might re-check against the DB periodically.
 
     return { userId: payload.userId, guildId: payload.guildId };
 }

@@ -1,5 +1,5 @@
 
-import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, GuildMember } from 'discord.js';
 import type { Command } from '@/types';
 import { generateAuthToken } from '../../auth';
 
@@ -7,22 +7,19 @@ const LoginCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('login')
         .setDescription('Génère un lien de connexion unique pour accéder au panel de configuration.')
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+        .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages), // Allow everyone to try, logic is handled inside
 
     async execute(interaction: ChatInputCommandInteraction) {
-        if (!interaction.guild) {
+        if (!interaction.guild || !(interaction.member instanceof GuildMember)) {
             await interaction.reply({ content: 'Cette commande ne peut être utilisée que dans un serveur.', flags: MessageFlags.Ephemeral });
             return;
         }
-
-        const user = interaction.user;
-        const guild = interaction.guild;
-
+        
         try {
-            const { token, error } = generateAuthToken(user.id, guild.id);
+            const { token, error } = await generateAuthToken(interaction.member);
 
-            if (error) {
-                await interaction.reply({ content: 'Vous n\'êtes pas autorisé à accéder au panel de ce serveur.', flags: MessageFlags.Ephemeral });
+            if (error || !token) {
+                await interaction.reply({ content: error || 'Une erreur est survenue lors de la vérification de vos permissions.', flags: MessageFlags.Ephemeral });
                 return;
             }
             
@@ -32,7 +29,7 @@ const LoginCommand: Command = {
             const embed = new EmbedBuilder()
                 .setColor(0x00BFFF)
                 .setTitle('🔗 Votre lien de connexion au panel')
-                .setDescription(`Cliquez sur le bouton ci-dessous pour accéder au panel de configuration du serveur **${guild.name}**.`)
+                .setDescription(`Cliquez sur le bouton ci-dessous pour accéder au panel de configuration du serveur **${interaction.guild.name}**.`)
                 .addFields(
                     { name: 'Valide pour', value: '5 minutes', inline: true },
                     { name: 'Usage unique', value: 'Oui', inline: true }

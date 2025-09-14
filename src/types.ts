@@ -47,7 +47,7 @@ export type Module =
     | 'manual-voice-control'
     | 'announcements'
     | 'leveling'
-    | 'welcome-message'
+    | 'panel-access'
     | 'annonce-bienvenue';
 
 export interface ModuleConfig {

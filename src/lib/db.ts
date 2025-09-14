@@ -33,8 +33,10 @@ const upgradeSchema = () => {
         db.exec(`INSERT OR IGNORE INTO global_settings (key, value) VALUES ('ai_disabled', '0');`);
         console.log('[Database] La table "global_settings" est prête.');
 
+        // This table is deprecated and will be removed in a future migration.
+        // For now, we ensure it exists to avoid errors on old setups.
         db.exec(`
-            CREATE TABLE IF NOT EXISTS panel_bans (
+             CREATE TABLE IF NOT EXISTS panel_bans (
                 guild_id TEXT NOT NULL,
                 user_id TEXT NOT NULL,
                 banned_by_id TEXT NOT NULL,
@@ -43,7 +45,7 @@ const upgradeSchema = () => {
                 PRIMARY KEY (guild_id, user_id)
             );
         `);
-        console.log('[Database] La table "panel_bans" est prête.');
+        console.log('[Database] La table "panel_bans" est prête (obsolète).');
 
         db.exec(`
             CREATE TABLE IF NOT EXISTS locked_channels (
@@ -242,6 +244,13 @@ export const defaultConfigs: DefaultConfigs = {
             panel: { enabled: true, channel_id: null },
         }
     },
+    'panel-access': {
+        enabled: true,
+        allowed_roles: [],
+        denied_roles: [],
+        allowed_users: [],
+        denied_users: [],
+    },
     'auto-translation': {
         enabled: false,
         premium: false,
@@ -363,16 +372,11 @@ export const defaultConfigs: DefaultConfigs = {
             iaresetserv: null,
         }
     },
-    'welcome-message': {
-        enabled: true,
-        welcome_channel_id: null,
-        welcome_message: 'Bienvenue sur le serveur, {user} ! 🎉',
-    },
     'annonce-bienvenue': {
         enabled: false,
         welcome_channel_id: null,
         welcome_message: "Bienvenue sur le serveur, {user} ! 🎉",
-        category: 'community',
+        category: 'community'
     },
     'tester-commands': {
         enabled: true,
@@ -447,6 +451,7 @@ export const defaultConfigs: DefaultConfigs = {
         bot_announcement_channel_id: null,
         command_permissions: {
             announce: null,
+            adminannounce: null,
         }
     },
     'leveling': {
@@ -783,25 +788,6 @@ export function redeemPremiumKey(key: string, guildId: string): { success: boole
 
     return { success: true, message: 'Clé premium activée avec succès !' };
 }
-
-// --- Panel Ban System ---
-export function banUserFromPanel(guildId: string, userId: string, bannedById: string, reason: string): void {
-    const stmt = db.prepare(`
-        INSERT INTO panel_bans (guild_id, user_id, banned_by_id, reason) VALUES (?, ?, ?, ?)
-    `);
-    stmt.run(guildId, userId, bannedById, reason);
-}
-
-export function unbanUserFromPanel(guildId: string, userId: string): void {
-    const stmt = db.prepare('DELETE FROM panel_bans WHERE guild_id = ? AND user_id = ?');
-    stmt.run(guildId, userId);
-}
-
-export function isUserBannedFromPanel(guildId: string, userId: string): boolean {
-    const stmt = db.prepare('SELECT 1 FROM panel_bans WHERE guild_id = ? AND user_id = ?');
-    return !!stmt.get(guildId, userId);
-}
-
 
 // --- Sanction History ---
 
