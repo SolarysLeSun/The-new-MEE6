@@ -1,4 +1,5 @@
 
+
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, TextChannel } from 'discord.js';
@@ -16,18 +17,8 @@ export function startApi(client: Client) {
     const app = express();
     const rest = new REST({ version: '10' });
 
-    // Options CORS pour autoriser les requêtes depuis n'importe quelle origine.
-    // C'est utile pour le développement local.
-    const corsOptions = {
-      origin: '*',
-      optionsSuccessStatus: 200 // Pour les navigateurs plus anciens
-    };
-
-    app.use(cors(corsOptions));
-    // Gérer les requêtes pre-flight pour toutes les routes
-    app.options('*', cors(corsOptions));
-
-    app.use(express.json({ limit: '50mb' })); // Augmenter la limite pour les grosses sauvegardes
+    app.use(express.json({ limit: '50mb' }));
+    app.use(cors()); // Configuration CORS simplifiée et permissive
 
     app.use((req, res, next) => {
         console.log(`[Bot API] Requête reçue : ${req.method} ${req.path}`);
