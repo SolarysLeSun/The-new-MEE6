@@ -1,10 +1,9 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-
-const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
+import { useAuthenticatedFetch } from './useAuthenticatedFetch';
 
 interface ServerInfo {
   id: string;
@@ -18,37 +17,35 @@ interface ServerInfo {
 export function useServerInfo() {
   const params = useParams();
   const serverId = params.serverId as string;
+  const authenticatedFetch = useAuthenticatedFetch();
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchServerInfo = useCallback(async () => {
     if (!serverId) {
         setLoading(false);
         setError("No server ID provided.");
         return;
     };
-
-    const fetchServerInfo = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`${API_URL}/get-server-details/${serverId}`);
-        if (!res.ok) {
-          throw new Error('Failed to fetch server details');
-        }
-        const data = await res.json();
+    
+    setLoading(true);
+    setError(null);
+    try {
+        const data = await authenticatedFetch(`/get-server-details/${serverId}`);
         setServerInfo(data);
-      } catch (err: any) {
+    } catch (err: any) {
         setError(err.message || "An unknown error occurred");
         setServerInfo(null);
-      } finally {
+    } finally {
         setLoading(false);
-      }
-    };
+    }
+  }, [serverId, authenticatedFetch]);
 
+
+  useEffect(() => {
     fetchServerInfo();
-  }, [serverId]);
+  }, [fetchServerInfo]);
 
-  return { serverInfo, loading, error };
+  return { serverInfo, loading, error, refetch: fetchServerInfo };
 }

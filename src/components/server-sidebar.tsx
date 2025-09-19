@@ -7,11 +7,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Skeleton } from './ui/skeleton';
+import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 
-
-const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
 interface ServerInfo {
   id: string;
@@ -37,35 +36,29 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const [servers, setServers] = useState<ServerInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteUrl, setInviteUrl] = useState<string>('#');
+  const authenticatedFetch = useAuthenticatedFetch();
+
+  const fetchServers = useCallback(async () => {
+    const storedGuildIds = JSON.parse(localStorage.getItem('authed_guilds') || '[]');
+    if (storedGuildIds.length === 0) {
+        setLoading(false);
+        return;
+    }
+
+    try {
+        const data = await authenticatedFetch('/get-servers-details', {
+            method: 'POST',
+            body: { guildIds: storedGuildIds },
+        });
+        setServers(data);
+    } catch (error) {
+        console.error("Failed to fetch servers details", error);
+    } finally {
+        setLoading(false);
+    }
+  }, [authenticatedFetch]);
 
   useEffect(() => {
-    const fetchServers = async () => {
-        const storedGuildIds = JSON.parse(localStorage.getItem('authed_guilds') || '[]');
-        if (storedGuildIds.length === 0) {
-            setLoading(false);
-            return;
-        }
-
-        try {
-             const response = await fetch(`${API_URL}/get-servers-details`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ guildIds: storedGuildIds }),
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setServers(data);
-            } else {
-                console.error("Failed to fetch servers details");
-            }
-        } catch (error) {
-            console.error("Error fetching server details", error);
-        } finally {
-            setLoading(false);
-        }
-    };
     fetchServers();
 
     // Construct the invite URL
@@ -74,7 +67,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
         setInviteUrl(`https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot%20applications.commands`);
     }
 
-  }, []);
+  }, [fetchServers]);
 
   return (
     <TooltipProvider delayDuration={0}>
