@@ -228,6 +228,7 @@ const defaultConfigs: DefaultConfigs = {
             moderation: { enabled: true, channel_id: null },
             voice: { enabled: false, channel_id: null },
             server: { enabled: false, channel_id: null },
+            panel: { enabled: true, channel_id: null },
         }
     },
     'auto-translation': {
@@ -355,6 +356,11 @@ const defaultConfigs: DefaultConfigs = {
         enabled: false,
         welcome_channel_id: null,
         welcome_message: 'Bienvenue sur le serveur, {user} ! 🎉',
+    },
+     'annonce-bienvenue': {
+        enabled: false,
+        welcome_channel_id: null,
+        welcome_message: "Bienvenue sur le serveur, {user} ! 🎉",
     },
     'tester-commands': {
         enabled: true,
@@ -844,17 +850,20 @@ export const updateUserXP = db.transaction((userId: string, guildId: string, xpT
     const { xp, level } = getUserLevel(userId, guildId);
     let requiredXp = calculateRequiredXp(level);
     
-    if (xp >= requiredXp) {
-        let newLevel = level;
-        while (xp >= requiredXp) {
-            newLevel++;
-            requiredXp = calculateRequiredXp(newLevel);
-        }
-        
+    let newLevel = level;
+    let leveledUp = false;
+    while (xp >= requiredXp) {
+        newLevel++;
+        requiredXp = calculateRequiredXp(newLevel);
+        leveledUp = true;
+    }
+
+    if (leveledUp) {
         const updateLevelStmt = db.prepare('UPDATE user_levels SET level = ? WHERE user_id = ? AND guild_id = ?');
         updateLevelStmt.run(newLevel, userId, guildId);
         
         console.log(`[Leveling] ${userId} has leveled up to level ${newLevel} in guild ${guildId}!`);
+        
         if (clientInstance) {
             Promise.all([
                 clientInstance.users.fetch(userId),
@@ -877,3 +886,4 @@ export function getUserRank(userId: string, guildId: string): number {
     const result = stmt.get(guildId, userId) as { rank: number } | undefined;
     return result?.rank || 1;
 }
+

@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
 import type { Command } from '@/types';
-import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig } from '@/lib/db';
+import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance } from '@/lib/db';
 import { startApi } from './api';
 import { initializeBotAuth } from './auth';
 import { v4 as uuidv4 } from 'uuid';
@@ -103,6 +103,9 @@ client.once(Events.ClientReady, async (readyClient) => {
     
     // Load all command modules into the client
     loadCommands(client);
+    
+    // Pass client instance to the DB module for leveling
+    setClientInstance(client);
     
     // Deploy global commands (owner-only)
     await deployGlobalCommands(client);
@@ -381,3 +384,4 @@ async function startBot() {
 }
 
 startBot();
+
