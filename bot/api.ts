@@ -20,6 +20,8 @@ export function startApi(client: Client) {
     // C'est utile pour le développement local.
     const corsOptions = {
       origin: '*',
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+      allowedHeaders: ['Content-Type', 'Authorization'],
       optionsSuccessStatus: 200 // Pour les navigateurs plus anciens
     };
 
