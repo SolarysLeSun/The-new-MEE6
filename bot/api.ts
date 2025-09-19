@@ -24,7 +24,8 @@ export function startApi(client: Client) {
       allowedHeaders: ['Content-Type', 'Authorization'],
       optionsSuccessStatus: 200 // Pour les navigateurs plus anciens
     };
-
+    
+    // IMPORTANT: CORS must be the first middleware to be applied.
     app.use(cors(corsOptions));
     // Gérer les requêtes pre-flight pour toutes les routes
     app.options('*', cors(corsOptions));
@@ -469,3 +470,5 @@ export function startApi(client: Client) {
         console.log(`[Bot API] Le serveur API interne écoute sur le port ${API_PORT}`);
     });
 }
+
+    
