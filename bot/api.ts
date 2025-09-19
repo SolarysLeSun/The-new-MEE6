@@ -17,8 +17,16 @@ export function startApi(client: Client) {
     const app = express();
     const rest = new REST({ version: '10' });
 
+    // Configuration CORS stricte pour la production
+    const corsOptions = {
+      origin: '*', // Vous pourrez restreindre cela à votre nom de domaine plus tard
+      optionsSuccessStatus: 200,
+      allowedHeaders: ['Content-Type', 'Authorization']
+    };
+    app.use(cors(corsOptions));
+    app.options('*', cors(corsOptions));
+
     app.use(express.json({ limit: '50mb' }));
-    app.use(cors()); // Configuration CORS simplifiée et permissive
 
     app.use((req, res, next) => {
         console.log(`[Bot API] Requête reçue : ${req.method} ${req.path}`);
