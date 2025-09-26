@@ -852,6 +852,8 @@ export const updateUserXP = db.transaction((userId: string, guildId: string, xpT
         const updateLevelStmt = db.prepare('UPDATE user_levels SET level = ? WHERE user_id = ? AND guild_id = ?');
         updateLevelStmt.run(newLevel, userId, guildId);
         
+        console.log(`[Leveling] ${userId} has leveled up to level ${newLevel} in guild ${guildId}!`);
+        
         if (clientInstance) {
             clientInstance.emit('levelUp', userId, guildId, newLevel);
         }

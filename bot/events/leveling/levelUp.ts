@@ -6,7 +6,13 @@ import { getServerConfig } from '@/lib/db';
 
 export const name = 'levelUp';
 
-export async function execute(user: User, guild: Guild, newLevel: number) {
+export async function execute(client: any, userId: string, guildId: string, newLevel: number) {
+    const guild = await client.guilds.fetch(guildId).catch(() => null);
+    if (!guild) return;
+
+    const user = await client.users.fetch(userId).catch(() => null);
+    if (!user) return;
+    
     const config = await getServerConfig(guild.id, 'leveling');
     if (!config || !config.enabled) return;
 

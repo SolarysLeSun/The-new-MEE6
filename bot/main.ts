@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
 import type { Command } from '@/types';
-import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance } from '@/lib/db';
+import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, updateUserXP } from '@/lib/db';
 import { startApi } from './api';
 import { initializeBotAuth } from './auth';
 import { v4 as uuidv4 } from 'uuid';
@@ -75,9 +75,9 @@ const loadEvents = (client: Client) => {
                     const event = require(fullPath);
                      if (event.name && event.execute) {
                         if (event.once) {
-                            client.once(event.name, (...args) => event.execute(...args, client));
+                            client.once(event.name, (...args) => event.execute(client, ...args));
                         } else {
-                            client.on(event.name, (...args) => event.execute(...args, client));
+                            client.on(event.name, (...args) => event.execute(client, ...args));
                         }
                         console.log(`[+] Loaded event: ${event.name} from ${path.relative(eventsPath, fullPath)}`);
                      }

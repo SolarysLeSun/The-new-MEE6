@@ -234,7 +234,7 @@ export default function LevelingPage() {
                             ))}
                         </CardContent>
                         <CardContent>
-                            <Button variant="outline" className="w-full" onClick={() => addListItem('role_rewards')}><PlusCircle />Ajouter une récompense</Button>
+                            <Button variant="outline" className="w-full" onClick={() => addListItem('role_rewards')}><PlusCircle /> Ajouter une récompense</Button>
                         </CardContent>
                     </Card>
                      <Card className="flex flex-col">
@@ -276,7 +276,7 @@ export default function LevelingPage() {
                                 <PopoverContent className="w-56 p-0">
                                     <div className="flex flex-col">
                                         <Button variant="ghost" onClick={() => addListItem('xp_boost_roles')}>Boost de Rôle</Button>
-                                        <Button variant="ghost" onClick={() => addListItem('xp_boost_channels')}>Boost de Salon</Button>
+                                        <Button variant="ghost" onClick={() => addListItem('xp_boost_channels')}>Boost de Salon Vocal</Button>
                                     </div>
                                 </PopoverContent>
                             </Popover>
