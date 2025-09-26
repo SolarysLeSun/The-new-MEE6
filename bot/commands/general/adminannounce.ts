@@ -75,15 +75,16 @@ const AdminAnnounceCommand: Command = {
 
         const allServers = getAllBotServers();
         let successCount = 0;
-        let failCount = 0;
+        const failedServers: { id: string, name: string, reason: string }[] = [];
 
         await interaction.editReply({ content: `Envoi de l'annonce à ${allServers.length} serveurs...` });
 
         for (const serverId of allServers.map(s => s.id)) {
+            let guild;
             try {
-                const guild = await client.guilds.fetch(serverId).catch(() => null);
+                guild = await client.guilds.fetch(serverId).catch(() => null);
                 if (!guild) {
-                    failCount++;
+                    failedServers.push({ id: serverId, name: 'Inconnu', reason: 'Le bot n\'est plus sur ce serveur ou ne peut pas le récupérer.' });
                     continue;
                 }
 
@@ -125,19 +126,37 @@ const AdminAnnounceCommand: Command = {
                     await targetChannel.send({ content: messageContent, embeds: [embed] });
                     successCount++;
                 } else {
-                    failCount++;
+                    failedServers.push({ id: serverId, name: guild.name, reason: 'Aucun salon d\'annonce approprié n\'a été trouvé (ni dédié, ni système, ni accessible).' });
                 }
 
-            } catch (error) {
+            } catch (error: any) {
                 console.warn(`[AdminAnnounce] Impossible d'envoyer l'annonce au serveur ${serverId}:`, error);
-                failCount++;
+                failedServers.push({ id: serverId, name: guild?.name || 'Inconnu', reason: error.message || 'Erreur inconnue.' });
             }
         }
 
+        // --- Final Report ---
         await interaction.followUp({
-            content: `✅ Annonce envoyée avec succès à **${successCount}** serveurs. Échec pour **${failCount}** serveurs (salon non configuré ou permissions manquantes).`,
+            content: `✅ Annonce envoyée avec succès à **${successCount}** serveurs. Échec pour **${failedServers.length}** serveurs.`,
             ephemeral: true,
         });
+
+        // Send detailed failure report in DMs
+        if (failedServers.length > 0) {
+            let report = "Rapport d'échec de l'envoi de l'annonce :\n\n";
+            for (const failure of failedServers) {
+                report += `**Serveur :** ${failure.name} (\`${failure.id}\`)\n**Raison :** ${failure.reason}\n-----------------\n`;
+            }
+
+            // Split report into chunks if it's too long for a single message
+            const chunks = report.match(/[\s\S]{1,1900}/g) || [];
+            for (const chunk of chunks) {
+                await interaction.user.send(`\`\`\`${chunk}\`\`\``).catch(() => {
+                    console.error("[AdminAnnounce] Impossible d'envoyer le rapport d'échec en DM.");
+                    interaction.followUp({ content: "Impossible de vous envoyer le rapport d'échec détaillé en DM. Vérifiez vos paramètres de confidentialité.", ephemeral: true });
+                });
+            }
+        }
     },
 };
 
