@@ -1,12 +1,10 @@
 
-
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { Client, Guild, User } from 'discord.js';
 import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel } from '../types';
 import { randomBytes } from 'crypto';
-import { handleLevelUp } from '../../bot/events/leveling/levelUp';
 
 // Assurez-vous que le répertoire de la base de données existe
 const dbDir = path.resolve(process.cwd(), 'database');
@@ -854,14 +852,8 @@ export const updateUserXP = db.transaction((userId: string, guildId: string, xpT
         const updateLevelStmt = db.prepare('UPDATE user_levels SET level = ? WHERE user_id = ? AND guild_id = ?');
         updateLevelStmt.run(newLevel, userId, guildId);
         
-        console.log(`[Leveling] ${userId} has leveled up to level ${newLevel} in guild ${guildId}!`);
         if (clientInstance) {
-            Promise.all([
-                clientInstance.users.fetch(userId),
-                clientInstance.guilds.fetch(guildId)
-            ]).then(([user, guild]) => {
-                handleLevelUp(user, guild, newLevel);
-            }).catch(console.error);
+            clientInstance.emit('levelUp', userId, guildId, newLevel);
         }
     }
 });

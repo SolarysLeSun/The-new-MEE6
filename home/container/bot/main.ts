@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
 import type { Command } from '@/types';
-import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig } from '@/lib/db';
+import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance } from '@/lib/db';
 import { startApi } from './api';
 import { initializeBotAuth } from './auth';
 import { v4 as uuidv4 } from 'uuid';
@@ -55,6 +55,10 @@ declare module "discord.js" {
 }
 
 client.commands = new Collection<string, Command>();
+
+// Pass client instance to the database module for event emitting
+setClientInstance(client);
+
 
 // Load Event Handlers
 const loadEvents = (client: Client) => {
@@ -359,13 +363,13 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
 const token = process.env.DISCORD_TOKEN;
 if (!token) {
-    throw new Error('DISCORD_TOKEN is not defined in your environment variables. Please create a .env.local file and add it.');
+    throw new Error('DISCORD_TOKEN is not defined in your environment variables. Please create a .env file and add it.');
 }
 if (!process.env.DISCORD_CLIENT_ID) {
-    throw new Error('DISCORD_CLIENT_ID is not defined in your environment variables. Please create a .env.local file and add it.');
+    throw new Error('DISCORD_CLIENT_ID is not defined in your environment variables. Please create a .env file and add it.');
 }
 if (!process.env.DISCORD_CLIENT_SECRET) {
-    throw new Error('DISCORD_CLIENT_SECRET is not defined in your environment variables. Please create a .env.local file and add it.');
+    throw new Error('DISCORD_CLIENT_SECRET is not defined in your environment variables. Please create a .env file and add it.');
 }
 
 
@@ -381,5 +385,3 @@ async function startBot() {
 }
 
 startBot();
-
-    

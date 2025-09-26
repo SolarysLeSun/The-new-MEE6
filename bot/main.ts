@@ -1,12 +1,11 @@
 
-
 import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
 import type { Command } from '@/types';
-import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig } from '@/lib/db';
+import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance } from '@/lib/db';
 import { startApi } from './api';
 import { initializeBotAuth } from './auth';
 import { v4 as uuidv4 } from 'uuid';
@@ -55,6 +54,9 @@ declare module "discord.js" {
 }
 
 client.commands = new Collection<string, Command>();
+
+// Pass client instance to the database module for event emitting
+setClientInstance(client);
 
 // Load Event Handlers
 const loadEvents = (client: Client) => {

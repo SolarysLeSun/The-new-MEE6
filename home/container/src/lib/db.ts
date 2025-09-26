@@ -4,8 +4,8 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { Client } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem } from '../types';
+import { Client, Guild, User } from 'discord.js';
+import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel } from '../types';
 import { randomBytes } from 'crypto';
 
 // Assurez-vous que le répertoire de la base de données existe
@@ -131,6 +131,18 @@ const upgradeSchema = () => {
         `);
         console.log('[Database] La table "premium_keys" est prête.');
 
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS user_levels (
+                user_id TEXT NOT NULL,
+                guild_id TEXT NOT NULL,
+                xp INTEGER NOT NULL DEFAULT 0,
+                level INTEGER NOT NULL DEFAULT 0,
+                last_message_timestamp DATETIME,
+                PRIMARY KEY (user_id, guild_id)
+            );
+        `);
+        console.log('[Database] La table "user_levels" est prête.');
+
 
     } catch (error) {
         console.error('[Database] Erreur lors de la mise à jour du schéma:', error);
@@ -159,11 +171,14 @@ const defaultConfigs: DefaultConfigs = {
         log_channel_id: null, 
         dm_user_on_action: true, 
         presets: [],
+        auto_sanctions: [],
         command_permissions: {
             ban: null,
             unban: null,
             kick: null,
             mute: null,
+            warn: null,
+            listwarns: null,
         }
     },
     'general-commands': {
@@ -181,6 +196,8 @@ const defaultConfigs: DefaultConfigs = {
             help: true,
             marcus: true,
             traduire: true,
+            say: true,
+            level: true,
         }
     },
     'community-assistant': {
@@ -196,6 +213,7 @@ const defaultConfigs: DefaultConfigs = {
     'auto-moderation': {
         enabled: false,
         rules: [],
+        log_channel_id: null,
     },
     'logs': {
         enabled: true,
@@ -209,6 +227,7 @@ const defaultConfigs: DefaultConfigs = {
             roles: { enabled: false, channel_id: null },
             moderation: { enabled: true, channel_id: null },
             voice: { enabled: false, channel_id: null },
+            server: { enabled: false, channel_id: null },
         }
     },
     'auto-translation': {
@@ -253,7 +272,8 @@ const defaultConfigs: DefaultConfigs = {
         enabled: false, 
         sensitivity: 'medium',
         premium: true,
-        exempt_roles: []
+        exempt_roles: [],
+        exempt_channels: []
     },
     'moderation-ai': { 
         enabled: false,
@@ -262,6 +282,7 @@ const defaultConfigs: DefaultConfigs = {
         alert_role_id: null,
         sensitivity: 'medium',
         exempt_roles: [],
+        exempt_channels: [],
         actions: {
             low: 'warn',
             medium: 'mute_5m',
@@ -277,7 +298,8 @@ const defaultConfigs: DefaultConfigs = {
         raid_action: 'lockdown',
         link_scanner_enabled: false,
         link_scanner_action: 'delete',
-        alert_channel_id: null
+        alert_channel_id: null,
+        exempt_roles: []
     },
     'private-rooms': { 
         enabled: true, 
@@ -356,7 +378,6 @@ const defaultConfigs: DefaultConfigs = {
         custom_prompt: '',
         knowledge_base: [],
         dedicated_channel_id: null,
-        engagement_module_enabled: false,
         allow_imagination: false,
         allow_freewheeling: false,
     },
@@ -406,6 +427,31 @@ const defaultConfigs: DefaultConfigs = {
             leave: null,
             parle: null
         }
+    },
+    'announcements': {
+        enabled: true,
+        announcement_channel_id: null,
+        bot_announcement_channel_id: null,
+        command_permissions: {
+            announce: null,
+            adminannounce: null,
+        }
+    },
+    'leveling': {
+        enabled: true,
+        xp_per_message: 15,
+        xp_per_reaction: 5,
+        xp_per_minute_in_voice: 10,
+        cooldown_seconds: 60,
+        level_up_message: 'Félicitations {user}, vous avez atteint le niveau {level} !',
+        level_up_channel_id: null,
+        level_card_background_url: null,
+        level_card_bar_color: '#FFFFFF',
+        level_card_text_color: '#FFFFFF',
+        ignored_channels: [],
+        role_rewards: [],
+        xp_boost_roles: [],
+        xp_boost_channels: [],
     }
 };
 
@@ -761,4 +807,73 @@ export function unlockChannel(channelId: string): string | null {
         return row.original_permissions;
     }
     return null;
+}
+
+// --- Leveling System ---
+let clientInstance: Client | null = null;
+export function setClientInstance(client: Client) {
+    clientInstance = client;
+}
+
+const calculateRequiredXp = (level: number) => 5 * (level ** 2) + 50 * level + 100;
+
+export function getUserLevel(userId: string, guildId: string): UserLevel {
+    let stmt = db.prepare('SELECT xp, level FROM user_levels WHERE user_id = ? AND guild_id = ?');
+    let user = stmt.get(userId, guildId) as { xp: number, level: number } | undefined;
+    
+    if (!user) {
+        user = { xp: 0, level: 0 };
+    }
+
+    return {
+        ...user,
+        requiredXp: calculateRequiredXp(user.level),
+    };
+}
+
+export const updateUserXP = db.transaction((userId: string, guildId: string, xpToAdd: number) => {
+    const stmt = db.prepare(`
+        INSERT INTO user_levels (user_id, guild_id, xp, level)
+        VALUES (?, ?, ?, 0)
+        ON CONFLICT(user_id, guild_id) DO UPDATE SET
+        xp = xp + excluded.xp;
+    `);
+    stmt.run(userId, guildId, xpToAdd);
+
+    // Check for level up
+    const { xp, level } = getUserLevel(userId, guildId);
+    let requiredXp = calculateRequiredXp(level);
+    
+    if (xp >= requiredXp) {
+        let newLevel = level;
+        while (xp >= requiredXp) {
+            newLevel++;
+            requiredXp = calculateRequiredXp(newLevel);
+        }
+        
+        const updateLevelStmt = db.prepare('UPDATE user_levels SET level = ? WHERE user_id = ? AND guild_id = ?');
+        updateLevelStmt.run(newLevel, userId, guildId);
+        
+        console.log(`[Leveling] ${userId} has leveled up to level ${newLevel} in guild ${guildId}!`);
+        
+        if (clientInstance) {
+            clientInstance.users.fetch(userId).then(user => {
+                clientInstance!.guilds.fetch(guildId).then(guild => {
+                    clientInstance!.emit('levelUp', user, guild, newLevel);
+                });
+            }).catch(console.error);
+        }
+    }
+});
+
+
+export function getUserRank(userId: string, guildId: string): number {
+    const stmt = db.prepare(`
+        SELECT rank FROM (
+            SELECT user_id, RANK() OVER (ORDER BY xp DESC) as rank 
+            FROM user_levels WHERE guild_id = ?
+        ) WHERE user_id = ?
+    `);
+    const result = stmt.get(guildId, userId) as { rank: number } | undefined;
+    return result?.rank || 1;
 }
