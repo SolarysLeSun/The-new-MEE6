@@ -5,6 +5,7 @@ import RotatingText from '@/components/ui/rotating-text';
 import { useServerInfo } from '@/hooks/use-server-info';
 import { Bot, Hammer, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 export default function ServerDashboardPage() {
   const { serverInfo, loading } = useServerInfo();
@@ -16,7 +17,7 @@ export default function ServerDashboardPage() {
       : 'Bienvenue sur votre panel';
 
   return (
-    <div className="space-y-8">
+    <PageTransitionWrapper className="space-y-8">
       <div>
         <h1 className="text-4xl font-bold tracking-tight text-white">{welcomeText}</h1>
         <div className="text-muted-foreground mt-2 text-lg flex items-center gap-1.5">
@@ -76,6 +77,6 @@ export default function ServerDashboardPage() {
           Marcus est une solution complète conçue pour simplifier et améliorer la gestion de votre serveur Discord. Combinant un bot puissant et un panel de configuration web moderne, Marcus intègre des fonctionnalités IA de pointe pour offrir une expérience de gestion inégalée. Explorez les modules via la barre latérale pour configurer chaque aspect du bot.
         </p>
       </div>
-    </div>
+    </PageTransitionWrapper>
   );
 }
