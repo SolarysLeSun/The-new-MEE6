@@ -72,52 +72,6 @@ const upgradeSchema = () => {
         console.log('[Database] La table "testers" est prête.');
 
         db.exec(`
-            CREATE TABLE IF NOT EXISTS ai_personas (
-                id TEXT PRIMARY KEY,
-                guild_id TEXT NOT NULL,
-                name TEXT NOT NULL,
-                persona_prompt TEXT NOT NULL,
-                creator_id TEXT NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                active_channel_id TEXT,
-                avatar_url TEXT,
-                role_id TEXT,
-                bot_token TEXT
-            );
-        `);
-        console.log('[Database] La table "ai_personas" est prête.');
-
-
-        db.exec(`
-            CREATE TABLE IF NOT EXISTS persona_memories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                persona_id TEXT NOT NULL,
-                user_id TEXT,
-                memory_type TEXT NOT NULL,
-                content TEXT NOT NULL,
-                salience_score INTEGER NOT NULL DEFAULT 5,
-                last_accessed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (persona_id) REFERENCES ai_personas (id) ON DELETE CASCADE
-            );
-        `);
-         console.log('[Database] La table "persona_memories" est prête.');
-        
-        db.exec(`
-            CREATE TABLE IF NOT EXISTS persona_relationships (
-                persona_id TEXT NOT NULL,
-                user_id TEXT NOT NULL,
-                status TEXT NOT NULL,
-                level INTEGER NOT NULL,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (persona_id, user_id),
-                FOREIGN KEY (persona_id) REFERENCES ai_personas (id) ON DELETE CASCADE
-            );
-        `);
-        console.log('[Database] La table "persona_relationships" est prête.');
-
-
-        db.exec(`
             CREATE TABLE IF NOT EXISTS premium_keys (
                 key TEXT PRIMARY KEY,
                 generated_by TEXT NOT NULL,
@@ -830,6 +784,8 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
 }
 
 export const updateUserXP = db.transaction((userId: string, guildId: string, xpToAdd: number) => {
+    if (xpToAdd <= 0) return;
+
     const stmt = db.prepare(`
         INSERT INTO user_levels (user_id, guild_id, xp, level)
         VALUES (?, ?, ?, 0)
@@ -844,16 +800,26 @@ export const updateUserXP = db.transaction((userId: string, guildId: string, xpT
     
     if (xp >= requiredXp) {
         let newLevel = level;
-        while (xp >= requiredXp) {
+        let currentXpForLeveling = xp;
+        while (currentXpForLeveling >= requiredXp) {
+            currentXpForLeveling -= requiredXp;
             newLevel++;
             requiredXp = calculateRequiredXp(newLevel);
         }
         
-        const updateLevelStmt = db.prepare('UPDATE user_levels SET level = ? WHERE user_id = ? AND guild_id = ?');
-        updateLevelStmt.run(newLevel, userId, guildId);
-        
-        if (clientInstance) {
-            clientInstance.emit('levelUp', userId, guildId, newLevel);
+        if (newLevel > level) {
+            const updateLevelStmt = db.prepare('UPDATE user_levels SET level = ? WHERE user_id = ? AND guild_id = ?');
+            updateLevelStmt.run(newLevel, userId, guildId);
+            
+            console.log(`[Leveling] ${userId} has leveled up to level ${newLevel} in guild ${guildId}!`);
+            
+            if (clientInstance) {
+                clientInstance.users.fetch(userId).then(user => {
+                    clientInstance!.guilds.fetch(guildId).then(guild => {
+                        clientInstance!.emit('levelUp', user, guild, newLevel);
+                    });
+                }).catch(console.error);
+            }
         }
     }
 });

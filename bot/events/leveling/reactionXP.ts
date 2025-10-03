@@ -15,6 +15,10 @@ export async function execute(reaction: MessageReaction, user: User) {
 
     // Prevent users from gaining XP by reacting to their own messages
     if (reaction.message.author?.id === user.id) return;
+    
+    if (config.ignored_channels?.includes(reaction.message.channel.id)) {
+        return;
+    }
 
     const cooldownKey = `reaction-${reaction.message.guild.id}-${user.id}`;
     const now = Date.now();

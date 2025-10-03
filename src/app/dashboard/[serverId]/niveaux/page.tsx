@@ -234,7 +234,7 @@ export default function LevelingPage() {
                             ))}
                         </CardContent>
                         <CardContent>
-                            <Button variant="outline" className="w-full" onClick={() => addListItem('role_rewards')}><PlusCircle />Ajouter une récompense</Button>
+                            <Button variant="outline" className="w-full" onClick={() => addListItem('role_rewards')}><PlusCircle /> Ajouter une récompense</Button>
                         </CardContent>
                     </Card>
                      <Card className="flex flex-col">
