@@ -11,9 +11,12 @@ const LoginCommand: Command = {
 
     async execute(interaction: ChatInputCommandInteraction) {
         if (!interaction.guild) {
-            await interaction.reply({ content: 'Cette commande ne peut être utilisée que dans un serveur.', flags: MessageFlags.Ephemeral });
+            await interaction.reply({ content: 'Cette commande ne peut être utilisée que dans un serveur.', ephemeral: true });
             return;
         }
+
+        // Defer the reply to prevent "Unknown Interaction" errors
+        await interaction.deferReply({ ephemeral: true });
 
         const user = interaction.user;
         const guild = interaction.guild;
@@ -21,7 +24,12 @@ const LoginCommand: Command = {
         try {
             const token = generateAuthToken(user.id, guild.id);
             
-            const panelUrl = process.env.PANEL_BASE_URL || 'http://localhost:9002';
+            const panelUrl = process.env.PANEL_BASE_URL;
+            if (!panelUrl) {
+                console.error('[LoginCommand] PANEL_BASE_URL is not defined in .env file.');
+                throw new Error('Configuration du panel incomplète.');
+            }
+            
             const loginUrl = `${panelUrl}/auth/discord?token=${token}`;
 
             const embed = new EmbedBuilder()
@@ -46,18 +54,24 @@ const LoginCommand: Command = {
                 ]
             };
 
-            await interaction.reply({
+            await interaction.editReply({
                 embeds: [embed],
                 components: [row],
-                flags: MessageFlags.Ephemeral,
             });
 
         } catch (error) {
             console.error('[LoginCommand] Error generating auth token link:', error);
-            await interaction.reply({
-                content: 'Une erreur est survenue lors de la création de votre lien de connexion. Veuillez réessayer plus tard.',
-                flags: MessageFlags.Ephemeral,
-            });
+            // Check if the interaction has already been replied to before sending another reply
+            if (!interaction.replied && !interaction.deferred) {
+                 await interaction.reply({
+                    content: 'Une erreur est survenue lors de la création de votre lien de connexion. Veuillez réessayer plus tard.',
+                    ephemeral: true,
+                });
+            } else {
+                 await interaction.editReply({
+                    content: 'Une erreur est survenue lors de la création de votre lien de connexion. Veuillez réessayer plus tard.',
+                });
+            }
         }
     },
 };
