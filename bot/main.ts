@@ -10,6 +10,7 @@ import { startApi } from './api';
 import { initializeBotAuth } from './auth';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
+import { generateTextContent } from '@/ai/flows/content-creation-flow';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -190,6 +191,45 @@ async function handleBotSuggestionModal(interaction: ModalSubmitInteraction) {
     }
 }
 
+async function handleContentModificationModal(interaction: ModalSubmitInteraction) {
+    if (!interaction.guild || !interaction.message || !interaction.message.embeds[0]) return;
+    
+    await interaction.deferReply({ ephemeral: true });
+
+    const modificationRequest = interaction.fields.getTextInputValue('modification_request');
+    const originalEmbed = interaction.message.embeds[0];
+    
+    // We need to infer the original type and topic. We can store this in the embed footer,
+    // or try to reverse-engineer it from the title. Let's try reverse-engineering for now.
+    const title = originalEmbed.title || '';
+    const type = title.includes('Règle') ? 'rule' : 'announcement';
+    const topic = title.replace(/^(📝 Règle : |📢 Annonce : )/i, '').replace(/"/g, '');
+
+    const config = await getServerConfig(interaction.guild.id, 'content-ai');
+
+    try {
+        const result = await generateTextContent({
+            type: type as 'rule' | 'announcement',
+            topic: topic, // The topic remains the same
+            tone: config.default_tone,
+            customInstructions: originalEmbed.description || '', // Use the old description as context
+            modificationRequest: modificationRequest // Pass the new modification request
+        });
+
+        const newEmbed = EmbedBuilder.from(originalEmbed)
+            .setDescription(result.generatedText.substring(0, 4096));
+
+        // The buttons are on the original message, which is ephemeral. We need to edit the reply from the button click.
+        // Wait, the original reply is what we need to edit.
+        await interaction.message.edit({ embeds: [newEmbed] });
+        await interaction.editReply({ content: '✅ Le contenu a été modifié. Vous pouvez le modifier à nouveau ou le publier.', ephemeral: true });
+
+    } catch (error) {
+        console.error('[ContentModify] Error:', error);
+        await interaction.editReply({ content: 'Une erreur est survenue lors de la modification du contenu.', ephemeral: true });
+    }
+}
+
 
 client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     if (interaction.isAutocomplete()) {
@@ -209,6 +249,8 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
             await handleSuggestionModal(interaction);
         } else if (interaction.customId === 'suggestion_modal_bot') {
             await handleBotSuggestionModal(interaction);
+        } else if (interaction.customId === 'content_modification_modal') {
+             await handleContentModificationModal(interaction);
         }
         return;
     }
@@ -297,10 +339,30 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
              
              if (customId === 'publish_content') {
                  await (interaction.channel as TextChannel).send({ embeds: [interaction.message.embeds[0]] });
-                 await interaction.update({ content: '✅ Contenu publié avec succès !', components: [] });
+                 await interaction.update({ content: '✅ Contenu publié avec succès !', components: [], embeds: [] });
              } else {
                  await interaction.message.delete();
              }
+             return;
+        }
+        
+        if (customId === 'modify_content') {
+            const modal = new ModalBuilder()
+                .setCustomId('content_modification_modal')
+                .setTitle('Modifier le Contenu IA');
+
+            const requestInput = new TextInputBuilder()
+                .setCustomId('modification_request')
+                .setLabel("Quelles modifications souhaitez-vous ?")
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder("Ex: 'Rends-le plus court', 'Utilise un ton plus professionnel', 'Ajoute un emoji à la fin'...")
+                .setRequired(true);
+            
+            const row = new ActionRowBuilder<TextInputBuilder>().addComponents(requestInput);
+            modal.addComponents(row);
+
+            await interaction.showModal(modal);
+            return;
         }
         
         // --- Handler for Private Room Button ---

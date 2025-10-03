@@ -15,6 +15,7 @@ const TextContentInputSchema = z.object({
   topic: z.string().describe('The specific topic for the content.'),
   tone: z.enum(['familiar', 'professional', 'narrative']).describe('The desired tone for the text.'),
   customInstructions: z.string().optional().describe('Optional custom instructions to further guide the AI.'),
+  modificationRequest: z.string().optional().describe("A user's request to modify the previous output. The AI should use the customInstructions as the base text to modify.")
 });
 
 const TextContentOutputSchema = z.object({
@@ -31,8 +32,22 @@ const textGenPrompt = ai.definePrompt({
     output: { schema: TextContentOutputSchema },
     model: 'googleai/gemini-2.0-flash',
     prompt: `You are a creative writer and community manager for a Discord server.
-Your task is to write a piece of content based on a specified type and topic.
+Your task is to write or modify a piece of content based on a specified type and topic.
 
+{{#if modificationRequest}}
+---
+Task: MODIFY EXISTING CONTENT
+You must modify the following text based on the user's request.
+Original Text to Modify:
+"""
+{{{customInstructions}}}
+"""
+User's Modification Request: "{{{modificationRequest}}}"
+You must generate a new version of the text that incorporates the user's request, while keeping the original topic and general intent. The title should remain the same.
+---
+{{else}}
+---
+Task: GENERATE NEW CONTENT
 Content Type: {{{type}}}
 Topic: "{{{topic}}}"
 Tone: {{{tone}}}
@@ -41,9 +56,12 @@ Custom Instructions: {{{customInstructions}}}
 {{/if}}
 
 Please generate a short, descriptive title for the content, and the content itself.
-Ensure the content is well-written, engaging, and perfectly suited for a Discord community. Format it appropriately using Discord markdown (like **bold** or *italics*) where necessary.
 For a rule, the title should be like "📝 Règle : [Sujet]".
 For an announcement, the title should be like "📢 Annonce : [Sujet]".
+---
+{{/if}}
+
+Ensure the final content is well-written, engaging, and perfectly suited for a Discord community. Format it appropriately using Discord markdown (like **bold** or *italics*) where necessary.
 `,
 });
 

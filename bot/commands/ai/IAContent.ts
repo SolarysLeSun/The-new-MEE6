@@ -81,6 +81,11 @@ const IAContentCommand: Command = {
                             .setStyle(ButtonStyle.Success)
                             .setEmoji('✅'),
                         new ButtonBuilder()
+                            .setCustomId('modify_content')
+                            .setLabel('Modifier')
+                            .setStyle(ButtonStyle.Primary)
+                            .setEmoji('✏️'),
+                        new ButtonBuilder()
                             .setCustomId('cancel_content')
                             .setLabel('Annuler')
                             .setStyle(ButtonStyle.Danger)
