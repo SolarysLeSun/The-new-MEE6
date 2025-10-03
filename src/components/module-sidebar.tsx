@@ -34,6 +34,7 @@ import {
   X,
   UserPlus,
   Megaphone,
+  Award,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,12 @@ const navCategories = [
             { href: 'assistant-communautaire', label: 'Assistant Communautaire', icon: MessageSquare, isPremium: true },
             { href: 'suggestions', label: 'Suggestions', icon: Lightbulb },
             { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages },
+        ]
+    },
+    {
+        name: 'Engagement',
+        items: [
+            { href: 'niveaux', label: 'Niveaux & XP', icon: Award },
         ]
     },
     {
@@ -103,7 +110,6 @@ const navCategories = [
             { href: 'assistant-moderation-ia', label: 'Assistant Modération IA', icon: Sparkles, isPremium: true },
             { href: 'createur-contenu-ia', label: 'Créateur de Contenu IA', icon: Palette, isPremium: true },
             { href: 'agent-conversationnel', label: 'Agent Conversationnel', icon: MessageCircleQuestion, isPremium: true },
-            { href: 'personnages-ia', label: 'Personnages IA', icon: Users, isPremium: true },
             { href: 'commandes-testeurs', label: 'Commandes Testeurs', icon: TestTubeDiagonal, isPremium: true },
         ]
     }
@@ -145,7 +151,7 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
         isOpen ? "translate-x-0" : "-translate-x-full"
     )}>
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3 px-2">
+        <Link href="/" className="flex items-center gap-3 px-2">
             {loading ? (
             <SidebarHeaderSkeleton />
             ) : serverInfo ? (
@@ -165,7 +171,7 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
             ) : (
             <SidebarHeaderSkeleton /> // Show skeleton on error or if no details
             )}
-        </div>
+        </Link>
         <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen(false)}>
             <X className="h-6 w-6" />
         </Button>
@@ -199,7 +205,7 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
       </nav>
       <div className="mt-auto pt-4 text-center">
           <a href="https://forgenet.fr" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-white transition-colors">
-              Développé par NightForge
+              Développé par Forge Network
           </a>
       </div>
     </aside>

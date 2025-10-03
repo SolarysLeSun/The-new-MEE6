@@ -2,37 +2,52 @@
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes } from 'discord.js';
-import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem } from '@/lib/db';
-import { verifyAndConsumeAuthToken, getBotAccessToken } from './auth';
-import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
-import { v4 as uuidv4 } from 'uuid';
+import { updateServerConfig, getServerConfig, getAllBotServers, addKnowledgeBaseItem, getGlobalAiStatus, setPanelAccess, getPanelAccess, clearPanelAccess } from '@/lib/db';
+import { verifyAndConsumeAuthToken, getBotAccessToken, generateAuthToken } from './auth';
 import { updateGuildCommands } from './handlers/commandHandler';
 import { generateKeywords } from '@/ai/flows/keyword-generation-flow';
 import { knowledgeCreationFlow } from '@/ai/flows/knowledge-creation-flow';
 
-const API_PORT = process.env.BOT_API_PORT || 3630;
+const API_PORT = process.env.BOT_API_PORT || 10033;
 
 export function startApi(client: Client) {
     const app = express();
     const rest = new REST({ version: '10' });
 
-    // Options CORS pour autoriser les requêtes depuis n'importe quelle origine.
-    // C'est utile pour le développement local.
     const corsOptions = {
       origin: '*',
-      optionsSuccessStatus: 200 // Pour les navigateurs plus anciens
+      optionsSuccessStatus: 200,
+      allowedHeaders: ['Content-Type', 'Authorization']
     };
-
     app.use(cors(corsOptions));
-    // Gérer les requêtes pre-flight pour toutes les routes
     app.options('*', cors(corsOptions));
 
-    app.use(express.json({ limit: '50mb' })); // Augmenter la limite pour les grosses sauvegardes
+    app.use(express.json({ limit: '50mb' }));
 
     app.use((req, res, next) => {
         console.log(`[Bot API] Requête reçue : ${req.method} ${req.path}`);
         next();
     });
+
+    const verifyPanelRequest = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+        const authHeader = req.headers.authorization;
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!token) {
+            return res.status(401).json({ error: 'Unauthorized: No token provided.' });
+        }
+        
+        const authResult = verifyAndConsumeAuthToken(token);
+        
+        if (!authResult) {
+            return res.status(401).json({ error: 'Unauthorized: Invalid or expired token.' });
+        }
+        
+        // Attach guildId to the request for later use
+        (req as any).guildId = authResult.guildId;
+        (req as any).userId = authResult.userId;
+        next();
+    };
 
     /**
      * Middleware pour s'assurer que le token du bot est prêt pour l'API Discord.
@@ -62,11 +77,6 @@ export function startApi(client: Client) {
         next();
     };
 
-
-    /**
-     * Endpoint for the panel to verify a user's auth token.
-     * This is public and does not use any internal secret.
-     */
     app.post('/api/verify-token', (req, res) => {
         const { token } = req.body;
         if (!token) {
@@ -79,21 +89,21 @@ export function startApi(client: Client) {
             return res.status(401).json({ error: 'Invalid or expired token.' });
         }
         
-        // In a real app, you would generate a session token (e.g., JWT) here
-        // and return it to the client to store in a cookie.
-        // For simplicity, we'll just return the guildId directly.
-        res.status(200).json({ success: true, guildId: authResult.guildId });
+        const sessionToken = generateAuthToken(authResult.userId, authResult.guildId);
+        
+        res.status(200).json({ 
+            success: true, 
+            guildId: authResult.guildId,
+            sessionToken: sessionToken
+        });
     });
 
-    /**
-     * Endpoint pour mettre à jour la configuration d'un module pour un serveur.
-     */
-    app.post('/api/update-config/:guildId/:module', async (req, res) => {
+    app.post('/api/update-config/:guildId/:module', verifyPanelRequest, ensureBotToken, async (req, res) => {
         const { guildId, module } = req.params;
         const configData = req.body;
 
-        if (!guildId || !module || !configData) {
-            return res.status(400).json({ error: 'Guild ID, module et données de configuration sont requis.' });
+        if (guildId !== (req as any).guildId) {
+            return res.status(403).json({ error: 'Forbidden: Mismatched guild ID.' });
         }
 
         try {
@@ -101,12 +111,10 @@ export function startApi(client: Client) {
             await updateServerConfig(guildId, module as any, configData);
 
             // Trigger command update for the guild
-            // This needs to be asynchronous and not block the response
             updateGuildCommands(guildId, client).catch(error => {
                 console.error(`[API] Erreur asynchrone lors de la mise à jour des commandes pour ${guildId}:`, error);
             });
 
-            // Handle specific side-effects for modules
             if (module === 'server-identity' && configData.enabled) {
                 const guild = await client.guilds.fetch(guildId);
                 if (guild.members.me) {
@@ -121,11 +129,13 @@ export function startApi(client: Client) {
         }
     });
 
-    /**
-     * Endpoint pour récupérer la configuration d'un module pour un serveur.
-     */
-    app.get('/api/get-config/:guildId/:module', async (req, res) => {
+    app.get('/api/get-config/:guildId/:module', verifyPanelRequest, async (req, res) => {
         const { guildId, module } = req.params;
+
+        if (guildId !== (req as any).guildId) {
+            return res.status(403).json({ error: 'Forbidden: Mismatched guild ID.' });
+        }
+        
         try {
             const config = await getServerConfig(guildId, module as any);
             if (!config) {
@@ -138,7 +148,7 @@ export function startApi(client: Client) {
         }
     });
 
-    app.get('/api/global-ai-status', (req, res) => {
+    app.get('/api/global-ai-status', verifyPanelRequest, (req, res) => {
         try {
             const status = getGlobalAiStatus();
             res.json(status);
@@ -147,19 +157,20 @@ export function startApi(client: Client) {
         }
     });
 
-    /**
-     * Endpoint pour récupérer les données d'un serveur (nom, icône, rôles, salons, statut premium).
-     */
-     app.get('/api/get-server-details/:guildId', async (req, res) => {
+     app.get('/api/get-server-details/:guildId', verifyPanelRequest, async (req, res) => {
         const { guildId } = req.params;
+
+        if (guildId !== (req as any).guildId) {
+            return res.status(403).json({ error: 'Forbidden: Mismatched guild ID.' });
+        }
+        
         try {
             const guild = await client.guilds.fetch(guildId).catch(() => null);
             if (!guild) {
                 return res.status(404).json({ error: 'Serveur non trouvé.' });
             }
 
-            // Fetch server config to get premium status
-            const premiumConfig = await getServerConfig(guildId, 'moderation'); // Can be any module, just to check premium status.
+            const premiumConfig = await getServerConfig(guildId, 'moderation');
 
             const serverDetails = {
                 id: guild.id,
@@ -177,10 +188,7 @@ export function startApi(client: Client) {
         }
     });
 
-    /**
-     * Endpoint to get details for multiple servers from a list of IDs.
-     */
-    app.post('/api/get-servers-details', async (req, res) => {
+    app.post('/api/get-servers-details', verifyPanelRequest, async (req, res) => {
         const { guildIds } = req.body;
         if (!Array.isArray(guildIds)) {
             return res.status(400).json({ error: 'guildIds must be an array.' });
@@ -205,10 +213,7 @@ export function startApi(client: Client) {
         }
     });
 
-    /**
-     * Endpoint to export server structure as JSON for the backup module.
-     */
-    app.get('/api/backup/:guildId/export', async (req, res) => {
+    app.get('/api/backup/:guildId/export', verifyPanelRequest, async (req, res) => {
         const { guildId } = req.params;
         const guild = await client.guilds.fetch(guildId).catch(() => null);
         if (!guild) {
@@ -221,7 +226,7 @@ export function startApi(client: Client) {
                 id: guild.id,
                 exportedAt: new Date().toISOString(),
                 roles: guild.roles.cache
-                    .filter(role => !role.managed) // Don't save integrated roles (bots)
+                    .filter(role => !role.managed)
                     .map(role => ({
                         name: role.name,
                         color: role.hexColor,
@@ -230,7 +235,7 @@ export function startApi(client: Client) {
                         mentionable: role.mentionable,
                     })),
                 channels: guild.channels.cache
-                    .filter(c => c.type !== ChannelType.GuildVoice) // Start with categories and text channels
+                    .filter(c => c.type !== ChannelType.GuildVoice)
                     .map(channel => {
                         const baseChannelData = {
                             type: channel.type,
@@ -260,7 +265,7 @@ export function startApi(client: Client) {
                             };
                         }
                         if (!channel.parentId) {
-                             return { // Channels without category
+                             return {
                                 ...baseChannelData,
                                 topic: 'topic' in channel ? channel.topic : null,
                                 nsfw: 'nsfw' in channel ? channel.nsfw : false,
@@ -278,107 +283,7 @@ export function startApi(client: Client) {
         }
     });
 
-    // --- AI Personas API ---
-
-    app.get('/api/personas/:guildId', (req, res) => {
-        const { guildId } = req.params;
-        try {
-            const personas = getPersonasForGuild(guildId);
-            res.json(personas);
-        } catch (error) {
-            res.status(500).json({ error: 'Failed to fetch personas.' });
-        }
-    });
-
-    app.post('/api/personas/generate-prompt', checkGlobalAiStatus, async (req, res) => {
-        const { name, instructions } = req.body;
-        if (!name || !instructions) {
-            return res.status(400).json({ error: 'Name and instructions are required.' });
-        }
-        try {
-            const personaPrompt = await generatePersonaPrompt({ name, instructions });
-            res.json({ personaPrompt });
-        } catch (error) {
-            res.status(500).json({ error: 'Failed to generate persona prompt.' });
-        }
-    });
-
-    app.post('/api/personas/create', checkGlobalAiStatus, async (req, res) => {
-        const { guild_id, name, persona_prompt, creator_id } = req.body;
-         if (!guild_id || !name || !persona_prompt || !creator_id) {
-            return res.status(400).json({ error: 'Missing required fields for persona creation.' });
-        }
-        try {
-            const guild = await client.guilds.fetch(guild_id);
-            if (!guild) {
-                return res.status(404).json({ error: 'Guild not found.' });
-            }
-
-            // Create Role
-            const newRole = await guild.roles.create({
-                name: name,
-                mentionable: true,
-                reason: `Role for AI Persona: ${name}`
-            });
-
-            // Generate an avatar for the persona
-            let avatarDataUri = null;
-            try {
-                const avatarResult = await generatePersonaAvatar({ name, persona_prompt });
-                avatarDataUri = avatarResult.avatarDataUri;
-            } catch (avatarError) {
-                console.error(`[API] Failed to generate avatar for ${name}, using default.`, avatarError);
-            }
-            
-            const newPersona = {
-                id: uuidv4(),
-                guild_id,
-                name,
-                persona_prompt,
-                creator_id,
-                active_channel_id: null,
-                avatar_url: avatarDataUri, // Store the generated avatar URL
-                role_id: newRole.id,
-                bot_token: null
-            };
-
-            createPersona(newPersona);
-            res.status(201).json(newPersona);
-        } catch (error) {
-            console.error("[API] Failed to create persona:", error);
-            res.status(500).json({ error: 'Failed to create persona.' });
-        }
-    });
-
-    app.patch('/api/personas/:personaId', (req, res) => {
-        const { personaId } = req.params;
-        const updates = req.body;
-        try {
-            updatePersona(personaId, updates);
-            res.json({ success: true });
-        } catch (error) {
-            res.status(500).json({ error: 'Failed to update persona.' });
-        }
-    });
-
-    app.delete('/api/personas/:personaId', async (req, res) => {
-        const { personaId } = req.params;
-        try {
-            // Optional: Find persona to get role_id and delete it
-            // const persona = getPersonaById(personaId); // You'd need to create this function in db.ts
-            // if (persona && persona.role_id) {
-            //     const guild = await client.guilds.fetch(persona.guild_id);
-            //     await guild.roles.delete(persona.role_id);
-            // }
-            deletePersona(personaId);
-            res.status(204).send();
-        } catch (error) {
-            res.status(500).json({ error: 'Failed to delete persona.' });
-        }
-    });
-
-    // --- Keyword Generation API for Auto-Mod ---
-    app.post('/api/generate-keywords', checkGlobalAiStatus, async (req, res) => {
+    app.post('/api/generate-keywords', verifyPanelRequest, checkGlobalAiStatus, async (req, res) => {
         const { prompt } = req.body;
         if (!prompt) {
             return res.status(400).json({ error: 'Prompt is required.' });
@@ -392,7 +297,7 @@ export function startApi(client: Client) {
         }
     });
 
-    app.post('/api/add-knowledge-item/:guildId', checkGlobalAiStatus, async (req, res) => {
+    app.post('/api/add-knowledge-item/:guildId', verifyPanelRequest, checkGlobalAiStatus, async (req, res) => {
         const { guildId } = req.params;
         const { userQuestion, agentResponse } = req.body;
 
@@ -410,7 +315,7 @@ export function startApi(client: Client) {
         }
     });
 
-    app.listen(API_PORT, () => {
+    app.listen(API_PORT, '0.0.0.0', () => {
         console.log(`[Bot API] Le serveur API interne écoute sur le port ${API_PORT}`);
     });
 }

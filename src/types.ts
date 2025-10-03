@@ -40,7 +40,6 @@ export type Module =
     | 'tester-commands'
     | 'conversational-agent'
     | 'suggestions'
-    | 'ai-personas'
     | 'autoroles'
     | 'server-identity'
     | 'security-alerts'
@@ -69,35 +68,6 @@ export interface KnowledgeBaseItem {
     id: string;
     question: string;
     answer: string;
-}
-
-export interface Persona {
-    id: string;
-    guild_id: string;
-    name: string;
-    persona_prompt: string;
-    creator_id: string;
-    created_at: string;
-    active_channel_id: string | null;
-    avatar_url: string | null;
-    role_id: string | null;
-    bot_token?: string | null;
-}
-
-export interface ConversationHistoryItem {
-    user: string; // The user's display name
-    content: string;
-}
-
-export interface PersonaMemory {
-    id: number;
-    persona_id: string;
-    user_id?: string;
-    memory_type: 'fact' | 'relationship' | 'interaction_summary' | 'preference';
-    content: string;
-    salience_score: number;
-    last_accessed_at: string;
-    created_at: string;
 }
 
 export interface SanctionHistoryEntry {
