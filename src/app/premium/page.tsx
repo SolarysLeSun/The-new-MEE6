@@ -19,6 +19,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectLabel,
 } from "@/components/ui/select"
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -122,7 +123,7 @@ function PremiumActivationDialog({ children }: { children: React.ReactNode }) {
                             <SelectContent>
                                 {guilds.length > 0 ? guilds.map(g => (
                                     <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                                )) : <SelectItem value="" disabled>Aucun serveur autorisé</SelectItem>}
+                                )) : <SelectLabel>Aucun serveur autorisé</SelectLabel>}
                             </SelectContent>
                         </Select>
                     </div>
