@@ -56,6 +56,12 @@ const MoveAllCommand: Command = {
             return;
         }
 
+        // Check bot's permissions for the destination channel
+        if (!destinationChannel.permissionsFor(interaction.client.user)?.has(PermissionFlagsBits.MoveMembers) || !destinationChannel.permissionsFor(interaction.client.user)?.has(PermissionFlagsBits.Connect)) {
+            await interaction.editReply({ content: `Je n'ai pas les permissions suffisantes (Connecter, Déplacer les membres) pour le salon de destination **${destinationChannel.name}**.` });
+            return;
+        }
+
         let membersToMove: Collection<string, GuildMember> = new Collection();
         let sourceDescription = '';
 
@@ -90,10 +96,17 @@ const MoveAllCommand: Command = {
         let movedCount = 0;
         let errorCount = 0;
 
+        await interaction.editReply({ content: `Déplacement de ${membersToMove.size} utilisateur(s) en cours...` });
+
         const movePromises = membersToMove.map(async (member) => {
             try {
-                await member.voice.setChannel(destinationChannel, `Déplacé par ${interaction.user.tag}`);
-                movedCount++;
+                // Double check permissions right before moving
+                if (member.voice.channel && member.voice.channel.permissionsFor(interaction.client.user)?.has(PermissionFlagsBits.MoveMembers)) {
+                    await member.voice.setChannel(destinationChannel, `Déplacé en masse par ${interaction.user.tag}`);
+                    movedCount++;
+                } else {
+                    errorCount++;
+                }
             } catch (error) {
                 console.error(`[MoveAll] Impossible de déplacer ${member.user.tag}:`, error);
                 errorCount++;
@@ -103,17 +116,16 @@ const MoveAllCommand: Command = {
         await Promise.all(movePromises);
 
         const embed = new EmbedBuilder()
-            .setColor(0x00FF00)
-            .setTitle('Déplacement de Masse Terminé')
-            .setDescription(`**${movedCount}** utilisateur(s) ont été déplacé(s) avec succès ${sourceDescription} vers **${destinationChannel.name}**.`)
+            .setColor(movedCount > 0 ? 0x00FF00 : 0xFF0000)
+            .setTitle('Rapport de Déplacement de Masse')
+            .setDescription(`Opération terminée ${sourceDescription} vers **${destinationChannel.name}**.`)
+            .addFields(
+                { name: 'Succès', value: `${movedCount} utilisateur(s) déplacé(s)`, inline: true },
+                { name: 'Échecs', value: `${errorCount} utilisateur(s) non déplacé(s)`, inline: true }
+            )
             .setFooter({ text: `Opération effectuée par ${interaction.user.tag}` });
-        
-        if (errorCount > 0) {
-            embed.addFields({ name: 'Erreurs', value: `${errorCount} utilisateur(s) n'ont pas pu être déplacé(s).`});
-            embed.setColor(0xFFA500);
-        }
             
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ content: '', embeds: [embed] });
     },
 };
 
