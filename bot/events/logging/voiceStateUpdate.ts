@@ -2,7 +2,7 @@
 
 'use server';
 
-import { Events, VoiceState, EmbedBuilder, TextChannel } from 'discord.js';
+import { Events, VoiceState, EmbedBuilder, TextChannel, AuditLogEvent, User } from 'discord.js';
 import { getServerConfig } from '../../../src/lib/db';
 
 export const name = Events.VoiceStateUpdate;
@@ -28,14 +28,36 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
         .setTimestamp()
         .setFooter({ text: `ID: ${member.id}` });
     
-    let logSent = false;
-
     // User joins/leaves/switches channel
     if (oldChannel?.id !== newChannel?.id) {
         if (!oldChannel && newChannel) {
             embed.setColor(0x2ECC71).setDescription(`${member.user.toString()} a rejoint le salon vocal **${newChannel.name}**.`);
         } else if (oldChannel && !newChannel) {
-            embed.setColor(0xE74C3C).setDescription(`${member.user.toString()} a quitté le salon vocal **${oldChannel.name}**.`);
+            // User left a channel, check if it was a disconnect
+            let wasKicked = false;
+             try {
+                const fetchedLogs = await guild.fetchAuditLogs({
+                    limit: 1,
+                    type: AuditLogEvent.MemberDisconnect,
+                });
+                const disconnectLog = fetchedLogs.entries.first();
+
+                // If the log is recent and targets this user
+                if (disconnectLog && (Date.now() - disconnectLog.createdTimestamp) < 5000 && (disconnectLog.target as User).id === member.id) {
+                    embed.setColor(0xE74C3C).setDescription(`${member.user.toString()} a été déconnecté(e) du salon vocal **${oldChannel.name}**.`);
+                    if(disconnectLog.executor) embed.addFields({ name: 'Déconnecté(e) par', value: disconnectLog.executor.toString(), inline: true });
+                    if(disconnectLog.reason) embed.addFields({ name: 'Raison', value: disconnectLog.reason, inline: true });
+                    wasKicked = true;
+                }
+
+            } catch (e) {
+                console.warn(`[Log] Could not fetch audit logs for voice disconnect on ${guild.name}`);
+            }
+
+            if (!wasKicked) {
+                 embed.setColor(0xE74C3C).setDescription(`${member.user.toString()} a quitté le salon vocal **${oldChannel.name}**.`);
+            }
+
         } else if (oldChannel && newChannel) {
             embed.setColor(0x3498DB).setDescription(`${member.user.toString()} a changé de salon vocal.`)
                  .addFields(
