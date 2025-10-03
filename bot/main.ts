@@ -1,5 +1,5 @@
 
-import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember } from 'discord.js';
+import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -259,11 +259,36 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
         // --- Handler for Suggestion Button ---
         if (customId === 'create_suggestion') {
-             const command = client.commands.get('suggest');
-             if (command) {
-                 await (command.execute as any)(interaction, { subcommand: 'serveur' });
-             }
-             return;
+            if (!interaction.guild) return;
+
+            const config = await getServerConfig(interaction.guild.id, 'suggestions');
+            if (!config?.enabled) {
+                await interaction.reply({ content: "Le module de suggestions est désactivé sur ce serveur.", flags: MessageFlags.Ephemeral });
+                return;
+            }
+
+            const modal = new ModalBuilder()
+                .setCustomId('suggestion_modal_server')
+                .setTitle('Suggestion pour le Serveur');
+            
+            const titleInput = new TextInputBuilder()
+                .setCustomId('suggestion_title')
+                .setLabel("Titre de votre suggestion")
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder("Ex: Ajouter un salon pour les mèmes")
+                .setRequired(true);
+
+            const descriptionInput = new TextInputBuilder()
+                .setCustomId('suggestion_description')
+                .setLabel("Décrivez votre suggestion en détail")
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder("Expliquez pourquoi votre suggestion serait bénéfique pour le serveur...")
+                .setRequired(true);
+                
+            modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput), new ActionRowBuilder<TextInputBuilder>().addComponents(descriptionInput));
+            
+            await interaction.showModal(modal);
+            return;
         }
 
         // --- Handler for Content Creator Buttons ---
