@@ -66,6 +66,10 @@ GEMINI_API_KEY="VOTRE_CLE_API_GEMINI"
 PANEL_BASE_URL="http://localhost:9002"
 # L'URL de l'API interne du bot. Pour le développement local :
 BOT_API_URL="http://localhost:3001/api"
+
+# --- Template de Transcription HTML ---
+# Template HTML complet pour la commande /save. Doit être sur une seule ligne.
+TRANSCRIPT_TEMPLATE_HTML="<!DOCTYPE html> <html lang=\"fr\"> <head> <title>{server_name} - {channel_name}</title> <meta charset=utf-8> <link rel=\"shortcut icon\" href=\"{server_icon}\"> <meta name=viewport content=\"width=device-width,initial-scale=1\"> <style>body{font-family:Arial,sans-serif;background-color:#36393f;color:#fff;margin:0;padding:20px}header{background-color:#2f3136;padding:20px;border-radius:8px;margin-bottom:20px}header h1,header p{margin:0;color:#fff}header p{color:#b9bbbe;font-size:14px}.chat-message{display:flex;margin-bottom:15px}.avatar{width:40px;height:40px;border-radius:50%;margin-right:15px}.message-content{flex-grow:1}.username{font-weight:700;color:#fff}.timestamp{font-size:12px;color:#72767d;margin-left:10px}.message-body{margin-top:5px;white-space:pre-wrap;word-wrap:break-word}</style> </head> <body> <header> <h1>Serveur : {server_name}</h1> <p>Sauvegarde du salon <strong>#{channel_name}</strong> - {message_count} messages</p> <p>Sauvegardé le : {transcript_date}</p> </header> <div class=\"chat-container\"> {transcript_content} </div> </body> </html>"
 ```
 
 ### 4. Lancer l'application
