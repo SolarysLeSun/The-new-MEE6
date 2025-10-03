@@ -72,6 +72,10 @@ export default function MentionsLegalesPage() {
                       <strong>Support Technique & Infrastructure (Forge Network) :</strong>{" "}
                       <a href="mailto:contact@forgenet.fr" className="text-primary hover:underline">contact@forgenet.fr</a>
                   </li>
+                   <li>
+                      <strong>Développement & Questions Techniques (NightFury) :</strong>{" "}
+                      <a href="mailto:nightfury@nationquest.fr" className="text-primary hover:underline">nightfury@nationquest.fr</a>
+                  </li>
                   <li>
                       <strong>Projet "Marcus Extend" (NationQuest) :</strong>{" "}
                       <a href="mailto:marcus@nationquest.fr" className="text-primary hover:underline">marcus@nationquest.fr</a>
