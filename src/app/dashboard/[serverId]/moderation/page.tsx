@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -6,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Shield, Settings, PlusCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,27 +15,18 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Combobox } from '@/components/ui/combobox';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import type { SanctionPreset, AutoSanction } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
 // --- Types ---
-interface SanctionPreset {
-    name: string;
-    action: 'warn' | 'mute' | 'kick' | 'ban';
-    duration?: string; // e.g., '10m', '1h'
-    reason: string;
-}
 interface ModerationConfig {
   enabled: boolean;
   log_channel_id: string | null;
   dm_user_on_action: boolean;
   command_permissions: { [command: string]: string | null };
   presets: SanctionPreset[];
-  auto_sanctions: {
-      warn_count: number;
-      action: 'mute' | 'kick' | 'ban';
-      duration?: string;
-  }[];
+  auto_sanctions: AutoSanction[];
 }
 interface DiscordChannel {
   id: string;
@@ -131,6 +123,23 @@ export default function ModerationPage() {
     if (!config) return;
     handleValueChange('presets', config.presets.filter((_, i) => i !== index));
   };
+  
+  // --- AutoSanction Handlers ---
+    const addAutoSanction = () => {
+        if (!config) return;
+        const newAutoSanction: AutoSanction = { warn_count: 3, action: 'mute', duration: '10m' };
+        handleValueChange('auto_sanctions', [...config.auto_sanctions, newAutoSanction]);
+    };
+    const updateAutoSanction = (index: number, updatedSanction: AutoSanction) => {
+        if (!config) return;
+        const newAutoSanctions = [...config.auto_sanctions];
+        newAutoSanctions[index] = updatedSanction;
+        handleValueChange('auto_sanctions', newAutoSanctions);
+    };
+    const removeAutoSanction = (index: number) => {
+        if (!config) return;
+        handleValueChange('auto_sanctions', config.auto_sanctions.filter((_, i) => i !== index));
+    };
 
   if (loading || !config) {
     return <ModerationPageSkeleton />;
@@ -204,6 +213,45 @@ export default function ModerationPage() {
           </CardContent>
       </Card>
       
+      {/* Section Sanctions Automatiques */}
+      <Card>
+          <CardHeader>
+              <CardTitle>Sanctions Automatiques</CardTitle>
+              <CardDescription>
+                  Appliquez automatiquement des sanctions en fonction du nombre d'avertissements d'un utilisateur.
+              </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+              {config.auto_sanctions.map((sanction, index) => (
+                  <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end p-4 border rounded-lg bg-card-foreground/5">
+                      <div className="space-y-1">
+                          <Label className="text-xs">Nombre de warns</Label>
+                          <Input type="number" placeholder="Ex: 3" value={sanction.warn_count} onChange={e => updateAutoSanction(index, {...sanction, warn_count: parseInt(e.target.value) || 0})} />
+                      </div>
+                      <div className="space-y-1">
+                          <Label className="text-xs">Action</Label>
+                          <Select value={sanction.action} onValueChange={(val: any) => updateAutoSanction(index, {...sanction, action: val})}>
+                              <SelectTrigger><SelectValue/></SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="mute">Rendre Muet</SelectItem>
+                                  <SelectItem value="kick">Expulser</SelectItem>
+                                  <SelectItem value="ban">Bannir</SelectItem>
+                              </SelectContent>
+                          </Select>
+                      </div>
+                      <div className="space-y-1 col-span-2 md:col-span-1">
+                          <Label className="text-xs">Durée (si mute)</Label>
+                          <Input placeholder="Ex: 1h, 30m" value={sanction.duration || ''} disabled={sanction.action !== 'mute'} onChange={e => updateAutoSanction(index, {...sanction, duration: e.target.value})} />
+                      </div>
+                      <div className="flex items-end">
+                        <Button variant="ghost" size="icon" onClick={() => removeAutoSanction(index)}><Trash2 className="text-destructive"/></Button>
+                      </div>
+                  </div>
+              ))}
+              <Button variant="outline" className="w-full" onClick={addAutoSanction}><PlusCircle/>Ajouter une sanction automatique</Button>
+          </CardContent>
+      </Card>
+
       {/* Section Sanctions Prédéfinies */}
        <Card>
         <CardHeader>
@@ -247,7 +295,7 @@ export default function ModerationPage() {
               </div>
             </div>
           ))}
-          <Button variant="outline" className="w-full" onClick={addPreset}><PlusCircle/>Ajouter une sanction</Button>
+          <Button variant="outline" className="w-full" onClick={addPreset}><PlusCircle/>Ajouter une sanction prédéfinie</Button>
         </CardContent>
       </Card>
 
