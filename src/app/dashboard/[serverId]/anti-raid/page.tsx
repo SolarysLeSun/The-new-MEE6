@@ -163,6 +163,9 @@ export default function AntiRaidPage() {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
                         <div>
                             <Label htmlFor="raid-sensitivity" className="font-bold text-sm uppercase text-muted-foreground">Sensibilité de détection</Label>
+                             <p className="text-sm text-muted-foreground/80">
+                                Un niveau élevé détectera les raids plus rapidement et agressivement.
+                            </p>
                         </div>
                         <Select value={config.sensitivity} onValueChange={(val) => handleValueChange('sensitivity', val)}>
                             <SelectTrigger id="raid-sensitivity" className="w-full md:w-[240px]">
