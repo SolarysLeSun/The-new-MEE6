@@ -85,6 +85,15 @@ export default function PresentationPage() {
                     <FeatureCard icon={Sparkles} title="Outils IA Créatifs" description="L'IA vous assiste pour créer des annonces, des règles, des images, et même la structure de votre serveur."/>
                 </div>
             </section>
+             <footer className="relative z-10 container mx-auto px-4 py-8 border-t border-white/10">
+                <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-muted-foreground">
+                    <p>&copy; {new Date().getFullYear()} Marcus Bot, développé par Forgenet. Tous droits réservés.</p>
+                    <div className="flex gap-4 mt-4 sm:mt-0">
+                        <Link href="/mentions-legales" className="hover:text-white transition-colors">Mentions Légales</Link>
+                        <Link href="/conditions-utilisation" className="hover:text-white transition-colors">Conditions d'Utilisation</Link>
+                    </div>
+                </div>
+            </footer>
         </div>
     );
 }
