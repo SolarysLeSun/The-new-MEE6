@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 function MarcusLogo() {
   return (
-    <div className="p-2 bg-primary/10 rounded-md">
+    <div className="p-2 rounded-md">
         <Bot className="text-primary"/>
     </div>
   );
