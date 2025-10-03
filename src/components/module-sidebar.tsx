@@ -35,6 +35,7 @@ import {
   UserPlus,
   Megaphone,
   Info,
+  FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -107,6 +108,12 @@ const navCategories = [
             { href: 'agent-conversationnel', label: 'Agent Conversationnel', icon: MessageCircleQuestion, isPremium: true },
             { href: 'personnages-ia', label: 'Personnages IA', icon: Users, isPremium: true, isDisabled: true },
             { href: 'commandes-testeurs', label: 'Commandes Testeurs', icon: TestTubeDiagonal, isPremium: true },
+        ]
+    },
+    {
+        name: 'Outils',
+        items: [
+            { href: 'transcript-viewer', label: 'Lecteur de Transcriptions', icon: FileText },
         ]
     }
 ];
