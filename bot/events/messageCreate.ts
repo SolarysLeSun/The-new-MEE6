@@ -69,7 +69,8 @@ async function handleAutoTranslate(message: Message) {
 
 
 export async function execute(message: Message) {
-    if (message.author.bot) return;
+    // Ignore DMs and messages from bots
+    if (!message.guild || message.author.bot) return;
 
     // Run all message-based handlers
     await Promise.all([

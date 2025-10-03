@@ -216,7 +216,8 @@ async function handleConversationalAgent(message: Message) {
 export const name = Events.MessageCreate;
 export const once = false;
 export async function execute(message: Message) {
-    if (message.author.bot || !message.guild) return;
+    // Ignore messages from DMs or bots
+    if (!message.guild || message.author.bot) return;
 
     // Determine if the message is for the conversational agent
     const agentConfig = await getServerConfig(message.guild.id, 'conversational-agent');
