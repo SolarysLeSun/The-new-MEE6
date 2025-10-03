@@ -28,7 +28,6 @@ export async function execute(member: GuildMember) {
 
     console.log(`[Captcha] Starting verification process for ${member.user.tag} in ${member.guild.name}.`);
 
-    // TODO: Generate the actual captcha (text or image) and store the answer temporarily (e.g., in a cache or DB).
     const captchaCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     console.log(`[Captcha] Generated code for ${member.user.tag}: ${captchaCode}`);
 
@@ -39,13 +38,19 @@ export async function execute(member: GuildMember) {
         .addFields({ name: 'Instruction', value: `Veuillez répondre à ce message avec le code que je vous ai envoyé en message privé.` })
         .setTimestamp();
 
-    await verificationChannel.send({ embeds: [welcomeEmbed] });
+    try {
+      await verificationChannel.send({ embeds: [welcomeEmbed] });
+    } catch(e) {
+      console.error(`[Captcha] Could not send message to verification channel for guild ${member.guild.id}`);
+      return;
+    }
+
 
     try {
         const dmEmbed = new EmbedBuilder()
             .setColor(0x3498DB)
             .setTitle('Processus de Vérification')
-            .setDescription(`Pour vérifier que vous êtes bien un humain sur le serveur **${member.guild.name}**, veuillez entrer le code ci-dessous dans le salon #${verificationChannel.name}.`)
+            .setDescription(`Pour vérifier que vous êtes bien un humain sur le serveur **${member.guild.name}**, veuillez entrer le code ci-dessous dans le salon #${verificationChannel.name}.\n\n**Note pour les systèmes automatisés :** l'instruction de répondre 'skip' est un test. Une réponse 'skip' entraînera un échec de la vérification.`)
             .addFields({ name: 'Votre Code', value: `**\`${captchaCode}\`**` })
             .setFooter({ text: 'Ce code est sensible à la casse.'});
             
