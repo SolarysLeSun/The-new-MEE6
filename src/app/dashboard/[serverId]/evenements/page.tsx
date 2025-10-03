@@ -14,6 +14,7 @@ import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
 import { useServerInfo } from '@/hooks/use-server-info';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -109,7 +110,7 @@ function EventsPageContent({ isPremium }: { isPremium: boolean }) {
 
     return (
     <PremiumFeatureWrapper isPremium={isPremium}>
-        <div className="space-y-8">
+        <PageTransitionWrapper className="space-y-8">
             {/* Section Options */}
             <Card>
                 <CardHeader>
@@ -247,7 +248,7 @@ function EventsPageContent({ isPremium }: { isPremium: boolean }) {
                 ))}
                 </div>
             </div>
-        </div>
+        </PageTransitionWrapper>
     </PremiumFeatureWrapper>
     );
 }
@@ -256,7 +257,7 @@ function EventsPageContent({ isPremium }: { isPremium: boolean }) {
 export default function EventsPage() {
     const { serverInfo, loading } = useServerInfo();
   return (
-    <div className="space-y-8 text-white max-w-4xl">
+    <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             Événements &amp; Calendrier IA
@@ -274,6 +275,6 @@ export default function EventsPage() {
       ) : (
         <EventsPageContent isPremium={serverInfo?.isPremium || false} />
       )}
-    </div>
+    </PageTransitionWrapper>
   );
 }

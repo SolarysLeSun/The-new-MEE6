@@ -13,6 +13,7 @@ import { useServerInfo } from '@/hooks/use-server-info';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -97,7 +98,7 @@ export default function IdentityPage() {
     }
 
     return (
-        <div className="space-y-8 text-white max-w-4xl">
+        <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Identité du Bot</h1>
                 <p className="text-muted-foreground mt-2">
@@ -155,6 +156,6 @@ export default function IdentityPage() {
                     </div>
                 </CardContent>
             </Card>
-        </div>
+        </PageTransitionWrapper>
     );
 }

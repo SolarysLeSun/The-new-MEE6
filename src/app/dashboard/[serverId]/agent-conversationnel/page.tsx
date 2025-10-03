@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { GlobalAiStatusAlert } from '@/components/global-ai-status-alert';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -135,7 +136,7 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
 
     return (
         <PremiumFeatureWrapper isPremium={isPremium}>
-            <div className="space-y-8">
+            <PageTransitionWrapper className="space-y-8">
                  <GlobalAiStatusAlert />
                 {/* Section Activation */}
                 <Card>
@@ -291,7 +292,7 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                         </CardContent>
                     </Card>
                 </div>
-            </div>
+            </PageTransitionWrapper>
         </PremiumFeatureWrapper>
     );
 }

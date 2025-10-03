@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Voicemail } from 'lucide-react';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -123,7 +124,7 @@ export default function AutorolesPage() {
     const roleOptions = roles.map(r => ({ value: r.id, label: r.name }));
 
     return (
-        <div className="space-y-8 text-white max-w-4xl">
+        <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Autoroles</h1>
                 <p className="text-muted-foreground mt-2">
@@ -183,6 +184,6 @@ export default function AutorolesPage() {
                     </div>
                 </CardContent>
             </Card>
-        </div>
+        </PageTransitionWrapper>
     );
 }

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -81,58 +82,60 @@ function AutoTranslatePageContent({ serverId }: { serverId: string }) {
     }
 
     return (
-        <Card>
-            <CardHeader>
-                <h2 className="text-xl font-bold">Options de Traduction</h2>
-                <p className="text-muted-foreground">
-                    Activez et configurez le module de traduction automatique.
-                </p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <Label htmlFor="enable-translation" className="font-bold text-sm uppercase text-muted-foreground">Activer la traduction</Label>
-                        <p className="text-sm text-muted-foreground/80">
-                            Active ou désactive complètement le module.
-                        </p>
-                    </div>
-                    <Switch id="enable-translation" checked={config.enabled} onCheckedChange={(val) => handleValueChange('enabled', val)} />
-                </div>
-                <Separator />
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                    <Label htmlFor="translation-mode" className="font-bold text-sm uppercase text-muted-foreground">Mode de traduction</Label>
-                    <p className="text-sm text-muted-foreground/80">
-                        Choisissez comment les traductions sont affichées.
+        <PageTransitionWrapper>
+            <Card>
+                <CardHeader>
+                    <h2 className="text-xl font-bold">Options de Traduction</h2>
+                    <p className="text-muted-foreground">
+                        Activez et configurez le module de traduction automatique.
                     </p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <Label htmlFor="enable-translation" className="font-bold text-sm uppercase text-muted-foreground">Activer la traduction</Label>
+                            <p className="text-sm text-muted-foreground/80">
+                                Active ou désactive complètement le module.
+                            </p>
+                        </div>
+                        <Switch id="enable-translation" checked={config.enabled} onCheckedChange={(val) => handleValueChange('enabled', val)} />
                     </div>
-                    <Select value={config.mode} onValueChange={(val: 'inline' | 'replace') => handleValueChange('mode', val)}>
-                        <SelectTrigger className="w-full md:w-[280px]">
-                            <SelectValue placeholder="Sélectionner un mode" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="inline">En ligne (sous le message original)</SelectItem>
-                            <SelectItem value="replace">Remplacement (traduit directement)</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <Separator/>
-                <div className="space-y-2">
-                    <div>
-                        <Label htmlFor="translation-channels" className="font-bold text-sm uppercase text-muted-foreground">Salons de traduction</Label>
+                    <Separator />
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                        <Label htmlFor="translation-mode" className="font-bold text-sm uppercase text-muted-foreground">Mode de traduction</Label>
                         <p className="text-sm text-muted-foreground/80">
-                            Salons où la traduction sera active.
+                            Choisissez comment les traductions sont affichées.
                         </p>
+                        </div>
+                        <Select value={config.mode} onValueChange={(val: 'inline' | 'replace') => handleValueChange('mode', val)}>
+                            <SelectTrigger className="w-full md:w-[280px]">
+                                <SelectValue placeholder="Sélectionner un mode" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="inline">En ligne (sous le message original)</SelectItem>
+                                <SelectItem value="replace">Remplacement (traduit directement)</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
-                    <MultiSelectCombobox
-                        options={allChannels.map(c => ({ value: c.id, label: `# ${c.name}` }))}
-                        selected={config.channels || []}
-                        onSelectedChange={(selected) => handleValueChange('channels', selected)}
-                        placeholder="Sélectionner des salons..."
-                    />
-                </div>
-            </CardContent>
-        </Card>
+                    <Separator/>
+                    <div className="space-y-2">
+                        <div>
+                            <Label htmlFor="translation-channels" className="font-bold text-sm uppercase text-muted-foreground">Salons de traduction</Label>
+                            <p className="text-sm text-muted-foreground/80">
+                                Salons où la traduction sera active.
+                            </p>
+                        </div>
+                        <MultiSelectCombobox
+                            options={allChannels.map(c => ({ value: c.id, label: `# ${c.name}` }))}
+                            selected={config.channels || []}
+                            onSelectedChange={(selected) => handleValueChange('channels', selected)}
+                            placeholder="Sélectionner des salons..."
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+        </PageTransitionWrapper>
     )
 }
 
@@ -141,7 +144,7 @@ export default function AutoTranslatePage() {
     const serverId = params.serverId as string;
 
   return (
-    <div className="space-y-8 text-white max-w-4xl">
+    <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             Traduction Automatique
@@ -154,6 +157,6 @@ export default function AutoTranslatePage() {
       <Separator />
 
       <AutoTranslatePageContent serverId={serverId} />
-    </div>
+    </PageTransitionWrapper>
   );
 }

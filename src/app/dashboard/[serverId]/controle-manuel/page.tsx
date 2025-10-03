@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -24,6 +25,7 @@ import { Voicemail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -127,7 +129,7 @@ export default function ManualControlPage() {
     }
 
   return (
-    <div className="space-y-8 text-white max-w-4xl">
+    <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Contrôle Manuel (Vocal)</h1>
         <p className="text-muted-foreground mt-2">
@@ -199,6 +201,6 @@ export default function ManualControlPage() {
           ))}
         </div>
       </div>
-    </div>
+    </PageTransitionWrapper>
   );
 }

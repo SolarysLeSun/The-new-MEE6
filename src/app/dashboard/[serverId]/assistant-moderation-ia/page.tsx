@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
 import { GlobalAiStatusAlert } from '@/components/global-ai-status-alert';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -136,7 +137,7 @@ function ModAssistantPageContent({ isPremium }: { isPremium: boolean }) {
 
     return (
         <PremiumFeatureWrapper isPremium={isPremium}>
-            <div className="space-y-4">
+            <PageTransitionWrapper className="space-y-4">
                 <GlobalAiStatusAlert />
                 <Card>
                     <CardHeader>
@@ -256,7 +257,7 @@ function ModAssistantPageContent({ isPremium }: { isPremium: boolean }) {
                         </div>
                     </CardContent>
                 </Card>
-            </div>
+            </PageTransitionWrapper>
         </PremiumFeatureWrapper>
     )
 }
@@ -264,7 +265,7 @@ function ModAssistantPageContent({ isPremium }: { isPremium: boolean }) {
 export default function ModAssistantPage() {
     const { serverInfo, loading } = useServerInfo();
   return (
-    <div className="space-y-8 text-white max-w-4xl">
+    <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             Assistant Modération IA
@@ -282,6 +283,6 @@ export default function ModAssistantPage() {
       ) : (
         <ModAssistantPageContent isPremium={serverInfo?.isPremium || false} />
       )}
-    </div>
+    </PageTransitionWrapper>
   );
 }

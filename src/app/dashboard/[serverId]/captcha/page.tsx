@@ -13,6 +13,7 @@ import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
 import { useServerInfo } from '@/hooks/use-server-info';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -110,71 +111,73 @@ function CaptchaPageContent({ isPremium }: { isPremium: boolean }) {
 
     return (
         <PremiumFeatureWrapper isPremium={isPremium}>
-            <Card>
-                <CardHeader>
-                <h2 className="text-xl font-bold">Options du Captcha</h2>
-                <p className="text-muted-foreground">
-                    Configurez le système de vérification pour filtrer les raids de bots.
-                </p>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <Label htmlFor="enable-captcha" className="font-bold">Activer le Captcha</Label>
+            <PageTransitionWrapper>
+                <Card>
+                    <CardHeader>
+                    <h2 className="text-xl font-bold">Options du Captcha</h2>
+                    <p className="text-muted-foreground">
+                        Configurez le système de vérification pour filtrer les raids de bots.
+                    </p>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <Label htmlFor="enable-captcha" className="font-bold">Activer le Captcha</Label>
+                                <p className="text-sm text-muted-foreground/80">
+                                    Active ou désactive complètement le module.
+                                </p>
+                            </div>
+                            <Switch id="enable-captcha" checked={config.enabled} onCheckedChange={(val) => handleValueChange('enabled', val)} />
+                        </div>
+                        <Separator />
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
+                            <div>
+                            <Label htmlFor="verification-channel" className="font-bold text-sm uppercase text-muted-foreground">Salon de vérification</Label>
                             <p className="text-sm text-muted-foreground/80">
-                                Active ou désactive complètement le module.
+                                Le salon où les nouveaux membres effectueront la vérification.
                             </p>
+                            </div>
+                            <Select value={config.verification_channel || 'none'} onValueChange={(val) => handleValueChange('verification_channel', val === 'none' ? null : val)}>
+                                <SelectTrigger id="verification-channel" className="w-full md:w-[280px]">
+                                    <SelectValue placeholder="Sélectionner un salon" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectLabel>Salons textuels</SelectLabel>
+                                        <SelectItem value="none">Aucun</SelectItem>
+                                        {channels.map(channel => (
+                                            <SelectItem key={channel.id} value={channel.id}># {channel.name}</SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
                         </div>
-                        <Switch id="enable-captcha" checked={config.enabled} onCheckedChange={(val) => handleValueChange('enabled', val)} />
-                    </div>
-                    <Separator />
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
-                        <div>
-                        <Label htmlFor="verification-channel" className="font-bold text-sm uppercase text-muted-foreground">Salon de vérification</Label>
-                        <p className="text-sm text-muted-foreground/80">
-                            Le salon où les nouveaux membres effectueront la vérification.
-                        </p>
+                        <Separator />
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
+                            <div>
+                            <Label htmlFor="verified-role" className="font-bold text-sm uppercase text-muted-foreground">Rôle vérifié</Label>
+                            <p className="text-sm text-muted-foreground/80">
+                                Ce rôle est attribué après une vérification réussie.
+                            </p>
+                            </div>
+                            <Select value={config.verified_role_id || 'none'} onValueChange={(val) => handleValueChange('verified_role_id', val === 'none' ? null : val)}>
+                                <SelectTrigger id="verified-role" className="w-full md:w-[280px]">
+                                    <SelectValue placeholder="Sélectionner un rôle" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectLabel>Rôles</SelectLabel>
+                                        <SelectItem value="none">Aucun</SelectItem>
+                                        {roles.filter(r => r.name !== '@everyone').map(role => (
+                                            <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
                         </div>
-                        <Select value={config.verification_channel || 'none'} onValueChange={(val) => handleValueChange('verification_channel', val === 'none' ? null : val)}>
-                            <SelectTrigger id="verification-channel" className="w-full md:w-[280px]">
-                                <SelectValue placeholder="Sélectionner un salon" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectLabel>Salons textuels</SelectLabel>
-                                    <SelectItem value="none">Aucun</SelectItem>
-                                    {channels.map(channel => (
-                                        <SelectItem key={channel.id} value={channel.id}># {channel.name}</SelectItem>
-                                    ))}
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <Separator />
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
-                        <div>
-                        <Label htmlFor="verified-role" className="font-bold text-sm uppercase text-muted-foreground">Rôle vérifié</Label>
-                        <p className="text-sm text-muted-foreground/80">
-                            Ce rôle est attribué après une vérification réussie.
-                        </p>
-                        </div>
-                        <Select value={config.verified_role_id || 'none'} onValueChange={(val) => handleValueChange('verified_role_id', val === 'none' ? null : val)}>
-                            <SelectTrigger id="verified-role" className="w-full md:w-[280px]">
-                                <SelectValue placeholder="Sélectionner un rôle" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectLabel>Rôles</SelectLabel>
-                                     <SelectItem value="none">Aucun</SelectItem>
-                                    {roles.filter(r => r.name !== '@everyone').map(role => (
-                                        <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                                    ))}
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+            </PageTransitionWrapper>
         </PremiumFeatureWrapper>
     );
 }
@@ -183,7 +186,7 @@ export default function CaptchaPage() {
     const { serverInfo, loading } = useServerInfo();
 
     return (
-        <div className="space-y-8 text-white max-w-4xl">
+        <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
                     Captcha
@@ -201,6 +204,6 @@ export default function CaptchaPage() {
             ) : (
                 <CaptchaPageContent isPremium={serverInfo?.isPremium || false} />
             )}
-        </div>
+        </PageTransitionWrapper>
     );
 }

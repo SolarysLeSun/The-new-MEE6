@@ -21,6 +21,7 @@ import { useServerInfo } from '@/hooks/use-server-info';
 import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
 import { Badge } from '@/components/ui/badge';
 import { GlobalAiStatusAlert } from '@/components/global-ai-status-alert';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -131,7 +132,7 @@ function CommunityAssistantPageContent({ isPremium, serverId }: { isPremium: boo
 
     return (
         <PremiumFeatureWrapper isPremium={isPremium}>
-            <div className="space-y-8">
+            <PageTransitionWrapper className="space-y-8">
                 <GlobalAiStatusAlert />
                 {/* Section Options */}
                 <Card>
@@ -263,7 +264,7 @@ function CommunityAssistantPageContent({ isPremium, serverId }: { isPremium: boo
                     </Button>
                     </Card>
                 </div>
-            </div>
+            </PageTransitionWrapper>
         </PremiumFeatureWrapper>
     );
 }
@@ -274,7 +275,7 @@ export default function CommunityAssistantPage() {
     const { serverInfo, loading } = useServerInfo();
 
   return (
-    <div className="space-y-8 text-white max-w-4xl">
+    <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             Assistant Communautaire
@@ -292,7 +293,7 @@ export default function CommunityAssistantPage() {
       ) : (
         <CommunityAssistantPageContent isPremium={serverInfo?.isPremium || false} serverId={serverId} />
       )}
-    </div>
+    </PageTransitionWrapper>
   );
 }
 

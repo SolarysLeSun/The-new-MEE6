@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ChevronDown } from 'lucide-react';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -111,7 +112,7 @@ function AntiRaidPageContent({ isPremium }: { isPremium: boolean }) {
     
     return (
     <PremiumFeatureWrapper isPremium={isPremium}>
-        <div className="space-y-8">
+        <PageTransitionWrapper className="space-y-8">
             <Card>
                 <CardHeader>
                     <h2 className="text-xl font-bold">Options Générales</h2>
@@ -278,7 +279,7 @@ function AntiRaidPageContent({ isPremium }: { isPremium: boolean }) {
                     </CardContent>
                 </Card>
             </div>
-        </div>
+        </PageTransitionWrapper>
     </PremiumFeatureWrapper>
     )
 }
@@ -317,7 +318,7 @@ export default function AntiRaidPage() {
   const { serverInfo, loading } = useServerInfo();
   
   return (
-    <div className="space-y-8 text-white max-w-4xl">
+    <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             Anti-Raid & Scanner de Liens
@@ -335,6 +336,6 @@ export default function AntiRaidPage() {
       ) : (
         <AntiRaidPageContent isPremium={serverInfo?.isPremium || false} />
       )}
-    </div>
+    </PageTransitionWrapper>
   );
 }
