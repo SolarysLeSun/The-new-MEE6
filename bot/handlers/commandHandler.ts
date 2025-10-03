@@ -86,7 +86,7 @@ export const deployGlobalCommands = async (client: Client) => {
      const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
      const globalCommands = [];
      
-     const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia'];
+     const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'adminannounce'];
      for(const cmdName of ownerCommands) {
         const command = client.commands.get(cmdName);
         if (command) {

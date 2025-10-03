@@ -1,17 +1,18 @@
 
-import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from 'discord.js';
+import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
 import type { Command } from '@/types';
-import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance } from '@/lib/db';
+import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers } from '@/lib/db';
 import { startApi } from './api';
 import { initializeBotAuth } from './auth';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
 import { generateTextContent } from '@/ai/flows/content-creation-flow';
 import { announcementFlow } from '@/ai/flows/announcement-flow';
+import { autoTranslateFlow } from '@/ai/flows/auto-translate-flow';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -254,6 +255,44 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
     await interaction.editReply({ content: '✅ Le contenu a été modifié. Vous pouvez le modifier à nouveau ou le publier.', ephemeral: true });
 }
 
+async function handleTranslationSelect(interaction: StringSelectMenuInteraction) {
+    await interaction.deferReply({ ephemeral: true });
+
+    const targetLanguage = interaction.values[0];
+    const messageId = interaction.customId.split('_')[2];
+
+    try {
+        const message = await interaction.channel?.messages.fetch(messageId);
+        if (!message || !message.content) {
+            await interaction.editReply({ content: 'Impossible de trouver le message original ou son contenu est vide.' });
+            return;
+        }
+
+        const result = await autoTranslateFlow({
+            textToTranslate: message.content,
+            targetLanguage,
+        });
+        
+        if (result.translatedText) {
+            const embed = new EmbedBuilder()
+                .setColor(0x3498DB)
+                .setTitle(`Traduction en ${targetLanguage}`)
+                .addFields(
+                    { name: 'Texte Original', value: `\`\`\`${message.content.substring(0, 1020)}\`\`\`` },
+                    { name: 'Traduction', value: `\`\`\`${result.translatedText.substring(0, 1020)}\`\`\`` }
+                )
+                .setFooter({ text: `Traduit pour ${interaction.user.tag}` });
+            await interaction.editReply({ embeds: [embed] });
+        } else {
+             await interaction.editReply({ content: 'Le texte est déjà dans la langue cible ou une erreur est survenue.' });
+        }
+
+    } catch (error) {
+        console.error('[TranslateSelect] Error:', error);
+        await interaction.editReply({ content: 'Une erreur est survenue lors de la traduction.' });
+    }
+}
+
 
 client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     if (interaction.isAutocomplete()) {
@@ -275,6 +314,13 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
             await handleBotSuggestionModal(interaction);
         } else if (interaction.customId === 'content_modification_modal') {
              await handleContentModificationModal(interaction);
+        }
+        return;
+    }
+
+    if (interaction.isStringSelectMenu()) {
+        if (interaction.customId.startsWith('translate_select_')) {
+            await handleTranslationSelect(interaction);
         }
         return;
     }
@@ -507,7 +553,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         return;
     }
 
-    if (!interaction.isChatInputCommand()) return;
+    if (!interaction.isChatInputCommand() && !interaction.isContextMenuCommand()) return;
 
     const command = client.commands.get(interaction.commandName);
 
@@ -517,7 +563,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     }
 
     try {
-        await command.execute(interaction);
+        await command.execute(interaction as ChatInputCommandInteraction);
     } catch (error) {
         console.error(error);
         if (interaction.replied || interaction.deferred) {
