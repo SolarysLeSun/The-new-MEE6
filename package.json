@@ -11,6 +11,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "bot:dev": "tsx --watch bot/main.ts",
+    "bot:prod": "tsx --exit-hook bot/main.ts",
     "bot:build": "tsc -p bot/tsconfig.json",
     "bot:start": "node dist/bot/main.js"
   },
