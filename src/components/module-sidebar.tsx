@@ -34,6 +34,7 @@ import {
   X,
   UserPlus,
   Megaphone,
+  Info,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,7 @@ import { useEffect, useState } from 'react';
 import { Skeleton } from './ui/skeleton';
 import { useServerInfo } from '@/hooks/use-server-info';
 import GradientText from './ui/gradient-text';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -103,7 +105,7 @@ const navCategories = [
             { href: 'assistant-moderation-ia', label: 'Assistant Modération IA', icon: Sparkles, isPremium: true },
             { href: 'createur-contenu-ia', label: 'Créateur de Contenu IA', icon: Palette, isPremium: true },
             { href: 'agent-conversationnel', label: 'Agent Conversationnel', icon: MessageCircleQuestion, isPremium: true },
-            { href: 'personnages-ia', label: 'Personnages IA', icon: Users, isPremium: true },
+            { href: 'personnages-ia', label: 'Personnages IA', icon: Users, isPremium: true, isDisabled: true },
             { href: 'commandes-testeurs', label: 'Commandes Testeurs', icon: TestTubeDiagonal, isPremium: true },
         ]
     }
@@ -172,6 +174,7 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
       </div>
 
       <nav className="flex-1 space-y-2 overflow-y-auto pr-2 no-scrollbar">
+      <TooltipProvider>
         {navCategories.map((category) => (
             <div key={category.name}>
                 <h3 className="px-3 py-2 text-xs font-bold uppercase text-muted-foreground">{category.name}</h3>
@@ -184,11 +187,21 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
                            <Button
                              variant={isActive ? 'secondary' : 'ghost'}
                              className={cn('w-full justify-start gap-3', { 'bg-secondary text-white': isActive, 'text-muted-foreground hover:text-white': !isActive})}
-                             disabled={!serverId}
+                             disabled={!serverId || item.isDisabled}
                            >
                                <item.icon className={cn('h-5 w-5', { 'text-primary': isActive })} />
-                               <span>{item.label}</span>
-                               {item.isPremium && <Sparkles className="h-4 w-4 ml-auto text-yellow-400" />}
+                               <span className="flex-grow text-left">{item.label}</span>
+                               {item.isPremium && <Sparkles className="h-4 w-4 text-yellow-400" />}
+                               {item.isDisabled && (
+                                   <Tooltip>
+                                       <TooltipTrigger asChild>
+                                            <Info className="h-4 w-4 text-orange-400"/>
+                                       </TooltipTrigger>
+                                       <TooltipContent>
+                                           <p>Ce module est en cours de refonte.</p>
+                                       </TooltipContent>
+                                   </Tooltip>
+                               )}
                            </Button>
                         </Link>
                       );
@@ -196,6 +209,7 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
                 </div>
             </div>
         ))}
+        </TooltipProvider>
       </nav>
       <div className="mt-auto pt-4 text-center">
           <a href="https://forgenet.fr" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-white transition-colors">
