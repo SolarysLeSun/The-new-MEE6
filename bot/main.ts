@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
-import type { Command } from '@/types';
+import type { Command, CustomField } from '@/types';
 import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers } from '@/lib/db';
 import { startApi } from './api';
 import { initializeBotAuth } from './auth';
@@ -293,6 +293,70 @@ async function handleTranslationSelect(interaction: StringSelectMenuInteraction)
     }
 }
 
+async function handlePrivateRoomModal(interaction: ModalSubmitInteraction) {
+    if (!interaction.guild || !interaction.member) return;
+    const config = await getServerConfig(interaction.guild.id, 'private-rooms');
+
+    if (!config || !config.enabled || !config.category_id) {
+        await interaction.reply({ content: "Le système de salons privés n'est pas correctement configuré.", ephemeral: true });
+        return;
+    }
+
+    try {
+        await interaction.deferReply({ ephemeral: true });
+
+        const sanitizedUsername = interaction.user.username.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20) || 'user';
+        let channelName = config.channel_name_format || 'ticket-{user}';
+
+        channelName = channelName
+            .replace('{user}', sanitizedUsername)
+            .replace('{mention}', interaction.user.toString())
+            .replace('{id}', interaction.user.id)
+            .replace('{random}', Math.random().toString(36).substring(2, 8));
+        
+        // Replace custom field variables
+        for (let i = 0; i < (config.custom_fields?.length || 0); i++) {
+            const field = config.custom_fields[i];
+            const value = interaction.fields.getTextInputValue(field.id);
+            channelName = channelName.replace(`{champ${i + 1}}`, value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
+        }
+
+        const existingChannel = interaction.guild.channels.cache.find(c => c.name === channelName && c.parentId === config.category_id);
+        if(existingChannel) {
+            await interaction.editReply(`Vous avez déjà un salon privé ouvert : ${existingChannel}`);
+            return;
+        }
+
+        const channel = await interaction.guild.channels.create({
+            name: channelName.slice(0, 100),
+            type: ChannelType.GuildText,
+            parent: config.category_id,
+            permissionOverwrites: [
+                { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+                { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
+                { id: client.user!.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels] },
+            ],
+        });
+
+        // Construct initial message with custom field values
+        let initialMessage = `Bienvenue ${interaction.user}, votre salon privé a été créé.`;
+        if (config.custom_fields?.length > 0) {
+            initialMessage += "\n\n**Détails fournis :**";
+            for (const field of config.custom_fields) {
+                const value = interaction.fields.getTextInputValue(field.id);
+                initialMessage += `\n**${field.label}:** ${value}`;
+            }
+        }
+        
+        await channel.send(initialMessage);
+        await interaction.editReply(`Votre salon privé a été créé : ${channel}`);
+
+    } catch (error) {
+        console.error('[PrivateRoom] Error creating channel:', error);
+        await interaction.editReply({ content: 'Une erreur est survenue lors de la création du salon.' });
+    }
+}
+
 
 client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     if (interaction.isAutocomplete()) {
@@ -314,6 +378,8 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
             await handleBotSuggestionModal(interaction);
         } else if (interaction.customId === 'content_modification_modal') {
              await handleContentModificationModal(interaction);
+        } else if (interaction.customId === 'private_room_modal') {
+            await handlePrivateRoomModal(interaction);
         }
         return;
     }
@@ -496,59 +562,39 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         
         // --- Handler for Private Room Button ---
         if (customId === 'create_private_room') {
-            if (!interaction.guild || !interaction.member) return;
+            if (!interaction.guild) return;
             const config = await getServerConfig(interaction.guild.id, 'private-rooms');
-            if (!config || !config.enabled || !config.category_id) {
-                await interaction.reply({ content: "Le système de salons privés n'est pas correctement configuré.", flags: MessageFlags.Ephemeral });
+            if (!config || !config.enabled) {
+                await interaction.reply({ content: "Le système de salons privés est désactivé.", flags: MessageFlags.Ephemeral });
                 return;
             }
 
-            try {
-                await interaction.deferReply({ ephemeral: true });
+            const modal = new ModalBuilder()
+                .setCustomId('private_room_modal')
+                .setTitle(config.modal_title || 'Créer un salon privé');
 
-                const channelNameFormat = config.channel_name_format || 'ticket-{user}';
-                const sanitizedUsername = interaction.user.username.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20) || 'user';
-                
-                const channelName = channelNameFormat
-                    .replace('{user}', sanitizedUsername)
-                    .replace('{mention}', interaction.user.toString())
-                    .replace('{id}', interaction.user.id)
-                    .replace('{random}', Math.random().toString(36).substring(2, 8));
+            const customFields = (config.custom_fields as CustomField[] || []).slice(0, 3);
 
-
-                const existingChannel = interaction.guild.channels.cache.find(c => c.name === channelName && c.parentId === config.category_id);
-                if(existingChannel) {
-                    await interaction.editReply(`Vous avez déjà un salon privé ouvert : ${existingChannel}`);
-                    return;
-                }
-
-                const channel = await interaction.guild.channels.create({
-                    name: channelName,
-                    type: ChannelType.GuildText,
-                    parent: config.category_id,
-                    permissionOverwrites: [
-                        {
-                            id: interaction.guild.id, // @everyone
-                            deny: [PermissionFlagsBits.ViewChannel],
-                        },
-                        {
-                            id: interaction.user.id,
-                            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
-                        },
-                         {
-                            id: client.user!.id,
-                            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels],
-                        },
-                    ],
-                });
-
-                await channel.send(`Bienvenue ${interaction.user}, votre salon privé a été créé. Décrivez votre problème ici.`);
-                await interaction.editReply(`Votre salon privé a été créé : ${channel}`);
-
-            } catch (error) {
-                console.error('[PrivateRoom] Error creating channel:', error);
-                await interaction.editReply({ content: 'Une erreur est survenue lors de la création du salon.' });
+            if (customFields.length === 0) {
+                 // If no custom fields, just create the channel directly.
+                 // This is a simplified path for the old behavior.
+                 // A better implementation would be to call the modal handler directly.
+                 await handlePrivateRoomModal(interaction as any); // Risky cast
+                 return;
             }
+
+            for (const field of customFields) {
+                const textInput = new TextInputBuilder()
+                    .setCustomId(field.id)
+                    .setLabel(field.label)
+                    .setPlaceholder(field.placeholder || '')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+                modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(textInput));
+            }
+
+            await interaction.showModal(modal);
+            return;
         }
         return;
     }

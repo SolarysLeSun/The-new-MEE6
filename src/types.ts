@@ -143,3 +143,9 @@ export interface UserLevel {
     level: number;
     requiredXp: number;
 }
+
+export interface CustomField {
+    id: string;
+    label: string;
+    placeholder: string;
+}

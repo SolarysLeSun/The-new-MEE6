@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,13 +8,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Ticket } from 'lucide-react';
+import { Ticket, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Combobox } from '@/components/ui/combobox';
+import { Button } from '@/components/ui/button';
+import { v4 as uuidv4 } from 'uuid';
+import type { CustomField } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -24,6 +27,8 @@ interface PrivateRoomsConfig {
     category_id: string | null;
     embed_message: string;
     channel_name_format: string;
+    modal_title: string;
+    custom_fields: CustomField[];
     archive_summary: boolean;
     command_permissions: { [key: string]: string | null };
 }
@@ -141,6 +146,27 @@ export default function PrivateRoomsPage() {
         if (!config) return;
         saveConfig({ ...config, [key]: value });
     };
+    
+    const handleCustomFieldChange = (index: number, field: 'label' | 'placeholder', value: string) => {
+        if (!config || !config.custom_fields) return;
+        const newFields = [...config.custom_fields];
+        newFields[index][field] = value;
+        handleValueChange('custom_fields', newFields);
+    };
+
+    const addCustomField = () => {
+        if (!config || (config.custom_fields && config.custom_fields.length >= 3)) {
+            toast({ title: "Limite atteinte", description: "Vous ne pouvez pas ajouter plus de 3 champs personnalisés.", variant: "destructive"});
+            return;
+        };
+        const newField: CustomField = { id: `custom_field_${Date.now()}`, label: '', placeholder: '' };
+        handleValueChange('custom_fields', [...(config.custom_fields || []), newField]);
+    };
+
+    const removeCustomField = (id: string) => {
+        if (!config) return;
+        handleValueChange('custom_fields', config.custom_fields.filter(field => field.id !== id));
+    };
 
     const handlePermissionChange = (commandKey: string, roleId: string) => {
         if (!config) return;
@@ -249,13 +275,13 @@ export default function PrivateRoomsPage() {
               Format du nom du salon
             </Label>
             <p className="text-sm text-muted-foreground/80">
-              Variables disponibles: {'{user}'} (nom), {'{mention}'}, {'{id}'}, {'{random}'}.
+              Variables: {'{user}'}, {'{id}'}, {'{random}'}, {'{champ1}'}, {'{champ2}'}, {'{champ3}'}.
             </p>
             <Input
               id="channel-name-format"
               value={config.channel_name_format || ''}
               onBlur={(e) => handleValueChange('channel_name_format', e.target.value)}
-              placeholder="ticket-{user}"
+              placeholder="ticket-{user}-{champ1}"
             />
           </div>
           <Separator />
@@ -277,6 +303,36 @@ export default function PrivateRoomsPage() {
               onBlur={(e) => handleValueChange('embed_message', e.target.value)}
             />
           </div>
+           <Separator />
+           <div className="space-y-2">
+                <Label htmlFor="modal-title" className="font-bold text-sm uppercase text-muted-foreground">Titre de la fenêtre de création</Label>
+                <Input id="modal-title" value={config.modal_title || ''} onBlur={(e) => handleValueChange('modal_title', e.target.value)} placeholder="Créer un nouveau ticket" />
+           </div>
+            <div className="space-y-4">
+                 <Label className="font-bold text-sm uppercase text-muted-foreground">Champs personnalisés (Max 3)</Label>
+                 {config.custom_fields && config.custom_fields.map((field, index) => (
+                    <div key={field.id} className="p-4 border rounded-lg bg-card-foreground/5 space-y-2">
+                        <div className="flex justify-between items-center">
+                            <Label className="font-semibold">Champ {index + 1} (utilisé comme {'{champ'}{index+1}{'}'})</Label>
+                            <Button variant="ghost" size="icon" onClick={() => removeCustomField(field.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                        </div>
+                        <Input 
+                            placeholder="Titre du champ (ex: Sujet de votre ticket)" 
+                            defaultValue={field.label}
+                            onBlur={(e) => handleCustomFieldChange(index, 'label', e.target.value)}
+                        />
+                        <Input 
+                            placeholder="Texte d'aide (ex: Soyez bref et précis)" 
+                            defaultValue={field.placeholder}
+                            onBlur={(e) => handleCustomFieldChange(index, 'placeholder', e.target.value)}
+                        />
+                    </div>
+                ))}
+                <Button variant="outline" className="w-full" onClick={addCustomField} disabled={(config.custom_fields?.length || 0) >= 3}>
+                    <PlusCircle className="mr-2" />
+                    Ajouter un champ personnalisé
+                </Button>
+            </div>
           <Separator />
           <div className="flex items-center justify-between">
             <div>
@@ -343,4 +399,8 @@ export default function PrivateRoomsPage() {
       </div>
     </div>
   );
+}
+
+if (typeof window !== 'undefined') {
+    (window as any).uuidv4 = uuidv4;
 }

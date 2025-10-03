@@ -265,6 +265,8 @@ const defaultConfigs: DefaultConfigs = {
         embed_message: 'Cliquez sur le bouton ci-dessous pour créer un salon privé.',
         channel_name_format: 'ticket-{user}',
         archive_summary: true,
+        modal_title: 'Créer un salon privé',
+        custom_fields: [],
         command_permissions: {
             addprivate: null,
             privateresum: null,
