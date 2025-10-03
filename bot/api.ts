@@ -2,7 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes } from 'discord.js';
-import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem } from '@/lib/db';
+import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey } from '@/lib/db';
 import { verifyAndConsumeAuthToken, getBotAccessToken } from './auth';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
@@ -263,7 +263,7 @@ export function startApi(client: Client) {
                              return { // Channels without category
                                 ...baseChannelData,
                                 topic: 'topic' in channel ? channel.topic : null,
-                                nsfw: 'nsfw' in channel ? channel.nsfw : false,
+                                nsfw: 'nsfw' in channel ? child.nsfw : false,
                             };
                         }
                         return null;
@@ -275,6 +275,27 @@ export function startApi(client: Client) {
         } catch (error) {
             console.error(`[Backup API] Erreur lors de l'exportation pour ${guildId}:`, error);
             res.status(500).json({ error: 'Erreur interne du serveur lors de l\'exportation.' });
+        }
+    });
+
+    /**
+     * Endpoint pour activer une clé premium
+     */
+    app.post('/api/redeem-key', async (req, res) => {
+        const { guildId, key } = req.body;
+        if (!guildId || !key) {
+            return res.status(400).json({ error: 'Guild ID and key are required.' });
+        }
+
+        try {
+            const result = redeemPremiumKey(key, guildId);
+            if (result.success) {
+                res.status(200).json(result);
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error) {
+            res.status(500).json({ success: false, message: 'Erreur interne du serveur.' });
         }
     });
 
