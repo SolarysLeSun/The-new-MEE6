@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Trash2, Shield, Gem, Settings, MessageSquare, Mic, MousePointerClick } from 'lucide-react';
+import { PlusCircle, Trash2, Shield, Gem, Settings, MessageSquare, Mic, MousePointerClick, Video } from 'lucide-react';
 import type { RoleReward, XPBoost } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
@@ -26,6 +26,7 @@ interface LevelingConfig {
     xp_per_message: number;
     xp_per_reaction: number;
     xp_per_minute_in_voice: number;
+    xp_boost_webcam_multiplier: number;
     cooldown_seconds: number;
     level_up_message: string;
     level_up_channel_id: string | null;
@@ -192,21 +193,28 @@ export default function LevelingPage() {
                          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2"><MessageSquare/>XP par message</Label>
-                                <Input type="number" value={config.xp_per_message} onBlur={(e) => handleValueChange('xp_per_message', parseInt(e.target.value))} />
+                                <Input type="number" defaultValue={config.xp_per_message} onBlur={(e) => handleValueChange('xp_per_message', parseInt(e.target.value))} />
                             </div>
                              <div className="space-y-2">
                                 <Label className="flex items-center gap-2"><Mic/>XP par minute en vocal</Label>
-                                <Input type="number" value={config.xp_per_minute_in_voice} onBlur={(e) => handleValueChange('xp_per_minute_in_voice', parseInt(e.target.value))} />
+                                <Input type="number" defaultValue={config.xp_per_minute_in_voice} onBlur={(e) => handleValueChange('xp_per_minute_in_voice', parseInt(e.target.value))} />
                             </div>
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2"><MousePointerClick/>XP par réaction</Label>
-                                <Input type="number" value={config.xp_per_reaction} onBlur={(e) => handleValueChange('xp_per_reaction', parseInt(e.target.value))} />
+                                <Input type="number" defaultValue={config.xp_per_reaction} onBlur={(e) => handleValueChange('xp_per_reaction', parseInt(e.target.value))} />
                             </div>
-                            <div className="space-y-2 col-span-full">
+                         </div>
+                         <Separator/>
+                         <div className="grid md:grid-cols-2 gap-4">
+                             <div className="space-y-2">
+                                <Label className="flex items-center gap-2"><Video/>Multiplicateur XP (Webcam)</Label>
+                                <Input type="number" step="0.1" defaultValue={config.xp_boost_webcam_multiplier} onBlur={(e) => handleValueChange('xp_boost_webcam_multiplier', parseFloat(e.target.value))} />
+                            </div>
+                            <div className="space-y-2">
                                 <Label>Cooldown entre les messages (secondes)</Label>
-                                <Input type="number" value={config.cooldown_seconds} onBlur={(e) => handleValueChange('cooldown_seconds', parseInt(e.target.value))} />
+                                <Input type="number" defaultValue={config.cooldown_seconds} onBlur={(e) => handleValueChange('cooldown_seconds', parseInt(e.target.value))} />
                             </div>
-                        </div>
+                         </div>
                     </CardContent>
                 </Card>
             </TabsContent>
@@ -223,7 +231,7 @@ export default function LevelingPage() {
                                 <div key={index} className="flex items-end gap-2">
                                     <div className="w-24">
                                         <Label className="text-xs">Niveau</Label>
-                                        <Input type="number" placeholder="Niv." value={reward.level} onChange={e => handleListChange('role_rewards', index, 'level', parseInt(e.target.value))} />
+                                        <Input type="number" placeholder="Niv." defaultValue={reward.level} onChange={e => handleListChange('role_rewards', index, 'level', parseInt(e.target.value))} />
                                     </div>
                                     <div className="flex-1">
                                         <Label className="text-xs">Rôle</Label>
@@ -251,7 +259,7 @@ export default function LevelingPage() {
                                     </div>
                                     <div className="w-28">
                                         <Label className="text-xs">Multiplicateur</Label>
-                                        <Input type="number" step="0.1" placeholder="Ex: 1.5" value={boost.multiplier} onChange={e => handleListChange('xp_boost_roles', index, 'multiplier', parseFloat(e.target.value))} />
+                                        <Input type="number" step="0.1" placeholder="Ex: 1.5" defaultValue={boost.multiplier} onChange={e => handleListChange('xp_boost_roles', index, 'multiplier', parseFloat(e.target.value))} />
                                     </div>
                                     <Button variant="ghost" size="icon" onClick={() => removeListItem('xp_boost_roles', index)}><Trash2 className="text-destructive"/></Button>
                                 </div>
@@ -264,7 +272,7 @@ export default function LevelingPage() {
                                     </div>
                                      <div className="w-28">
                                         <Label className="text-xs">Multiplicateur</Label>
-                                        <Input type="number" step="0.1" placeholder="Ex: 1.5" value={boost.multiplier} onChange={e => handleListChange('xp_boost_channels', index, 'multiplier', parseFloat(e.target.value))} />
+                                        <Input type="number" step="0.1" placeholder="Ex: 1.5" defaultValue={boost.multiplier} onChange={e => handleListChange('xp_boost_channels', index, 'multiplier', parseFloat(e.target.value))} />
                                     </div>
                                     <Button variant="ghost" size="icon" onClick={() => removeListItem('xp_boost_channels', index)}><Trash2 className="text-destructive"/></Button>
                                 </div>
@@ -299,7 +307,7 @@ export default function LevelingPage() {
                         <div className="space-y-2">
                             <Label>Message de montée de niveau</Label>
                             <p className="text-sm text-muted-foreground">Variables: {'{user}'} (mention), {'{level}'}</p>
-                            <Textarea value={config.level_up_message} onBlur={(e) => handleValueChange('level_up_message', e.target.value)} />
+                            <Textarea defaultValue={config.level_up_message} onBlur={(e) => handleValueChange('level_up_message', e.target.value)} />
                         </div>
                         <Separator/>
                          <div className="space-y-2">

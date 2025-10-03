@@ -7,7 +7,7 @@ const INTERVAL = 60 * 1000; // 1 minute
 export function startVoiceXPInterval(client: Client) {
     setInterval(async () => {
         for (const guild of client.guilds.cache.values()) {
-            if (!guild || !guild.id) continue; // <-- **CORRECTIF AJOUTÉ ICI**
+            if (!guild || !guild.id) continue;
 
             const config = await getServerConfig(guild.id, 'leveling');
             if (!config?.enabled || !config.xp_per_minute_in_voice || config.xp_per_minute_in_voice <= 0) continue;
@@ -23,6 +23,11 @@ export function startVoiceXPInterval(client: Client) {
                     !vs.selfDeaf && !vs.serverDeaf // Is not deafened
                 ) {
                     let xpToGive = config.xp_per_minute_in_voice;
+
+                    // Apply webcam boost
+                    if (vs.selfVideo && config.xp_boost_webcam_multiplier > 1) {
+                        xpToGive *= config.xp_boost_webcam_multiplier;
+                    }
 
                     // Apply channel/role boosts
                     const channelBoost = config.xp_boost_channels?.find((c:any) => c.channel_id === vs.channelId);
