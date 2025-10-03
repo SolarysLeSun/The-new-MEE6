@@ -437,6 +437,11 @@ export function setGlobalAiStatus(disabled: boolean, reason: string | null) {
 }
 
 export function getServerConfig(guildId: string, module: Module): ModuleConfig | null {
+    // **CORRECTIF AJOUTÉ ICI**
+    if (!guildId) {
+        console.error(`[Database] Tentative de récupération de configuration avec un guildId non défini pour le module : ${module}.`);
+        return defaultConfigs[module] || null;
+    }
     try {
         const stmt = db.prepare('SELECT config, premium FROM server_configs WHERE guild_id = ? AND module = ?');
         const result = stmt.get(guildId, module) as { config: string, premium: number } | undefined;
@@ -482,6 +487,11 @@ export function getServerConfig(guildId: string, module: Module): ModuleConfig |
 }
 
 export function updateServerConfig(guildId: string, module: Module, configData: ModuleConfig) {
+     // **CORRECTIF AJOUTÉ ICI**
+    if (!guildId) {
+        console.error(`[Database] Tentative de mise à jour de configuration avec un guildId non défini pour le module : ${module}.`);
+        return;
+    }
     try {
         const { premium, ...restConfig } = configData;
         const configString = JSON.stringify(restConfig);
