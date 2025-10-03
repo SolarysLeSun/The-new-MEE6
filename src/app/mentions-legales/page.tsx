@@ -58,6 +58,26 @@ export default function MentionsLegalesPage() {
                 Le créateur de Marcus et Forgenet ne sauraient être tenus responsables des éventuels dommages, pertes de données, ou conflits survenant sur les serveurs Discord qui utilisent le bot. L'administration et la modération du serveur restent sous l'entière responsabilité de ses propriétaires et de leur équipe de modération.
               </p>
             </div>
+            <div className="space-y-2" id="contact">
+              <h2 className="text-2xl font-semibold text-white">
+                4. Contact
+              </h2>
+              <p>Pour toute demande, veuillez utiliser l'adresse e-mail appropriée :</p>
+              <ul className="list-disc list-inside space-y-2 pl-4">
+                  <li>
+                      <strong>Demandes Générales & Partenariats :</strong>{" "}
+                      <a href="mailto:contact@marcusbot.fr" className="text-primary hover:underline">contact@marcusbot.fr</a>
+                  </li>
+                  <li>
+                      <strong>Support Technique & Infrastructure (Forge Network) :</strong>{" "}
+                      <a href="mailto:contact@forgenet.fr" className="text-primary hover:underline">contact@forgenet.fr</a>
+                  </li>
+                  <li>
+                      <strong>Projet "Marcus Extend" (NationQuest) :</strong>{" "}
+                      <a href="mailto:marcus@nationquest.fr" className="text-primary hover:underline">marcus@nationquest.fr</a>
+                  </li>
+              </ul>
+            </div>
              <div className="text-center pt-8">
                 <Link href="/">
                     <Button variant="outline">
