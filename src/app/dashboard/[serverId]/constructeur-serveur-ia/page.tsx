@@ -21,13 +21,14 @@ import {
   SelectGroup,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { ToyBrick } from 'lucide-react';
+import { ToyBrick, AlertTriangle } from 'lucide-react';
 import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
 import { useServerInfo } from '@/hooks/use-server-info';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { GlobalAiStatusAlert } from '@/components/global-ai-status-alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -131,13 +132,22 @@ function ServerBuilderPageContent({ isPremium }: { isPremium: boolean }) {
         <PremiumFeatureWrapper isPremium={isPremium}>
             <div className="space-y-8">
             <GlobalAiStatusAlert />
+
+            <Alert variant="default" className="border-primary/40">
+                <AlertTriangle className="h-4 w-4 text-primary" />
+                <AlertTitle>Évolution du Module</AlertTitle>
+                <AlertDescription>
+                    Cette fonctionnalité est désormais gérée par un bot partenaire externe pour de meilleures performances. Les commandes Discord internes sont désactivées. Assurez-vous d'avoir invité le bot partenaire pour utiliser ces outils.
+                </AlertDescription>
+            </Alert>
+            
             <Card>
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <div>
-                            <h2 className="text-xl font-bold">Options du Constructeur</h2>
+                            <h2 className="text-xl font-bold">Activation du Module Premium</h2>
                             <p className="text-muted-foreground">
-                                Activez ou désactivez le module et gérez ses permissions.
+                                Activez ou désactivez l'accès premium pour le bot partenaire externe.
                             </p>
                         </div>
                         <Switch id="enable-module" checked={config.enabled} onCheckedChange={(val) => handleValueChange('enabled', val)} />
@@ -148,11 +158,11 @@ function ServerBuilderPageContent({ isPremium }: { isPremium: boolean }) {
             <Separator />
 
             {/* Section Commandes */}
-            <div className="space-y-6">
+            <div className="space-y-6 opacity-50 pointer-events-none">
                 <div>
-                <h2 className="text-xl font-bold">Commandes</h2>
+                <h2 className="text-xl font-bold">Anciennes Commandes (Désactivées)</h2>
                 <p className="text-muted-foreground">
-                    Gérez les permissions pour chaque commande de ce module.
+                    Ces commandes ne sont plus fonctionnelles et sont gérées par le bot externe.
                 </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -176,6 +186,7 @@ function ServerBuilderPageContent({ isPremium }: { isPremium: boolean }) {
                         <Select
                             value={config.command_permissions?.[command.key] || 'none'}
                             onValueChange={(value) => handlePermissionChange(command.key, value)}
+                            disabled
                         >
                             <SelectTrigger id={`role-select-${command.key}`} className="w-full">
                             <SelectValue placeholder="Sélectionner un rôle" />
@@ -212,7 +223,7 @@ export default function ServerBuilderPage() {
             <Badge className="bg-yellow-400 text-yellow-900">Premium</Badge>
         </h1>
         <p className="text-muted-foreground mt-2">
-          Utilisez l'IA pour créer, éditer ou réinitialiser la structure de votre serveur.
+          Utilisez l'IA pour créer, éditer ou réinitialiser la structure de votre serveur via un bot partenaire.
         </p>
       </div>
 

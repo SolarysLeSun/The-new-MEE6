@@ -263,7 +263,7 @@ export function startApi(client: Client) {
                              return { // Channels without category
                                 ...baseChannelData,
                                 topic: 'topic' in channel ? channel.topic : null,
-                                nsfw: 'nsfw' in channel ? child.nsfw : false,
+                                nsfw: 'nsfw' in channel ? (channel as any).nsfw : false,
                             };
                         }
                         return null;
@@ -430,6 +430,44 @@ export function startApi(client: Client) {
             res.status(500).json({ error: 'Failed to create knowledge item.' });
         }
     });
+    
+    /**
+     * Endpoint for an external bot to check if a guild has premium status.
+     * Requires a secret key for authentication.
+     */
+    app.get('/api/check-premium/:guildId', async (req, res) => {
+        const { guildId } = req.params;
+        const providedSecret = req.headers['x-bot-secret'];
+
+        if (!process.env.EXTERNAL_BOT_SECRET) {
+            console.error('[API Check Premium] La variable d\'environnement EXTERNAL_BOT_SECRET n\'est pas définie.');
+            return res.status(500).json({ error: 'Internal server configuration error.' });
+        }
+
+        if (providedSecret !== process.env.EXTERNAL_BOT_SECRET) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        if (!guildId) {
+            return res.status(400).json({ error: 'Guild ID is required.' });
+        }
+
+        try {
+            const guild = await client.guilds.fetch(guildId).catch(() => null);
+            if (!guild) {
+                return res.status(404).json({ error: 'Guild not found.' });
+            }
+
+            const serverBuilderConfig = getServerConfig(guildId, 'server-builder');
+            const isPremiumAndEnabled = (serverBuilderConfig?.premium && serverBuilderConfig?.enabled) || false;
+
+            res.status(200).json({ isPremium: isPremiumAndEnabled });
+        } catch (error) {
+            console.error(`[API Check Premium] Erreur lors de la vérification du statut premium pour ${guildId}:`, error);
+            res.status(500).json({ error: 'Internal server error.' });
+        }
+    });
+
 
     app.listen(API_PORT, () => {
         console.log(`[Bot API] Le serveur API interne écoute sur le port ${API_PORT}`);
