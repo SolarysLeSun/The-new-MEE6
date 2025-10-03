@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -93,7 +93,7 @@ export default function WelcomePage() {
     }
 
     return (
-        <div className="space-y-8 max-w-4xl">
+        <PageTransitionWrapper className="space-y-8 max-w-4xl">
             <div>
                 <h1 className="text-3xl font-bold">Accueil & Intégration</h1>
                 <p className="text-muted-foreground mt-2">
@@ -132,6 +132,6 @@ export default function WelcomePage() {
                     </div>
                 </CardContent>
             </Card>
-        </div>
+        </PageTransitionWrapper>
     );
 }

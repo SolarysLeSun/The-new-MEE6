@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -26,6 +24,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { v4 as uuidv4 } from 'uuid';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -157,7 +156,7 @@ export default function AutoModerationPage() {
     }
 
   return (
-    <div className="space-y-8 text-white max-w-5xl">
+    <PageTransitionWrapper className="space-y-8 text-white max-w-5xl">
         <div className="flex items-start justify-between">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Auto-Modération Personnalisée</h1>
@@ -198,7 +197,7 @@ export default function AutoModerationPage() {
                 ))}
             </div>
         )}
-    </div>
+    </PageTransitionWrapper>
   );
 }
 

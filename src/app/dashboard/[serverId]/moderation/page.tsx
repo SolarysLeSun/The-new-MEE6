@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -14,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Combobox } from '@/components/ui/combobox';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -147,7 +147,7 @@ export default function ModerationPage() {
   ];
 
   return (
-    <div className="space-y-8 text-white max-w-4xl">
+    <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Modération de Base</h1>
         <p className="text-muted-foreground mt-2">
@@ -277,7 +277,7 @@ export default function ModerationPage() {
             ))}
         </CardContent>
       </Card>
-    </div>
+    </PageTransitionWrapper>
   );
 }
 
