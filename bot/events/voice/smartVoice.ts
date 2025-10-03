@@ -59,6 +59,7 @@ async function updateChannelName(channel: NonThreadGuildBasedChannel) {
         members.forEach(member => {
             if (member.voice.streaming) streamingCount++;
             if (member.voice.selfVideo) webcamCount++;
+            // Gracefully handle cases where presence or activities might be null/undefined
             const game = member.presence?.activities.find(activity => activity.type === ActivityType.Playing)?.name;
             if (game) {
                 activityCounts[game] = (activityCounts[game] || 0) + 1;
@@ -86,7 +87,7 @@ async function updateChannelName(channel: NonThreadGuildBasedChannel) {
 
         // Only rename if the new name is different and not empty
         if (result.channelName && result.channelName !== channel.name) {
-            await (channel as GuildChannel).setName(result.channelName);
+            await channel.setName(result.channelName);
             if (channel instanceof VoiceChannel && result.channelBio) {
                 await channel.setTopic(result.channelBio);
             }

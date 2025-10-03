@@ -203,7 +203,6 @@ export default function SmartVoicePage() {
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             IA Vocaux
             <Badge className="bg-yellow-400 text-yellow-900">Premium</Badge>
-            <Badge variant="secondary">1 salon gratuit</Badge>
         </h1>
         <p className="text-muted-foreground mt-2">
             L'IA gère les salons vocaux : elle génère un nom en fonction de l'activité des membres. Si le salon est vide, il est renommé "Vocal intéractif".
