@@ -50,15 +50,22 @@ export async function execute(oldRole: Role, newRole: Role) {
     if (oldRole.permissions.bitfield !== newRole.permissions.bitfield) {
         const oldPerms = new PermissionsBitField(oldRole.permissions.bitfield);
         const newPerms = new PermissionsBitField(newRole.permissions.bitfield);
+        
         const addedPerms = newPerms.toArray().filter(p => !oldPerms.has(p));
         const removedPerms = oldPerms.toArray().filter(p => !newPerms.has(p));
         
+        let permChanges = '';
         if (addedPerms.length > 0) {
-            embed.addFields({ name: 'Permissions ajoutées', value: `\`\`\`diff\n+ ${addedPerms.join('\n+ ')}\n\`\`\`` });
+            permChanges += `+ ${addedPerms.join('\n+ ')}\n`;
         }
         if (removedPerms.length > 0) {
-            embed.addFields({ name: 'Permissions retirées', value: `\`\`\`diff\n- ${removedPerms.join('\n- ')}\n\`\`\`` });
+            permChanges += `- ${removedPerms.join('\n- ')}\n`;
         }
+
+        if (permChanges) {
+             embed.addFields({ name: 'Permissions modifiées', value: `\`\`\`diff\n${permChanges}\`\`\`` });
+        }
+        
         hasChanged = true;
     }
 
@@ -72,7 +79,7 @@ export async function execute(oldRole: Role, newRole: Role) {
             type: AuditLogEvent.RoleUpdate,
         });
 
-        const roleLog = fetchedLogs.entries.find(entry => (entry.target as Role).id === newRole.id);
+        const roleLog = fetchedLogs.entries.find(entry => (entry.target as Role).id === newRole.id && (Date.now() - entry.createdTimestamp) < 5000);
         if (roleLog) {
             embed.addFields({ name: 'Modifié par', value: roleLog.executor?.toString() || 'Inconnu' });
         }

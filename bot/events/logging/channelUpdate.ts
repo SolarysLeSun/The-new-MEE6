@@ -6,30 +6,6 @@ import { diff } from 'deep-object-diff';
 
 export const name = Events.ChannelUpdate;
 
-// Helper function to format permission changes
-function formatPermissionChanges(oldPerms: PermissionOverwrites, newPerms: PermissionOverwrites): string[] {
-    const changes: string[] = [];
-    const changedFor = (oldPerms.type === 0 ? 'Rôle' : 'Membre');
-    const targetName = oldPerms.type === 0 
-        ? oldPerms.channel.guild.roles.cache.get(oldPerms.id)?.name 
-        : oldPerms.channel.guild.members.cache.get(oldPerms.id)?.displayName;
-    
-    if(!targetName) return [];
-
-    const oldBits = { allow: oldPerms.allow.bitfield, deny: oldPerms.deny.bitfield };
-    const newBits = { allow: newPerms.allow.bitfield, deny: newPerms.deny.bitfield };
-    
-    const diffs = diff(oldBits, newBits);
-    
-    if (Object.keys(diffs).length > 0) {
-        changes.push(`**${changedFor} : @${targetName}**`);
-        if (diffs.allow) changes.push(`> Permissions autorisées modifiées.`);
-        if (diffs.deny) changes.push(`> Permissions refusées modifiées.`);
-    }
-
-    return changes;
-}
-
 export async function execute(oldChannel: GuildChannel, newChannel: GuildChannel) {
     if (!newChannel.guild) return;
 
@@ -70,7 +46,7 @@ export async function execute(oldChannel: GuildChannel, newChannel: GuildChannel
     const oldPerms = oldChannel.permissionOverwrites.cache;
     const newPerms = newChannel.permissionOverwrites.cache;
     if (oldPerms.size !== newPerms.size || !oldPerms.every((p, id) => newPerms.has(id) && newPerms.get(id)!.allow.bitfield === p.allow.bitfield && newPerms.get(id)!.deny.bitfield === p.deny.bitfield)) {
-         embed.addFields({ name: 'Permissions Mises à Jour', value: `Les permissions du salon ont été modifiées.`, inline: false });
+         embed.addFields({ name: 'Permissions Mises à Jour', value: `Les permissions du salon ont été modifiées. Consultez les logs d'audit du serveur pour plus de détails.`, inline: false });
          hasChanged = true;
     }
     
