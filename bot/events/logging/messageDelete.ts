@@ -25,12 +25,26 @@ export async function execute(message: Message | PartialMessage) {
         .setColor(0xFF470F) // Orange
         .setTitle('Message Supprimé')
         .setDescription(`Un message de **${message.author?.tag || 'Auteur inconnu'}** a été supprimé dans <#${message.channel.id}>.`)
-        .addFields(
-            { name: 'Contenu', value: message.content ? `\`\`\`${message.content.substring(0, 1020)}\`\`\`` : 'Impossible de récupérer le contenu (embed ou message partiel).', inline: false },
-        )
         .setTimestamp()
         .setFooter({ text: `Auteur ID: ${message.author?.id ?? 'Inconnu'} | Message ID: ${message.id}` });
         
+    if (message.content) {
+         embed.addFields(
+            { name: 'Contenu', value: `\`\`\`${message.content.substring(0, 1020)}\`\`\``, inline: false },
+        );
+    }
+    
+    // --- Find and display deleted image ---
+    const deletedAttachment = message.attachments.first();
+    if (deletedAttachment?.url) {
+        embed.setImage(deletedAttachment.url);
+        if (!message.content) { // If there was no text content, explicitly state it.
+             embed.addFields({ name: 'Contenu', value: 'Le message ne contenait que l\'image ci-dessous.', inline: false });
+        }
+    } else if (!message.content) {
+        embed.addFields({ name: 'Contenu', value: 'Impossible de récupérer le contenu (embed, message partiel, ou pièce jointe non-image).', inline: false });
+    }
+
     // --- Find who deleted the message ---
     try {
         const fetchedLogs = await message.guild.fetchAuditLogs({
@@ -62,5 +76,3 @@ export async function execute(message: Message | PartialMessage) {
         console.error(`[Log] Erreur lors de l'envoi du log de suppression de message pour le serveur ${message.guild.id}:`, error);
     }
 }
-
-    
