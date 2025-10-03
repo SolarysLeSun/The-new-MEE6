@@ -1,10 +1,11 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'Marcus',
-  description: 'Un tableau de bord moderne pour la gestion de votre bot Discord.',
+  title: "Marcus | Le Bot Discord Ultime, Propulsé par l'IA",
+  description: "Une solution tout-en-un pour la modération, la sécurité, et l'animation de votre serveur, avec des fonctionnalités IA de pointe pour une gestion intelligente.",
 };
 
 export default function RootLayout({
