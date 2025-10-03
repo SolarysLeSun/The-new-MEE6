@@ -1,5 +1,5 @@
 
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, TextChannel, Client, SystemChannelFlagsBitField, SystemChannelFlags, APIPartialChannel, User } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, TextChannel, Client, SystemChannelFlagsBitField, SystemChannelFlags, APIPartialChannel, User, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import type { Command } from '@/types';
 import { getServerConfig, getAllBotServers, getGlobalAiStatus } from '@/lib/db';
 import { announcementFlow } from '@/ai/flows/announcement-flow';
@@ -70,95 +70,32 @@ const AdminAnnounceCommand: Command = {
             .setTitle(title)
             .setDescription(description)
             .setColor(0x5865F2)
-            .setFooter({ text: `Annonce de la part de l'équipe de ${client.user?.username}`, iconURL: client.user?.displayAvatarURL() || undefined })
+            .setFooter({ text: `Annonce de la part de l'équipe de ${client.user?.username} | admin_announce`, iconURL: client.user?.displayAvatarURL() || undefined })
             .setTimestamp();
+        
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+                .setCustomId('publish_content')
+                .setLabel('Publier sur tous les serveurs')
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('🚀'),
+            new ButtonBuilder()
+                .setCustomId('modify_content')
+                .setLabel('Modifier')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('✏️'),
+            new ButtonBuilder()
+                .setCustomId('cancel_content')
+                .setLabel('Annuler')
+                .setStyle(ButtonStyle.Danger)
+                .setEmoji('🗑️')
+        );
 
-        const allServers = getAllBotServers();
-        let successCount = 0;
-        const failures: { name: string; id: string; reason: string }[] = [];
-
-        await interaction.editReply({ content: `Envoi de l'annonce à ${allServers.length} serveurs...` });
-
-        for (const serverId of allServers.map(s => s.id)) {
-            let guild;
-            try {
-                guild = await client.guilds.fetch(serverId).catch(() => null);
-                if (!guild) {
-                    failures.push({ id: serverId, name: 'Serveur Inconnu', reason: 'Le bot n\'est plus sur ce serveur.' });
-                    continue;
-                }
-
-                const config = await getServerConfig(guild.id, 'announcements');
-                let targetChannel: TextChannel | null = null;
-                let isFallback = false;
-
-                // 1. Try dedicated announcement channel
-                if (config && config.bot_announcement_channel_id) {
-                    targetChannel = await client.channels.fetch(config.bot_announcement_channel_id).catch(() => null) as TextChannel;
-                }
-
-                // 2. If not found, try welcome channel
-                if (!targetChannel) {
-                    const welcomeConfig = await getServerConfig(guild.id, 'welcome-message');
-                    if (welcomeConfig && welcomeConfig.welcome_channel_id) {
-                         targetChannel = await client.channels.fetch(welcomeConfig.welcome_channel_id).catch(() => null) as TextChannel;
-                         if (targetChannel) isFallback = true;
-                    }
-                }
-                
-                // 3. If not found, try system channel
-                if (!targetChannel && guild.systemChannel && !guild.systemChannel.flags.has(SystemChannelFlags.SuppressJoinNotifications)) {
-                     targetChannel = guild.systemChannel;
-                     if (targetChannel) isFallback = true;
-                }
-
-                // 4. If not found, find first writable text channel
-                if (!targetChannel) {
-                    targetChannel = guild.channels.cache.find(c => c.type === 0 && c.permissionsFor(guild.members.me!)?.has('SendMessages')) as TextChannel;
-                     if (targetChannel) isFallback = true;
-                }
-                
-                // Send the message
-                if (targetChannel) {
-                    let messageContent = isFallback 
-                        ? "Message de l'équipe du bot (veuillez configurer un salon d'annonce dédié via le panel pour éviter ce message)." 
-                        : "";
-                    await targetChannel.send({ content: messageContent, embeds: [embed] });
-                    successCount++;
-                } else {
-                    failures.push({ id: guild.id, name: guild.name, reason: 'Aucun salon approprié n\'a été trouvé pour envoyer le message.' });
-                }
-
-            } catch (error: any) {
-                failures.push({ id: serverId, name: guild?.name || 'ID Inconnu', reason: `Erreur API: ${error.message}` });
-            }
-        }
-
-        const summaryMessage = `✅ Annonce envoyée avec succès à **${successCount}** serveurs. Échec pour **${failures.length}** serveurs.`;
-        await interaction.followUp({
-            content: summaryMessage,
-            ephemeral: true,
+        await interaction.editReply({
+            content: "Voici un aperçu de votre annonce. Confirmez-vous l'envoi ?",
+            embeds: [embed],
+            components: [row]
         });
-
-        // Send detailed failure report via DM
-        if (failures.length > 0) {
-            let report = "Rapport d'échec pour la commande `/adminannounce`:\n\n";
-            for (const fail of failures) {
-                report += `**Serveur :** ${fail.name} (\`${fail.id}\`)\n**Raison :** ${fail.reason}\n-----------------\n`;
-            }
-
-            try {
-                const owner = await client.users.fetch(OWNER_ID);
-                // Split message if it's too long for Discord
-                const chunks = report.match(/[\s\S]{1,1900}/g) || [];
-                for (const chunk of chunks) {
-                    await owner.send(`\`\`\`${chunk}\`\`\``);
-                }
-            } catch (dmError) {
-                console.error(`[AdminAnnounce] Impossible d'envoyer le rapport d'erreurs en DM au propriétaire.`, dmError);
-                 await interaction.followUp({ content: "Impossible d'envoyer le rapport d'erreurs détaillé en DM.", ephemeral: true });
-            }
-        }
     },
 };
 

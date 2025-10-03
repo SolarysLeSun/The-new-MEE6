@@ -11,6 +11,7 @@ import { initializeBotAuth } from './auth';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
 import { generateTextContent } from '@/ai/flows/content-creation-flow';
+import { announcementFlow } from '@/ai/flows/announcement-flow';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -198,36 +199,59 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
 
     const modificationRequest = interaction.fields.getTextInputValue('modification_request');
     const originalEmbed = interaction.message.embeds[0];
-    
-    // We need to infer the original type and topic. We can store this in the embed footer,
-    // or try to reverse-engineer it from the title. Let's try reverse-engineering for now.
-    const title = originalEmbed.title || '';
-    const type = title.includes('Règle') ? 'rule' : 'announcement';
-    const topic = title.replace(/^(📝 Règle : |📢 Annonce : )/i, '').replace(/"/g, '');
+    const footerText = originalEmbed.footer?.text || '';
 
-    const config = await getServerConfig(interaction.guild.id, 'content-ai');
+    let newEmbed: EmbedBuilder;
 
-    try {
-        const result = await generateTextContent({
-            type: type as 'rule' | 'announcement',
-            topic: topic, // The topic remains the same
-            tone: config.default_tone,
-            customInstructions: originalEmbed.description || '', // Use the old description as context
-            modificationRequest: modificationRequest // Pass the new modification request
-        });
+    if (footerText.includes('admin_announce') || footerText.includes('announce_channel')) {
+        // --- Handle Announcement Modification ---
+        const config = await getServerConfig(interaction.guild.id, 'announcements');
+        try {
+            const result = await announcementFlow({
+                rawText: originalEmbed.description || '',
+                authorName: originalEmbed.author?.name || interaction.user.username,
+                modificationRequest: modificationRequest
+            });
 
-        const newEmbed = EmbedBuilder.from(originalEmbed)
-            .setDescription(result.generatedText.substring(0, 4096));
+            newEmbed = EmbedBuilder.from(originalEmbed)
+                .setTitle(result.title)
+                .setDescription(result.description);
+                
+        } catch (error) {
+            console.error('[AnnounceModify] Error:', error);
+            await interaction.editReply({ content: 'Une erreur est survenue lors de la modification de l\'annonce.', ephemeral: true });
+            return;
+        }
 
-        // The buttons are on the original message, which is ephemeral. We need to edit the reply from the button click.
-        // Wait, the original reply is what we need to edit.
-        await interaction.message.edit({ embeds: [newEmbed] });
-        await interaction.editReply({ content: '✅ Le contenu a été modifié. Vous pouvez le modifier à nouveau ou le publier.', ephemeral: true });
+    } else {
+         // --- Handle IA Content (Rule/Announcement) Modification ---
+        const title = originalEmbed.title || '';
+        const type = title.includes('Règle') ? 'rule' : 'announcement';
+        const topic = title.replace(/^(📝 Règle : |📢 Annonce : )/i, '').replace(/"/g, '');
 
-    } catch (error) {
-        console.error('[ContentModify] Error:', error);
-        await interaction.editReply({ content: 'Une erreur est survenue lors de la modification du contenu.', ephemeral: true });
+        const config = await getServerConfig(interaction.guild.id, 'content-ai');
+
+        try {
+            const result = await generateTextContent({
+                type: type as 'rule' | 'announcement',
+                topic: topic,
+                tone: config.default_tone,
+                customInstructions: originalEmbed.description || '', // Use the old description as context
+                modificationRequest: modificationRequest // Pass the new modification request
+            });
+
+            newEmbed = EmbedBuilder.from(originalEmbed)
+                .setDescription(result.generatedText.substring(0, 4096));
+
+        } catch (error) {
+            console.error('[ContentModify] Error:', error);
+            await interaction.editReply({ content: 'Une erreur est survenue lors de la modification du contenu.', ephemeral: true });
+            return;
+        }
     }
+
+    await interaction.message.edit({ embeds: [newEmbed] });
+    await interaction.editReply({ content: '✅ Le contenu a été modifié. Vous pouvez le modifier à nouveau ou le publier.', ephemeral: true });
 }
 
 
@@ -301,11 +325,10 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
         // --- Handler for Suggestion Button ---
         if (customId === 'create_suggestion') {
-            if (!interaction.guild) return;
-
-            const config = await getServerConfig(interaction.guild.id, 'suggestions');
+            await interaction.deferReply({ ephemeral: true });
+            const config = await getServerConfig(interaction.guild!.id, 'suggestions');
             if (!config?.enabled) {
-                await interaction.reply({ content: "Le module de suggestions est désactivé sur ce serveur.", flags: MessageFlags.Ephemeral });
+                await interaction.editReply({ content: "Le module de suggestions est désactivé sur ce serveur." });
                 return;
             }
 
@@ -334,15 +357,75 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         }
 
         // --- Handler for Content Creator Buttons ---
-        if (customId === 'publish_content' || customId === 'cancel_content') {
-             if (!interaction.channel || !interaction.message.embeds[0]) return;
-             
-             if (customId === 'publish_content') {
-                 await (interaction.channel as TextChannel).send({ embeds: [interaction.message.embeds[0]] });
-                 await interaction.update({ content: '✅ Contenu publié avec succès !', components: [], embeds: [] });
-             } else {
-                 await interaction.message.delete();
-             }
+        if (customId === 'publish_content') {
+            if (!interaction.channel || !interaction.message.embeds[0]) return;
+            
+            const embed = interaction.message.embeds[0];
+            const footerText = embed.footer?.text || '';
+
+            if (footerText.includes('announce_channel')) {
+                const channelId = footerText.split(':')[1];
+                const targetChannel = await client.channels.fetch(channelId).catch(() => null) as TextChannel;
+                if (targetChannel) {
+                    await targetChannel.send({ embeds: [embed] });
+                    await interaction.update({ content: '✅ Annonce publiée avec succès !', components: [], embeds: [] });
+                } else {
+                    await interaction.update({ content: '❌ Erreur : Le salon d\'annonce est introuvable.', components: [], embeds: [] });
+                }
+            } else if (footerText.includes('admin_announce')) {
+                await interaction.update({ content: '🚀 Envoi de l\'annonce globale en cours...', components: [], embeds: [] });
+                
+                const allServers = getAllBotServers();
+                let successCount = 0;
+                const failures: { name: string; id: string; reason: string }[] = [];
+
+                for (const serverId of allServers.map(s => s.id)) {
+                    let guild;
+                    try {
+                        guild = await client.guilds.fetch(serverId).catch(() => null);
+                        if (!guild) {
+                            failures.push({ id: serverId, name: 'Serveur Inconnu', reason: 'Le bot n\'est plus sur ce serveur.' });
+                            continue;
+                        }
+
+                        const config = await getServerConfig(guild.id, 'announcements');
+                        let targetChannel: TextChannel | null = null;
+                        if (config && config.bot_announcement_channel_id) {
+                            targetChannel = await client.channels.fetch(config.bot_announcement_channel_id).catch(() => null) as TextChannel;
+                        }
+                        if (!targetChannel) {
+                             failures.push({ id: guild.id, name: guild.name, reason: 'Aucun salon d\'annonce configuré.' });
+                             continue;
+                        }
+                        await targetChannel.send({ embeds: [embed] });
+                        successCount++;
+                    } catch (error: any) {
+                        failures.push({ id: serverId, name: guild?.name || 'ID Inconnu', reason: `Erreur API: ${error.message}` });
+                    }
+                }
+                const summaryMessage = `✅ Annonce envoyée avec succès à **${successCount}** serveurs. Échec pour **${failures.length}** serveurs.`;
+                await interaction.followUp({ content: summaryMessage, ephemeral: true });
+
+                if (failures.length > 0) {
+                    let report = "Rapport d'échec pour la commande `/adminannounce`:\n\n";
+                    for (const fail of failures) {
+                        report += `**Serveur :** ${fail.name} (\`${fail.id}\`)\n**Raison :** ${fail.reason}\n-----------------\n`;
+                    }
+                    try {
+                        await interaction.user.send(report.substring(0, 2000));
+                    } catch (dmError) {
+                        console.error(`[AdminAnnounce] Impossible d'envoyer le rapport d'erreurs en DM.`, dmError);
+                    }
+                }
+            } else { // Fallback for iacontent
+                await (interaction.channel as TextChannel).send({ embeds: [embed] });
+                await interaction.update({ content: '✅ Contenu publié avec succès !', components: [], embeds: [] });
+            }
+            return;
+        }
+
+        if (customId === 'cancel_content') {
+             await interaction.message.delete();
              return;
         }
         

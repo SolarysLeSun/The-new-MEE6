@@ -1,5 +1,5 @@
 
-import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, TextChannel } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, TextChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import type { Command } from '@/types';
 import { getServerConfig } from '@/lib/db';
 import { announcementFlow } from '@/ai/flows/announcement-flow';
@@ -51,11 +51,33 @@ const AnnounceCommand: Command = {
                 .setTitle(result.title)
                 .setDescription(result.description)
                 .setAuthor({ name: `Annonce de ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() || undefined })
-                .setTimestamp();
+                .setTimestamp()
+                .setFooter({ text: `announce_channel:${config.announcement_channel_id}` });
 
-            await targetChannel.send({ embeds: [embed] });
 
-            await interaction.editReply({ content: `✅ Votre annonce a été publiée avec succès dans ${targetChannel}.` });
+            const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('publish_content')
+                    .setLabel('Publier')
+                    .setStyle(ButtonStyle.Success)
+                    .setEmoji('✅'),
+                new ButtonBuilder()
+                    .setCustomId('modify_content')
+                    .setLabel('Modifier')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('✏️'),
+                new ButtonBuilder()
+                    .setCustomId('cancel_content')
+                    .setLabel('Annuler')
+                    .setStyle(ButtonStyle.Danger)
+                    .setEmoji('🗑️')
+            );
+            
+            await interaction.editReply({
+                content: "Voici un aperçu de votre annonce. Confirmez-vous la publication ?",
+                embeds: [embed],
+                components: [row]
+            });
 
         } catch (error) {
             console.error('[AnnounceCommand] Error:', error);
