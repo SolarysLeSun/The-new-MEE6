@@ -8,7 +8,7 @@ import { updateGuildCommands } from './handlers/commandHandler';
 import { generateKeywords } from '@/ai/flows/keyword-generation-flow';
 import { knowledgeCreationFlow } from '@/ai/flows/knowledge-creation-flow';
 
-const API_PORT = process.env.BOT_API_PORT || 10033;
+const API_PORT = process.env.BOT_API_PORT || 3630;
 
 export function startApi(client: Client) {
     const app = express();
