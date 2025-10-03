@@ -17,7 +17,7 @@ const IADeleteServCommand: Command = {
             .setColor(0xFFA500)
             .setTitle('Fonctionnalité en Évolution')
             .setDescription(
-                'Le module "Server Builder IA" est désormais géré par un **bot externe partenaire** pour une expérience améliorée et plus puissante.\n\n' +
+                'Le module "Server Builder IA" est désormais géré par un **bot Marcus dédié** pour une expérience améliorée et plus puissante.\n\n' +
                 'Pour utiliser cette fonctionnalité, veuillez inviter le bot dédié depuis notre site web ou serveur de support.\n\n' +
                 'Cette fonctionnalité reste une exclusivité **Premium**.'
             )

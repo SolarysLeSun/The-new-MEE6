@@ -7,10 +7,11 @@ import RippleGrid from "@/components/ripple-grid";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { PageTransitionWrapper } from "@/components/page-transition-wrapper";
 
 export default function ConditionsUtilisationPage() {
   return (
-    <div className="relative min-h-screen w-full bg-background text-foreground">
+    <PageTransitionWrapper className="relative min-h-screen w-full bg-background text-foreground">
       <div className="absolute inset-0 z-0">
         <RippleGrid
           gridColor="#ffffff10"
@@ -80,6 +81,6 @@ export default function ConditionsUtilisationPage() {
           </CardContent>
         </Card>
       </main>
-    </div>
+    </PageTransitionWrapper>
   );
 }

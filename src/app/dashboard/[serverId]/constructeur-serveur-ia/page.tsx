@@ -29,6 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { GlobalAiStatusAlert } from '@/components/global-ai-status-alert';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -130,14 +131,14 @@ function ServerBuilderPageContent({ isPremium }: { isPremium: boolean }) {
 
     return (
         <PremiumFeatureWrapper isPremium={isPremium}>
-            <div className="space-y-8">
+            <PageTransitionWrapper className="space-y-8">
             <GlobalAiStatusAlert />
 
             <Alert variant="default" className="border-primary/40">
                 <AlertTriangle className="h-4 w-4 text-primary" />
                 <AlertTitle>Évolution du Module</AlertTitle>
                 <AlertDescription>
-                    Cette fonctionnalité est désormais gérée par un bot partenaire externe pour de meilleures performances. Les commandes Discord internes sont désactivées. Assurez-vous d'avoir invité le bot partenaire pour utiliser ces outils.
+                    Cette fonctionnalité est désormais gérée par un **bot Marcus dédié** pour des performances accrues. Les commandes Discord internes sont désactivées. Assurez-vous d'avoir invité ce bot spécifique pour utiliser ces outils.
                 </AlertDescription>
             </Alert>
             
@@ -208,7 +209,7 @@ function ServerBuilderPageContent({ isPremium }: { isPremium: boolean }) {
                 ))}
                 </div>
             </div>
-            </div>
+            </PageTransitionWrapper>
         </PremiumFeatureWrapper>
     );
 }
@@ -216,7 +217,7 @@ function ServerBuilderPageContent({ isPremium }: { isPremium: boolean }) {
 export default function ServerBuilderPage() {
     const { serverInfo, loading } = useServerInfo();
   return (
-    <div className="space-y-8 text-white max-w-4xl">
+    <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             Constructeur de Serveur IA
@@ -234,6 +235,6 @@ export default function ServerBuilderPage() {
       ) : (
         <ServerBuilderPageContent isPremium={serverInfo?.isPremium || false} />
       )}
-    </div>
+    </PageTransitionWrapper>
   );
 }

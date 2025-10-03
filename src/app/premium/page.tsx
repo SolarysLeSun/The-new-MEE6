@@ -21,6 +21,7 @@ import {
   SelectLabel,
   SelectGroup,
 } from "@/components/ui/select"
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -159,7 +160,7 @@ export default function PremiumPage() {
     const koFiUrl = 'https://ko-fi.com/M4M21555O9';
 
     return (
-        <div className="relative min-h-screen w-full bg-background text-foreground">
+        <PageTransitionWrapper className="relative min-h-screen w-full bg-background text-foreground">
              <div className="absolute inset-0 z-0">
                 <RippleGrid
                     gridColor="#ffffff10"
@@ -215,7 +216,6 @@ export default function PremiumPage() {
                     </CardContent>
                 </Card>
             </main>
-        </div>
+        </PageTransitionWrapper>
     );
 }
-
