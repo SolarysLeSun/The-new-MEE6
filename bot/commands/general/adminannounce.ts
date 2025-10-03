@@ -1,5 +1,5 @@
 
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, TextChannel, Client, SystemChannelFlagsBitField, SystemChannelFlags, APIPartialChannel } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, TextChannel, Client, SystemChannelFlagsBitField, SystemChannelFlags, APIPartialChannel, User } from 'discord.js';
 import type { Command } from '@/types';
 import { getServerConfig, getAllBotServers, getGlobalAiStatus } from '@/lib/db';
 import { announcementFlow } from '@/ai/flows/announcement-flow';
@@ -75,15 +75,16 @@ const AdminAnnounceCommand: Command = {
 
         const allServers = getAllBotServers();
         let successCount = 0;
-        let failCount = 0;
+        const failures: { name: string; id: string; reason: string }[] = [];
 
         await interaction.editReply({ content: `Envoi de l'annonce à ${allServers.length} serveurs...` });
 
         for (const serverId of allServers.map(s => s.id)) {
+            let guild;
             try {
-                const guild = await client.guilds.fetch(serverId).catch(() => null);
+                guild = await client.guilds.fetch(serverId).catch(() => null);
                 if (!guild) {
-                    failCount++;
+                    failures.push({ id: serverId, name: 'Serveur Inconnu', reason: 'Le bot n\'est plus sur ce serveur.' });
                     continue;
                 }
 
@@ -125,19 +126,39 @@ const AdminAnnounceCommand: Command = {
                     await targetChannel.send({ content: messageContent, embeds: [embed] });
                     successCount++;
                 } else {
-                    failCount++;
+                    failures.push({ id: guild.id, name: guild.name, reason: 'Aucun salon approprié n\'a été trouvé pour envoyer le message.' });
                 }
 
-            } catch (error) {
-                console.warn(`[AdminAnnounce] Impossible d'envoyer l'annonce au serveur ${serverId}:`, error);
-                failCount++;
+            } catch (error: any) {
+                failures.push({ id: serverId, name: guild?.name || 'ID Inconnu', reason: `Erreur API: ${error.message}` });
             }
         }
 
+        const summaryMessage = `✅ Annonce envoyée avec succès à **${successCount}** serveurs. Échec pour **${failures.length}** serveurs.`;
         await interaction.followUp({
-            content: `✅ Annonce envoyée avec succès à **${successCount}** serveurs. Échec pour **${failCount}** serveurs (salon non configuré ou permissions manquantes).`,
+            content: summaryMessage,
             ephemeral: true,
         });
+
+        // Send detailed failure report via DM
+        if (failures.length > 0) {
+            let report = "Rapport d'échec pour la commande `/adminannounce`:\n\n";
+            for (const fail of failures) {
+                report += `**Serveur :** ${fail.name} (\`${fail.id}\`)\n**Raison :** ${fail.reason}\n-----------------\n`;
+            }
+
+            try {
+                const owner = await client.users.fetch(OWNER_ID);
+                // Split message if it's too long for Discord
+                const chunks = report.match(/[\s\S]{1,1900}/g) || [];
+                for (const chunk of chunks) {
+                    await owner.send(`\`\`\`${chunk}\`\`\``);
+                }
+            } catch (dmError) {
+                console.error(`[AdminAnnounce] Impossible d'envoyer le rapport d'erreurs en DM au propriétaire.`, dmError);
+                 await interaction.followUp({ content: "Impossible d'envoyer le rapport d'erreurs détaillé en DM.", ephemeral: true });
+            }
+        }
     },
 };
 
