@@ -8,7 +8,7 @@ const userCooldowns = new Collection<string, number>();
 export const name = Events.MessageReactionAdd;
 
 export async function execute(client: any, reaction: MessageReaction, user: User) {
-    if (!reaction.message.guild || user.bot) return;
+    if (!reaction.message.guild || !user || user.bot) return;
 
     const config = await getServerConfig(reaction.message.guild.id, 'leveling');
     if (!config?.enabled || !config.xp_per_reaction || config.xp_per_reaction <= 0) return;

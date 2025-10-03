@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { Client, Guild, User } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel } from '../types';
+import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel } from '../types';
 import { randomBytes } from 'crypto';
 
 // Assurez-vous que le répertoire de la base de données existe
@@ -70,52 +70,6 @@ const upgradeSchema = () => {
             );
         `);
         console.log('[Database] La table "testers" est prête.');
-
-        db.exec(`
-            CREATE TABLE IF NOT EXISTS ai_personas (
-                id TEXT PRIMARY KEY,
-                guild_id TEXT NOT NULL,
-                name TEXT NOT NULL,
-                persona_prompt TEXT NOT NULL,
-                creator_id TEXT NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                active_channel_id TEXT,
-                avatar_url TEXT,
-                role_id TEXT,
-                bot_token TEXT
-            );
-        `);
-        console.log('[Database] La table "ai_personas" est prête.');
-
-
-        db.exec(`
-            CREATE TABLE IF NOT EXISTS persona_memories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                persona_id TEXT NOT NULL,
-                user_id TEXT,
-                memory_type TEXT NOT NULL,
-                content TEXT NOT NULL,
-                salience_score INTEGER NOT NULL DEFAULT 5,
-                last_accessed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (persona_id) REFERENCES ai_personas (id) ON DELETE CASCADE
-            );
-        `);
-         console.log('[Database] La table "persona_memories" est prête.');
-        
-        db.exec(`
-            CREATE TABLE IF NOT EXISTS persona_relationships (
-                persona_id TEXT NOT NULL,
-                user_id TEXT NOT NULL,
-                status TEXT NOT NULL,
-                level INTEGER NOT NULL,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (persona_id, user_id),
-                FOREIGN KEY (persona_id) REFERENCES ai_personas (id) ON DELETE CASCADE
-            );
-        `);
-        console.log('[Database] La table "persona_relationships" est prête.');
-
 
         db.exec(`
             CREATE TABLE IF NOT EXISTS premium_keys (
@@ -389,13 +343,6 @@ const defaultConfigs: DefaultConfigs = {
             setsuggest: null,
         }
     },
-    'ai-personas': {
-        enabled: false,
-        premium: true,
-        command_permissions: {
-            personnage: null,
-        },
-    },
     'server-identity': {
         enabled: true,
         nickname: null,
@@ -648,82 +595,6 @@ export function checkTesterStatus(userId: string, guildId: string): { isTester: 
         console.error(`[Database] Erreur lors de la vérification du statut de testeur pour ${userId}:`, error);
         return { isTester: false, expires_at: null };
     }
-}
-
-export function getPersonasForGuild(guildId: string): Persona[] {
-    const stmt = db.prepare('SELECT * FROM ai_personas WHERE guild_id = ?');
-    return stmt.all(guildId) as Persona[];
-}
-
-export function createPersona(persona: Omit<Persona, 'created_at'>): void {
-    const stmt = db.prepare(`
-        INSERT INTO ai_personas (id, guild_id, name, persona_prompt, creator_id, active_channel_id, avatar_url, role_id, bot_token)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    stmt.run(persona.id, persona.guild_id, persona.name, persona.persona_prompt, persona.creator_id, persona.active_channel_id, persona.avatar_url, persona.role_id, persona.bot_token);
-}
-
-export function updatePersona(id: string, updates: Partial<Omit<Persona, 'id' | 'guild_id' | 'creator_id'>>): void {
-    const fields = Object.keys(updates);
-    const values = Object.values(updates);
-    if (fields.length === 0) return;
-
-    const setClause = fields.map(field => `${field} = ?`).join(', ');
-    const stmt = db.prepare(`UPDATE ai_personas SET ${setClause} WHERE id = ?`);
-    stmt.run(...values, id);
-}
-
-export function deletePersona(id: string): void {
-    const stmt = db.prepare('DELETE FROM ai_personas WHERE id = ?');
-    stmt.run(id);
-}
-
-export function getMemoriesForPersona(personaId: string, userIds: (string | null)[]): PersonaMemory[] {
-    // Ensure userIds always contains at least one value to prevent SQL syntax errors, even if it's a value that won't match (like NULL for user_id)
-    const placeholders = userIds.length > 0 ? userIds.map(() => '?').join(',') : 'NULL';
-    
-    const query = `
-        SELECT * FROM persona_memories 
-        WHERE persona_id = ? AND (user_id IN (${placeholders}) OR user_id IS NULL)
-        ORDER BY salience_score DESC, last_accessed_at DESC 
-        LIMIT 20
-    `;
-    
-    const params: (string | number | null)[] = [personaId, ...userIds];
-    
-    const stmt = db.prepare(query);
-    const memories = stmt.all(...params) as PersonaMemory[];
-    
-    // Touch memories to update last_accessed_at
-    if (memories.length > 0) {
-        const touchStmt = db.prepare(`UPDATE persona_memories SET last_accessed_at = CURRENT_TIMESTAMP WHERE id = ?`);
-        const touchTransaction = db.transaction((mems) => {
-            for (const mem of mems) touchStmt.run(mem.id);
-        });
-        touchTransaction(memories);
-    }
-
-    return memories;
-}
-
-
-export function createMemory(memory: Omit<PersonaMemory, 'id' | 'created_at' | 'last_accessed_at'>): void {
-    const stmt = db.prepare(`
-        INSERT INTO persona_memories (persona_id, user_id, memory_type, content, salience_score)
-        VALUES (?, ?, ?, ?, ?)
-    `);
-    stmt.run(memory.persona_id, memory.user_id, memory.memory_type, memory.content, memory.salience_score);
-}
-
-export function createMultipleMemories(memories: Omit<PersonaMemory, 'id' | 'created_at' | 'last_accessed_at'>[]): void {
-    const insert = db.prepare(`
-        INSERT INTO persona_memories (persona_id, user_id, memory_type, content, salience_score)
-        VALUES (@persona_id, @user_id, @memory_type, @content, @salience_score)
-    `);
-    const insertMany = db.transaction((mems) => {
-        for (const mem of mems) insert.run(mem);
-    });
-    insertMany(memories);
 }
 
 export function createPremiumKey(generatedBy: string): string {

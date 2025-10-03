@@ -88,7 +88,7 @@ async function checkSimilarUsername(member: GuildMember, config: any, alertChann
 
 export const name = Events.GuildMemberAdd;
 export async function execute(member: GuildMember) {
-    if (member.user.bot) return;
+    if (!member.guild || member.user.bot) return;
 
     const securityConfig = await getServerConfig(member.guild.id, 'security-alerts');
     const logsConfig = await getServerConfig(member.guild.id, 'logs');

@@ -9,7 +9,7 @@ export const once = false;
 const WEBHOOK_NAME = "Marcus Translator";
 
 async function handleAutoTranslate(message: Message) {
-    if (!message.guild || message.author.bot || !message.content) return;
+    if (!message.guild || !message.author || message.author.bot || !message.content) return;
 
     const config = await getServerConfig(message.guild.id, 'auto-translation');
     const isPremium = config?.premium || false;
@@ -70,7 +70,7 @@ async function handleAutoTranslate(message: Message) {
 
 export async function execute(message: Message) {
     // Ignore DMs and messages from bots
-    if (!message.guild || message.author.bot) return;
+    if (!message.guild || !message.author || message.author.bot) return;
 
     // Run all message-based handlers
     await Promise.all([

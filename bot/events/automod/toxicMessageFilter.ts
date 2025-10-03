@@ -17,8 +17,8 @@ export function addBotSentMessage(messageId: string) {
 
 
 export async function execute(message: Message) {
-    // Ignore messages from DMs, bots, AND messages that the bot itself just sent as a warning
-    if (!message.guild || message.author.bot || !message.content || !message.member || botSentMessages.has(message.id)) {
+    // Ignore DMs, bots, messages without author, or messages that the bot itself just sent as a warning
+    if (!message.guild || !message.author || message.author.bot || !message.content || !message.member || botSentMessages.has(message.id)) {
         if (botSentMessages.has(message.id)) {
             botSentMessages.delete(message.id); // Consume the tracked ID
         }

@@ -9,7 +9,7 @@ const linkRegex = /https?:\/\/[^\s]+/gi;
 export const name = Events.MessageCreate;
 
 export async function execute(message: Message) {
-    if (!message.guild || message.author.bot || !message.member) return;
+    if (!message.guild || !message.author || message.author.bot || !message.member) return;
 
     const config = await getServerConfig(message.guild.id, 'adaptive-anti-raid');
     const isPremium = config?.premium || false;

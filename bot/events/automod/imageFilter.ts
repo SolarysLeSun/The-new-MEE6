@@ -26,7 +26,7 @@ export const name = Events.MessageCreate;
 export const once = false;
 
 export async function execute(message: Message) {
-    if (!message.guild || message.author.bot || !message.member) return;
+    if (!message.guild || !message.author || message.author.bot || !message.member) return;
 
     // Check for image attachments
     const imageAttachment = message.attachments.find(att => imageMimeTypes.some(mime => att.contentType?.startsWith(mime)));

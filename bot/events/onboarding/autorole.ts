@@ -5,7 +5,7 @@ import { getServerConfig } from '../../../src/lib/db';
 export const name = Events.GuildMemberAdd;
 
 export async function execute(member: GuildMember) {
-    if (member.user.bot) return;
+    if (!member.guild || member.user.bot) return;
 
     const config = await getServerConfig(member.guild.id, 'autoroles');
 

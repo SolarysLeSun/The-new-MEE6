@@ -7,8 +7,7 @@ export const name = Events.GuildMemberAdd;
 
 // La fonction qui sera exécutée
 export async function execute(member: GuildMember) {
-    // Ignore les bots
-    if (member.user.bot) return;
+    if (!member.guild || member.user.bot) return;
 
     // 1. Récupérer la configuration du module pour ce serveur
     const config = await getServerConfig(member.guild.id, 'welcome-message');

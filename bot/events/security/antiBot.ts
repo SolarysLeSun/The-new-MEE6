@@ -7,10 +7,7 @@ import { getServerConfig } from '../../../src/lib/db';
 export const name = Events.GuildMemberAdd;
 
 export async function execute(member: GuildMember) {
-    // 1. Only act if the new member is a bot
-    if (!member.user.bot) {
-        return;
-    }
+    if (!member.guild || !member.user.bot) return;
 
     const antibotConfig = await getServerConfig(member.guild.id, 'anti-bot');
 

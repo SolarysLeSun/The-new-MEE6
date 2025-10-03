@@ -1,263 +1,743 @@
+import Database from 'better-sqlite3';
+import path from 'path';
+import fs from 'fs';
+import { Client, Guild, User } from 'discord.js';
+import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel } from '../types';
+import { randomBytes } from 'crypto';
+
+// Assurez-vous que le répertoire de la base de données existe
+const dbDir = path.resolve(process.cwd(), 'database');
+if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+}
+
+const dbPath = path.resolve(dbDir, 'bot.db');
+const db = new Database(dbPath);
+console.log(`[Database] Connecté à la base de données SQLite sur ${dbPath}`);
 
 
-import { Events, Message, Collection, TextChannel, EmbedBuilder, AttachmentBuilder, DMChannel } from 'discord.js';
-import { getServerConfig, getPersonasForGuild, getMemoriesForPersona, createMultipleMemories } from '@/lib/db';
-import { personaInteractionFlow, generatePersonaImage } from '@/ai/flows/persona-flow';
-import { memoryFlow } from '@/ai/flows/memory-flow';
-import type { Persona, ConversationHistoryItem } from '@/types';
-import fetch from 'node-fetch';
-import { ai, textModelCascade } from '@/ai/genkit';
-import { defineFlow } from 'genkit';
+// --- Schéma et Migration de la Base de Données ---
+const upgradeSchema = () => {
+    try {
+        db.pragma('journal_mode = WAL');
+        
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS global_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT,
+                reason TEXT
+            );
+        `);
+        db.exec(`INSERT OR IGNORE INTO global_settings (key, value) VALUES ('ai_disabled', '0');`);
+        console.log('[Database] La table "global_settings" est prête.');
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS locked_channels (
+                channel_id TEXT PRIMARY KEY,
+                original_permissions TEXT NOT NULL
+            );
+        `);
+        console.log('[Database] La table "locked_channels" est prête.');
 
 
-const imageMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
-const PERSONA_WEBHOOK_NAME = "Marcus Persona";
-const COMMON_BOT_PREFIXES = /^[!§?%.^]/;
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS sanction_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                moderator_id TEXT NOT NULL,
+                action_type TEXT NOT NULL,
+                reason TEXT,
+                duration_seconds INTEGER,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log('[Database] La table "sanction_history" est prête.');
+        
+        const configColumns = db.pragma('table_info(server_configs)') as any[];
+        if (!configColumns.some(col => col.name === 'premium')) {
+            console.log('[Database] Mise à jour du schéma : Ajout de la colonne "premium" à server_configs.');
+            db.exec('ALTER TABLE server_configs ADD COLUMN premium BOOLEAN DEFAULT FALSE');
+        }
+        
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS testers (
+                user_id TEXT NOT NULL,
+                guild_id TEXT NOT NULL,
+                expires_at DATETIME,
+                PRIMARY KEY (user_id, guild_id)
+            );
+        `);
+        console.log('[Database] La table "testers" est prête.');
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS premium_keys (
+                key TEXT PRIMARY KEY,
+                generated_by TEXT NOT NULL,
+                generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                is_used BOOLEAN DEFAULT FALSE,
+                used_by_guild TEXT,
+                used_at DATETIME
+            );
+        `);
+        console.log('[Database] La table "premium_keys" est prête.');
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS user_levels (
+                user_id TEXT NOT NULL,
+                guild_id TEXT NOT NULL,
+                xp INTEGER NOT NULL DEFAULT 0,
+                level INTEGER NOT NULL DEFAULT 0,
+                last_message_timestamp DATETIME,
+                PRIMARY KEY (user_id, guild_id)
+            );
+        `);
+        console.log('[Database] La table "user_levels" est prête.');
 
 
-// Helper to convert image URL to data URI
-async function imageUrlToDataUri(url: string): Promise<string> {
-    const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`Failed to fetch image: ${response.statusText}`);
+    } catch (error) {
+        console.error('[Database] Erreur lors de la mise à jour du schéma:', error);
     }
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !imageMimeTypes.includes(contentType)) {
-        throw new Error('Invalid content type for image.');
+};
+
+
+const createConfigTable = () => {
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS server_configs (
+            guild_id TEXT NOT NULL,
+            module TEXT NOT NULL,
+            config TEXT NOT NULL,
+            premium BOOLEAN DEFAULT FALSE,
+            PRIMARY KEY (guild_id, module)
+        );
+    `);
+    console.log('[Database] La table "server_configs" est prête.');
+    upgradeSchema();
+};
+
+// --- Configurations par défaut pour les nouveaux serveurs ---
+const defaultConfigs: DefaultConfigs = {
+    'moderation': { 
+        enabled: true, 
+        log_channel_id: null, 
+        dm_user_on_action: true, 
+        presets: [],
+        auto_sanctions: [],
+        command_permissions: {
+            ban: null,
+            unban: null,
+            kick: null,
+            mute: null,
+            warn: null,
+            listwarns: null,
+        }
+    },
+    'general-commands': {
+        enabled: true,
+        command_permissions: {
+            invite: null,
+            ping: null,
+            help: null,
+            marcus: null,
+            traduire: null,
+        },
+        command_enabled: {
+            invite: true,
+            ping: true,
+            help: true,
+            marcus: true,
+            traduire: true,
+            say: true,
+            level: true,
+        }
+    },
+    'community-assistant': {
+        enabled: false,
+        premium: true,
+        confidence_threshold: 75,
+        knowledge_base: [],
+        faq_scan_enabled: false,
+        command_permissions: {
+            faq: null
+        }
+    },
+    'auto-moderation': {
+        enabled: false,
+        rules: [],
+        log_channel_id: null,
+    },
+    'logs': {
+        enabled: true,
+        main_channel_id: null,
+        exempt_roles: [],
+        exempt_channels: [],
+        log_settings: {
+            messages: { enabled: true, channel_id: null },
+            members: { enabled: true, channel_id: null },
+            channels: { enabled: false, channel_id: null },
+            roles: { enabled: false, channel_id: null },
+            moderation: { enabled: true, channel_id: null },
+            voice: { enabled: false, channel_id: null },
+            server: { enabled: false, channel_id: null },
+        }
+    },
+    'auto-translation': {
+        enabled: false,
+        premium: false,
+        mode: 'inline',
+        channels: [],
+    },
+     'lock': {
+        enabled: true,
+        exempt_roles: [],
+        command_permissions: {
+            lock: null,
+            unlock: null,
+        }
+    },
+    'backup': {
+        enabled: true,
+        command_permissions: {
+            backup: null
+        }
+    },
+    'anti-bot': { 
+        enabled: false, 
+        mode: 'approval-required', 
+        approval_channel_id: null, 
+        whitelisted_bots: [] 
+    },
+    'webcam': {
+        enabled: true,
+        webcam_allowed: true,
+        stream_allowed: true,
+        exempt_roles: [],
+    },
+    'captcha': { 
+        enabled: false, 
+        verification_channel: null, 
+        verified_role_id: null,
+        premium: true
+    },
+    'image-filter': { 
+        enabled: false, 
+        sensitivity: 'medium',
+        premium: true,
+        exempt_roles: [],
+        exempt_channels: []
+    },
+    'moderation-ai': { 
+        enabled: false,
+        premium: true,
+        alert_channel_id: null,
+        alert_role_id: null,
+        sensitivity: 'medium',
+        exempt_roles: [],
+        exempt_channels: [],
+        actions: {
+            low: 'warn',
+            medium: 'mute_5m',
+            high: 'mute_1h',
+            critical: 'ban'
+        }
+    },
+    'adaptive-anti-raid': { 
+        enabled: false, 
+        premium: true,
+        raid_detection_enabled: false, 
+        raid_sensitivity: 'medium', 
+        raid_action: 'lockdown',
+        link_scanner_enabled: false,
+        link_scanner_action: 'delete',
+        alert_channel_id: null,
+        exempt_roles: []
+    },
+    'private-rooms': { 
+        enabled: true, 
+        creation_channel: null, 
+        category_id: null, 
+        embed_message: 'Cliquez sur le bouton ci-dessous pour créer un salon privé.',
+        channel_name_format: 'ticket-{user}',
+        archive_summary: true,
+        command_permissions: {
+            addprivate: null,
+            privateresum: null,
+        }
+    },
+    'smart-events': { 
+        enabled: true, 
+        suggest_time: true, 
+        templates: 'quiz', 
+        rsvp_tracking: true, 
+        recurring_events: false,
+        command_permissions: {
+            'event-create': null,
+            'event-list': null
+        }
+    },
+    'smart-voice': { 
+        enabled: false, 
+        premium: true,
+        interactive_channels: [], 
+        creation_threshold: 4,
+        custom_instructions: ''
+    },
+    'content-ai': { 
+        enabled: false, 
+        premium: true,
+        default_tone: 'familiar', 
+        custom_instructions: '',
+        allow_nsfw_images: false,
+        command_permissions: {
+            iacontent: null
+        }
+    },
+    'server-builder': { 
+        enabled: false, 
+        premium: true,
+        command_permissions: {
+            iacreateserv: null,
+            iaeditserv: null,
+            iadeleteserv: null,
+            iaresetserv: null,
+        }
+    },
+    'welcome-message': {
+        enabled: false,
+        welcome_channel_id: null,
+        welcome_message: 'Bienvenue sur le serveur, {user} ! 🎉',
+    },
+    'tester-commands': {
+        enabled: true,
+        command_permissions: {
+            mp: null,
+            webhook: null,
+            tester: null,
+            givepremium: null,
+            genpremium: null,
+            giverole: null,
+            disableia: null,
+            enableia: null,
+        },
+    },
+    'conversational-agent': {
+        enabled: false,
+        premium: true,
+        agent_name: 'Marcus',
+        agent_role: 'un assistant IA utile',
+        agent_personality: 'serviable, direct et concis',
+        custom_prompt: '',
+        knowledge_base: [],
+        dedicated_channel_id: null,
+        allow_imagination: false,
+        allow_freewheeling: false,
+    },
+    'suggestions': {
+        enabled: true,
+        suggestion_channel_id: null,
+        upvote_emoji: '👍',
+        downvote_emoji: '👎',
+        command_permissions: {
+            suggest: null,
+            setsuggest: null,
+        }
+    },
+    'server-identity': {
+        enabled: true,
+        nickname: null,
+        avatar_url: null,
+    },
+    'autoroles': {
+        enabled: true,
+        on_join_roles: [],
+        on_voice_join_roles: [],
+    },
+    'security-alerts': {
+        enabled: true,
+        alert_channel_id: null,
+        account_age_check_enabled: true,
+        account_age_threshold_days: 7,
+        similar_username_check_enabled: true,
+        similar_username_sensitivity: 80,
+    },
+    'moveall': {
+        enabled: true,
+        premium: true,
+    },
+    'manual-voice-control': {
+        enabled: true,
+        command_permissions: {
+            join: null,
+            leave: null,
+            parle: null
+        }
+    },
+    'announcements': {
+        enabled: true,
+        announcement_channel_id: null,
+        bot_announcement_channel_id: null,
+        command_permissions: {
+            announce: null,
+            adminannounce: null,
+        }
+    },
+    'leveling': {
+        enabled: true,
+        xp_per_message: 15,
+        xp_per_reaction: 5,
+        xp_per_minute_in_voice: 10,
+        cooldown_seconds: 60,
+        level_up_message: 'Félicitations {user}, vous avez atteint le niveau {level} !',
+        level_up_channel_id: null,
+        level_card_background_url: null,
+        level_card_bar_color: '#FFFFFF',
+        level_card_text_color: '#FFFFFF',
+        ignored_channels: [],
+        role_rewards: [],
+        xp_boost_roles: [],
+        xp_boost_channels: [],
     }
-    const buffer = await response.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString('base64');
-    return `data:${contentType};base64,${base64}`;
+};
+
+export function initializeDatabase() {
+    createConfigTable();
+    console.log('[Database] Initialisation de la base de données terminée.');
+}
+
+export function getGlobalAiStatus(): { disabled: boolean; reason: string | null } {
+    try {
+        const stmt = db.prepare("SELECT value, reason FROM global_settings WHERE key = 'ai_disabled'");
+        const row = stmt.get() as { value: string; reason: string | null } | undefined;
+        return {
+            disabled: row?.value === '1',
+            reason: row?.reason || null
+        };
+    } catch (error) {
+        console.error('[Database] Failed to get global AI status:', error);
+        return { disabled: false, reason: null };
+    }
+}
+
+export function setGlobalAiStatus(disabled: boolean, reason: string | null) {
+    try {
+        const stmt = db.prepare("UPDATE global_settings SET value = ?, reason = ? WHERE key = 'ai_disabled'");
+        stmt.run(disabled ? '1' : '0', reason);
+        console.log(`[Database] Global AI status set to: ${disabled ? 'DISABLED' : 'ENABLED'}. Reason: ${reason || 'N/A'}`);
+    } catch (error) {
+        console.error('[Database] Failed to set global AI status:', error);
+    }
+}
+
+export function getServerConfig(guildId: string, module: Module): ModuleConfig | null {
+    try {
+        const stmt = db.prepare('SELECT config, premium FROM server_configs WHERE guild_id = ? AND module = ?');
+        const result = stmt.get(guildId, module) as { config: string, premium: number } | undefined;
+        const defaultConfig = defaultConfigs[module] || {};
+
+        if (result && result.config) {
+            const config = JSON.parse(result.config);
+            const finalConfig = { ...defaultConfig, ...config };
+
+            // Deep merge for nested objects to prevent overwriting with partial data
+            if (defaultConfig.command_permissions && config.command_permissions) {
+                finalConfig.command_permissions = { ...defaultConfig.command_permissions, ...config.command_permissions };
+            }
+             if (defaultConfig.command_enabled && config.command_enabled) {
+                finalConfig.command_enabled = { ...defaultConfig.command_enabled, ...config.command_enabled };
+            }
+            if (defaultConfig.actions && config.actions) {
+                finalConfig.actions = { ...defaultConfig.actions, ...config.actions };
+            }
+             if (defaultConfig.log_settings && config.log_settings) {
+                finalConfig.log_settings = { ...defaultConfig.log_settings, ...config.log_settings };
+                for (const key of Object.keys(defaultConfig.log_settings)) {
+                    if(config.log_settings[key]) {
+                        finalConfig.log_settings[key] = { ...defaultConfig.log_settings[key], ...config.log_settings[key] };
+                    }
+                }
+            }
+            finalConfig.premium = !!result.premium;
+            return finalConfig;
+        } else {
+             // If no config exists for this module, create the default one and return it.
+            console.log(`[Database] Aucune config trouvée pour ${guildId} et le module ${module}. Création de la config par défaut.`);
+            updateServerConfig(guildId, module, defaultConfig);
+            const premiumStatusStmt = db.prepare('SELECT premium FROM server_configs WHERE guild_id = ? LIMIT 1');
+            const premiumResult = premiumStatusStmt.get(guildId) as { premium: number } | undefined;
+            defaultConfig.premium = premiumResult ? !!premiumResult.premium : false;
+            return defaultConfig;
+        }
+    } catch (error) {
+        console.error(`[Database] Erreur lors de la récupération de la config pour ${guildId} (module: ${module}):`, error);
+        return defaultConfigs[module] || null;
+    }
+}
+
+export function updateServerConfig(guildId: string, module: Module, configData: ModuleConfig) {
+    try {
+        const { premium, ...restConfig } = configData;
+        const configString = JSON.stringify(restConfig);
+        
+        const stmt = db.prepare(`
+            INSERT INTO server_configs (guild_id, module, config)
+            VALUES (?, ?, ?)
+            ON CONFLICT(guild_id, module) DO UPDATE SET config = excluded.config;
+        `);
+        stmt.run(guildId, module, configString);
+    } catch (error) {
+        console.error(`[Database] Erreur lors de la mise à jour de la config pour ${guildId} (module: ${module}):`, error);
+    }
+}
+
+export function addKnowledgeBaseItem(guildId: string, newItem: KnowledgeBaseItem): void {
+    try {
+        const currentConfig = getServerConfig(guildId, 'conversational-agent');
+        if (!currentConfig) throw new Error('Config not found for conversational-agent');
+
+        const newKnowledgeBase = [...(currentConfig.knowledge_base || []), newItem];
+        const newConfig = { ...currentConfig, knowledge_base: newKnowledgeBase };
+
+        updateServerConfig(guildId, 'conversational-agent', newConfig);
+        console.log(`[Database] Added new knowledge item for guild ${guildId}`);
+    } catch (error) {
+        console.error(`[Database] Error adding knowledge item for guild ${guildId}:`, error);
+    }
 }
 
 
-// Cache conversation histories
-const conversationHistory = new Collection<string, ConversationHistoryItem[]>();
-const HISTORY_LIMIT = 20; // Increased history limit for better context
-
-export const name = Events.MessageCreate;
-export const once = false;
-
-export async function execute(message: Message) {
-    if (message.author.bot) return;
-
-    // --- DM Handling ---
-    if (!message.guild) {
-        // Find if this user is interacting with any persona across all guilds the bot is in.
-        // This is a simplified approach. A real implementation might need a way for the user
-        // to specify which persona they want to talk to. For now, we'll find the first one.
-        const allGuilds = Array.from(message.client.guilds.cache.keys());
-        let personaToTalkTo: Persona | undefined;
-        let guildId: string | undefined;
-
-        for (const id of allGuilds) {
-            const personas = getPersonasForGuild(id);
-            if (personas.length > 0) {
-                // Heuristic: maybe the user shares a server with one of the personas.
-                // A better approach would be to let the user select a persona to DM.
-                personaToTalkTo = personas[0];
-                guildId = id;
-                break;
-            }
+export function setupDefaultConfigs(guildId: string) {
+    const stmt = db.prepare('SELECT 1 FROM server_configs WHERE guild_id = ? AND module = ?');
+    
+    for (const moduleName of Object.keys(defaultConfigs) as Module[]) {
+        const existing = stmt.get(guildId, moduleName);
+        if (!existing) {
+            console.log(`[Database] Adding default config for module '${moduleName}' for guild ${guildId}`);
+            updateServerConfig(guildId, moduleName, defaultConfigs[moduleName]!);
         }
-        
-        if (personaToTalkTo && guildId) {
-            console.log(`[Persona DM] Triggered: Persona "${personaToTalkTo.name}" is processing a DM from ${message.author.tag}.`);
-            await handlePersonaInteraction(message, personaToTalkTo, guildId, 'Message Privé');
+    }
+}
+
+export async function syncGuilds(client: Client) {
+    console.log('[Database] Synchronisation des serveurs...');
+    const guilds = await client.guilds.fetch();
+
+    for (const oauthGuild of guilds.values()) {
+        setupDefaultConfigs(oauthGuild.id);
+    }
+    console.log('[Database] Synchronisation des serveurs terminée.');
+}
+
+export function getAllBotServers(): { id: string; name: string; icon: string | null }[] {
+    try {
+        const stmt = db.prepare('SELECT DISTINCT guild_id FROM server_configs');
+        const rows = stmt.all() as { guild_id: string }[];
+        return rows.map(row => ({ id: row.guild_id, name: 'Unknown Server', icon: null }));
+    } catch (error) {
+        console.error('[Database] Erreur lors de la récupération de tous les serveurs:', error);
+        return [];
+    }
+}
+
+export function setPremiumStatus(guildId: string, isPremium: boolean) {
+    try {
+        const stmt = db.prepare(`UPDATE server_configs SET premium = ? WHERE guild_id = ?`);
+        stmt.run(isPremium ? 1 : 0, guildId);
+        console.log(`[Database] Statut premium mis à jour à '${isPremium}' pour le serveur ${guildId}.`);
+    } catch (error) {
+        console.error(`[Database] Erreur lors de la mise à jour du statut premium pour ${guildId}:`, error);
+    }
+}
+
+export function giveTesterStatus(userId: string, guildId: string, expiresAt: Date | null) {
+    try {
+        const stmt = db.prepare(`
+            INSERT INTO testers (user_id, guild_id, expires_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(user_id, guild_id) DO UPDATE SET expires_at = excluded.expires_at;
+        `);
+        stmt.run(userId, guildId, expiresAt ? expiresAt.toISOString() : null);
+    } catch (error) {
+        console.error(`[Database] Erreur lors de l'attribution du statut de testeur à ${userId}:`, error);
+    }
+}
+
+export function revokeTesterStatus(userId: string, guildId: string) {
+    try {
+        const stmt = db.prepare('DELETE FROM testers WHERE user_id = ? AND guild_id = ?');
+        stmt.run(userId, guildId);
+    } catch (error) {
+        console.error(`[Database] Erreur lors de la révocation du statut de testeur pour ${userId}:`, error);
+    }
+}
+
+export function checkTesterStatus(userId: string, guildId: string): { isTester: boolean; expires_at: Date | null } {
+    try {
+        const stmt = db.prepare('SELECT expires_at FROM testers WHERE user_id = ? AND guild_id = ?');
+        const row = stmt.get(userId, guildId) as { expires_at: string | null } | undefined;
+
+        if (!row) {
+            return { isTester: false, expires_at: null };
+        }
+
+        if (row.expires_at === null) {
+            return { isTester: true, expires_at: null };
+        }
+
+        const expiresAt = new Date(row.expires_at);
+        if (expiresAt > new Date()) {
+            return { isTester: true, expires_at: expiresAt };
         } else {
-             console.log(`[Persona DM] Received DM from ${message.author.tag}, but no persona could be assigned.`);
+            revokeTesterStatus(userId, guildId);
+            return { isTester: false, expires_at: null };
         }
-        return;
+    } catch (error) {
+        console.error(`[Database] Erreur lors de la vérification du statut de testeur pour ${userId}:`, error);
+        return { isTester: false, expires_at: null };
+    }
+}
+
+export function createPremiumKey(generatedBy: string): string {
+    const key = `MARCUS-${randomBytes(8).toString('hex').toUpperCase()}`;
+    const stmt = db.prepare('INSERT INTO premium_keys (key, generated_by) VALUES (?, ?)');
+    stmt.run(key, generatedBy);
+    return key;
+}
+
+export function redeemPremiumKey(key: string, guildId: string): { success: boolean; message: string } {
+    const stmt = db.prepare('SELECT * FROM premium_keys WHERE key = ?');
+    const row = stmt.get(key) as { is_used: number; used_by_guild: string } | undefined;
+
+    if (!row) {
+        return { success: false, message: 'Clé invalide.' };
     }
 
-
-    // --- Guild Message Handling ---
-    if (!message.member) return;
-
-    const config = await getServerConfig(message.guild.id, 'ai-personas');
-    if (!config?.enabled || !config.premium) {
-        return;
+    if (row.is_used) {
+        if (row.used_by_guild === guildId) {
+            return { success: false, message: 'Cette clé a déjà été activée pour ce serveur.' };
+        }
+        return { success: false, message: 'Cette clé a déjà été utilisée par un autre serveur.' };
     }
 
-    const personas = getPersonasForGuild(message.guild.id);
-    if (personas.length === 0) return;
+    const updateStmt = db.prepare('UPDATE premium_keys SET is_used = TRUE, used_by_guild = ?, used_at = CURRENT_TIMESTAMP WHERE key = ?');
+    updateStmt.run(guildId, key);
 
-    const activePersona = personas.find(p => p.active_channel_id === message.channel.id);
-    const mentionedPersona = personas.find(p => p.role_id && message.mentions.roles.has(p.role_id));
+    setPremiumStatus(guildId, true);
 
-    const triggeredPersona = activePersona || mentionedPersona;
+    return { success: true, message: 'Clé premium activée avec succès !' };
+}
 
-    if (!triggeredPersona) {
-        return;
-    }
-    
-    // The persona should not respond to itself if it was somehow triggered by its own message via webhook.
-    if (message.webhookId && message.author.username.toLowerCase() === triggeredPersona.name.toLowerCase()) {
-        return;
-    }
+// --- Sanction History ---
 
-    // Pre-analysis: Ignore obvious bot commands
-    if (COMMON_BOT_PREFIXES.test(message.content)) {
-        console.log(`[Persona] Ignoring potential bot command from ${message.author.tag}.`);
-        return;
-    }
-    
-    // Check for image attachments in the user's message
-    const imageAttachment = message.attachments.find(att => imageMimeTypes.some(mime => att.contentType?.startsWith(mime)));
-    
-    if (!message.content && !imageAttachment && !mentionedPersona) {
-        return;
-    }
-    
-    const interactionContext = activePersona ? 'Salon dédié actif' : 'Mention dans un groupe';
-    console.log(`[Persona] Triggered: Persona "${triggeredPersona.name}" is processing a message from ${message.author.tag} in #${(message.channel as TextChannel).name}. Context: ${interactionContext}`);
-    await handlePersonaInteraction(message, triggeredPersona, message.guild.id, interactionContext);
+export function recordSanction(sanction: Omit<SanctionHistoryEntry, 'id' | 'timestamp'>) {
+    const stmt = db.prepare(`
+        INSERT INTO sanction_history (guild_id, user_id, moderator_id, action_type, reason, duration_seconds)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+        sanction.guild_id,
+        sanction.user_id,
+        sanction.moderator_id,
+        sanction.action_type,
+        sanction.reason,
+        sanction.duration_seconds
+    );
+}
+
+export function getUserSanctionHistory(guildId: string, userId: string): SanctionHistoryEntry[] {
+    const stmt = db.prepare(`
+        SELECT * FROM sanction_history
+        WHERE guild_id = ? AND user_id = ?
+        ORDER BY timestamp DESC
+        LIMIT 10
+    `);
+    return stmt.all(guildId, userId) as SanctionHistoryEntry[];
 }
 
 
-async function handlePersonaInteraction(message: Message, persona: Persona, guildId: string, interactionContext: string) {
-     if (message.channel.isTextBased()) {
-         await message.channel.sendTyping();
+// --- Lock System ---
+export function isChannelLocked(channelId: string): boolean {
+    const stmt = db.prepare('SELECT 1 FROM locked_channels WHERE channel_id = ?');
+    return !!stmt.get(channelId);
+}
+
+export function lockChannel(channelId: string, originalPermissions: string): void {
+    const stmt = db.prepare('INSERT INTO locked_channels (channel_id, original_permissions) VALUES (?, ?)');
+    stmt.run(channelId, originalPermissions);
+}
+
+export function unlockChannel(channelId: string): string | null {
+    const stmt = db.prepare('SELECT original_permissions FROM locked_channels WHERE channel_id = ?');
+    const row = stmt.get(channelId) as { original_permissions: string } | undefined;
+
+    if (row) {
+        const deleteStmt = db.prepare('DELETE FROM locked_channels WHERE channel_id = ?');
+        deleteStmt.run(channelId);
+        return row.original_permissions;
     }
+    return null;
+}
+
+// --- Leveling System ---
+let clientInstance: Client | null = null;
+export function setClientInstance(client: Client) {
+    clientInstance = client;
+}
+
+const calculateRequiredXp = (level: number) => 5 * (level ** 2) + 50 * level + 100;
+
+export function getUserLevel(userId: string, guildId: string): UserLevel {
+    let stmt = db.prepare('SELECT xp, level FROM user_levels WHERE user_id = ? AND guild_id = ?');
+    let user = stmt.get(userId, guildId) as { xp: number, level: number } | undefined;
     
-    const imageAttachment = message.attachments.find(att => imageMimeTypes.some(mime => att.contentType?.startsWith(mime)));
-    let photoDataUri: string | undefined = undefined;
-    if (imageAttachment) {
-        try {
-            photoDataUri = await imageUrlToDataUri(imageAttachment.url);
-        } catch (error) {
-            console.error(`[Persona] Failed to process image for persona:`, error);
-        }
+    if (!user) {
+        user = { xp: 0, level: 0 };
     }
 
-    const historyKey = message.channel.id;
-    const currentHistory = conversationHistory.get(historyKey) || [];
+    return {
+        ...user,
+        requiredXp: calculateRequiredXp(user.level),
+    };
+}
+
+export const updateUserXP = db.transaction((userId: string, guildId: string, xpToAdd: number) => {
+    const stmt = db.prepare(`
+        INSERT INTO user_levels (user_id, guild_id, xp, level)
+        VALUES (?, ?, ?, 0)
+        ON CONFLICT(user_id, guild_id) DO UPDATE SET
+        xp = xp + excluded.xp;
+    `);
+    stmt.run(userId, guildId, xpToAdd);
+
+    // Check for level up
+    const { xp, level } = getUserLevel(userId, guildId);
+    let requiredXp = calculateRequiredXp(level);
     
-    let messageTextForHistory = message.content;
-    if (persona.role_id && message.mentions.roles.has(persona.role_id)) {
-        messageTextForHistory = message.content.replace(`<@&${persona.role_id}>`, '').trim();
-    }
-    currentHistory.push({ user: message.author.username, content: messageTextForHistory });
-
-    if (currentHistory.length > HISTORY_LIMIT) {
-        currentHistory.shift();
-    }
-    conversationHistory.set(historyKey, currentHistory);
-
-    const relevantMemories = getMemoriesForPersona(persona.id, [message.author.id]);
-    console.log(`[Persona] Retrieved ${relevantMemories.length} relevant memories for "${persona.name}".`);
-
-    let result;
-    let lastError: any;
-    for (const model of textModelCascade) {
-        try {
-            console.log(`[Persona] Trying model ${model} for persona interaction...`);
-             result = await personaInteractionFlow({
-                personaPrompt: persona.persona_prompt,
-                conversationHistory: currentHistory, 
-                memories: relevantMemories.map(m => ({ content: m.content, salience_score: m.salience_score })),
-                photoDataUri: photoDataUri,
-                interactionContext: interactionContext,
-            });
-            console.log(`[Persona] Model ${model} succeeded.`);
-            break; 
-        } catch (error: any) {
-            lastError = error;
-             console.warn(`[Persona] Model ${model} failed with error:`, error.message);
-            if (error.status === 429 || error.message.includes('quota')) {
-                 console.log(`[Persona] Quota exceeded for ${model}. Trying next model...`);
-                continue;
-            }
-            // For other errors, don't retry, just fail.
-            break;
-        }
-    }
-
-
-    if (result) {
-        if (result.response || result.image_prompt) {
-            let files: AttachmentBuilder[] = [];
-            if (result.image_prompt) {
-                console.log(`[Persona] Persona "${persona.name}" wants to generate an image with prompt: "${result.image_prompt}"`);
-                try {
-                    const imageResult = await generatePersonaImage({ prompt: result.image_prompt });
-                    if (imageResult.imageDataUri) {
-                        const imageBuffer = Buffer.from(imageResult.imageDataUri.split(',')[1], 'base64');
-                        files.push(new AttachmentBuilder(imageBuffer, { name: 'persona_image.png' }));
-                    }
-                } catch (imgError) {
-                    console.error(`[Persona] Image generation failed for "${persona.name}":`, imgError);
-                }
-            }
-
-            if (result.response || files.length > 0) {
-                 if (message.channel instanceof DMChannel) {
-                     await message.channel.send({ content: result.response || undefined, files: files });
-                 } else if (message.channel instanceof TextChannel) {
-                    const webhooks = await message.channel.fetchWebhooks();
-                    let webhook = webhooks.find(wh => wh.name === PERSONA_WEBHOOK_NAME && wh.token !== null);
-
-                    if (!webhook) {
-                        webhook = await message.channel.createWebhook({
-                            name: PERSONA_WEBHOOK_NAME,
-                            reason: 'Webhook for AI Personas'
-                        });
-                    }
-                    await webhook.send({
-                        content: result.response || undefined,
-                        username: persona.name,
-                        avatarURL: persona.avatar_url || message.client.user?.displayAvatarURL(),
-                        files: files
-                    });
-                 }
-            }
-            
-            const updatedHistory = conversationHistory.get(historyKey) || [];
-            if (result.response) {
-                 updatedHistory.push({ user: persona.name, content: result.response });
-            }
-            if (updatedHistory.length > HISTORY_LIMIT) {
-                updatedHistory.shift();
-            }
-            conversationHistory.set(historyKey, updatedHistory);
-
-            console.log(`[Persona Memory] Triggering memory creation for "${persona.name}".`);
-            memoryFlow({
-                persona_id: persona.id,
-                conversationTranscript: updatedHistory.map(h => `${h.user}: ${h.content}`).join('\n')
-            }).then(newMemories => {
-                if (newMemories && newMemories.length > 0) {
-                     console.log(`[Persona Memory] Creating ${newMemories.length} new memories for ${persona.name}.`);
-                     createMultipleMemories(newMemories);
-                } else {
-                    console.log(`[Persona Memory] No new significant memories to create for "${persona.name}".`);
-                }
-            }).catch(err => console.error(`[Persona Memory] Error creating memories for "${persona.name}":`, err));
-
-        } else {
-             console.log(`[Persona] Persona "${persona.name}" chose not to respond.`);
-        }
-    } else {
-         // All models failed, handle the final error
-        console.error(`[Persona] All models in cascade failed. Last error:`, lastError);
-        const ownerIds = ['556529963877138442', '760977578839506985', '800041004400902145'];
-        const errorMessage = `🚨 **Erreur Critique de l'API Gemini** 🚨\n\nTous les modèles de la cascade ont échoué sur le serveur **${message.guild?.name || 'DM'}**. Les fonctionnalités IA sont probablement indisponibles.\n\n**Détails de la dernière erreur :**\n\`\`\`json\n${JSON.stringify(lastError.errorDetails || { message: lastError.message }, null, 2)}\n\`\`\``;
-        
-        for (const id of ownerIds) {
-            try {
-                const user = await message.client.users.fetch(id);
-                await user.send(errorMessage);
-            } catch (dmError) {
-                console.error(`[Persona Error] Impossible d'envoyer un DM d'erreur à l'utilisateur ${id}`, dmError);
-            }
+    if (xp >= requiredXp) {
+        let newLevel = level;
+        while (xp >= requiredXp) {
+            newLevel++;
+            requiredXp = calculateRequiredXp(newLevel);
         }
         
-        try {
-            await message.reply("Désolé, une erreur est survenue pendant que je réfléchissais. Les administrateurs ont été notifiés.");
-        } catch (replyError: any) {
-            if (replyError.code !== 10008) { // Ignore "Unknown Message" error
-                console.error('[Persona] Failed to send error message:', replyError);
-            }
+        const updateLevelStmt = db.prepare('UPDATE user_levels SET level = ? WHERE user_id = ? AND guild_id = ?');
+        updateLevelStmt.run(newLevel, userId, guildId);
+        
+        console.log(`[Leveling] ${userId} has leveled up to level ${newLevel} in guild ${guildId}!`);
+        
+        if (clientInstance) {
+            clientInstance.emit('levelUp', userId, guildId, newLevel);
         }
     }
+});
+
+
+export function getUserRank(userId: string, guildId: string): number {
+    const stmt = db.prepare(`
+        SELECT rank FROM (
+            SELECT user_id, RANK() OVER (ORDER BY xp DESC) as rank 
+            FROM user_levels WHERE guild_id = ?
+        ) WHERE user_id = ?
+    `);
+    const result = stmt.get(guildId, userId) as { rank: number } | undefined;
+    return result?.rank || 1;
 }

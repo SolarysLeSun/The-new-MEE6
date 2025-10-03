@@ -16,6 +16,7 @@ const sensitivityThresholds = {
 export const name = Events.GuildMemberAdd;
 
 export async function execute(member: GuildMember) {
+    if (!member.guild) return;
     const antiRaidConfig = await getServerConfig(member.guild.id, 'adaptive-anti-raid');
     const isPremium = antiRaidConfig?.premium || false;
 

@@ -31,7 +31,7 @@ async function imageUrlToDataUri(url: string): Promise<string> {
 
 
 async function handleFaqScan(message: Message) {
-    if (!message.guild || message.author.bot || !message.content) return;
+    if (!message.guild || !message.author || message.author.bot || !message.content) return;
 
     const config = await getServerConfig(message.guild.id, 'community-assistant');
     if (!config?.enabled || !config.premium || !config.faq_scan_enabled) {
@@ -66,7 +66,7 @@ async function handleFaqScan(message: Message) {
 
 
 async function handleConversationalAgent(message: Message) {
-    if (message.author.bot || !message.guild || !message.member) {
+    if (!message.guild || !message.member || !message.author || message.author.bot) {
         return;
     }
 
@@ -216,8 +216,8 @@ async function handleConversationalAgent(message: Message) {
 export const name = Events.MessageCreate;
 export const once = false;
 export async function execute(message: Message) {
-    // Ignore messages from DMs or bots
-    if (!message.guild || message.author.bot) return;
+    // Ignore messages from DMs, bots, or those without an author
+    if (!message.guild || !message.author || message.author.bot) return;
 
     // Determine if the message is for the conversational agent
     const agentConfig = await getServerConfig(message.guild.id, 'conversational-agent');
