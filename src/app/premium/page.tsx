@@ -12,7 +12,6 @@ import { Label } from '@/components/ui/label';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 import {
   Select,
   SelectContent,
@@ -122,11 +121,18 @@ function PremiumActivationDialog({ children }: { children: React.ReactNode }) {
                                 <SelectValue placeholder="Sélectionnez un serveur" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectGroup>
-                                    {guilds.length > 0 ? guilds.map(g => (
-                                        <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                                    )) : <SelectLabel>Aucun serveur autorisé</SelectLabel>}
-                                </SelectGroup>
+                                {guilds.length > 0 ? (
+                                    <SelectGroup>
+                                        <SelectLabel>Vos serveurs</SelectLabel>
+                                        {guilds.map(g => (
+                                            <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                ) : (
+                                    <SelectGroup>
+                                        <SelectLabel>Aucun serveur autorisé</SelectLabel>
+                                    </SelectGroup>
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
@@ -150,8 +156,7 @@ function PremiumActivationDialog({ children }: { children: React.ReactNode }) {
 }
 
 export default function PremiumPage() {
-    const searchParams = useSearchParams();
-    const showKeyRedemption = searchParams.get('action') === 'redeem';
+    const koFiUrl = 'https://ko-fi.com/M4M21555O9';
 
     return (
         <div className="relative min-h-screen w-full bg-background text-foreground">
@@ -169,7 +174,7 @@ export default function PremiumPage() {
             
             <main className="relative z-10 container mx-auto flex flex-col items-center justify-center px-4 py-24 sm:py-32">
                 <Card className="max-w-2xl w-full bg-card/60 backdrop-blur-sm shadow-lg border-primary/20">
-                    <CardHeader className="text-center">
+                    <CardHeader className="text-center pb-4">
                         <div className="flex justify-center mb-4">
                              <div className="p-3 bg-yellow-400/10 rounded-full border-2 border-yellow-400/30">
                                 <Star className="h-8 w-8 text-yellow-400"/>
@@ -181,6 +186,10 @@ export default function PremiumPage() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
+                        <div className="text-center my-6">
+                            <p className="text-5xl font-bold">19,99€</p>
+                            <p className="text-muted-foreground">par serveur / an</p>
+                        </div>
                         <ul className="space-y-3 text-card-foreground">
                             {premiumFeatures.map((feature, index) => (
                                 <li key={index} className="flex items-center gap-3">
@@ -189,23 +198,24 @@ export default function PremiumPage() {
                                 </li>
                             ))}
                         </ul>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-                             <a href='https://ko-fi.com/M4M21555O9' target='_blank' rel='noopener noreferrer' className='w-full'>
-                                <Button size="lg" className="w-full bg-blue-500 hover:bg-blue-600 text-white">
-                                    Soutenir via Ko-fi
+                        <div className="grid grid-cols-1 gap-4 pt-4">
+                             <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
+                                <Button size="lg" className="w-full h-12 text-lg">
+                                    Acheter Premium
                                 </Button>
                             </a>
                              <PremiumActivationDialog>
-                                <Button size="lg" variant="secondary" className="w-full">
+                                <Button size="lg" variant="secondary" className="w-full h-12 text-md">
                                     <KeyRound className="mr-2"/>
-                                    Activer une clé
+                                    J'ai déjà une clé d'activation
                                 </Button>
                             </PremiumActivationDialog>
                         </div>
-                         <p className="text-xs text-center text-muted-foreground pt-4">Le statut Premium s'applique à un seul serveur Discord par clé ou par abonnement.</p>
+                         <p className="text-xs text-center text-muted-foreground pt-4">Le statut Premium s'applique à un seul serveur Discord par clé ou par abonnement. Le bouton d'achat vous redirigera vers Ko-fi pour le moment.</p>
                     </CardContent>
                 </Card>
             </main>
         </div>
     );
 }
+
