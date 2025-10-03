@@ -3,7 +3,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { Client, Guild, User } from 'discord.js';
+import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable } from 'discord.js';
 import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel } from '../types';
 import { randomBytes } from 'crypto';
 
@@ -847,3 +847,4 @@ export function getUserRank(userId: string, guildId: string): number {
     const result = stmt.get(guildId, userId) as { rank: number } | undefined;
     return result?.rank || 1;
 }
+

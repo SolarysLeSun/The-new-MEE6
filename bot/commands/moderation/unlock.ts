@@ -1,7 +1,7 @@
 
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, TextChannel, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, TextChannel, ChatInputCommandInteraction, MessageFlags, OverwriteResolvable } from 'discord.js';
 import type { Command } from '@/types';
-import { getServerConfig } from '@/lib/db';
+import { getServerConfig, unlockChannel, isChannelLocked } from '@/lib/db';
 
 const UnlockCommand: Command = {
     data: new SlashCommandBuilder()
@@ -27,22 +27,24 @@ const UnlockCommand: Command = {
             return;
         }
         
-        // TODO: Check for command permissions from config
-
         const channel = (interaction.options.getChannel('channel') || interaction.channel) as TextChannel;
-        const everyoneRole = interaction.guild.roles.everyone;
+        
+        if (!isChannelLocked(channel.id)) {
+            await interaction.editReply({ content: `Le salon ${channel} n'est pas verrouillé par le bot.` });
+            return;
+        }
 
         try {
-            // Check if channel is actually locked
-             const currentPermissions = channel.permissionOverwrites.cache.get(everyoneRole.id);
-            if (!currentPermissions || !currentPermissions.deny.has(PermissionFlagsBits.SendMessages)) {
-                 await interaction.editReply({ content: `Le salon ${channel} n'est pas verrouillé.` });
+            const originalPermissionsJSON = unlockChannel(channel.id);
+            if (!originalPermissionsJSON) {
+                 await interaction.editReply({ content: `Impossible de trouver la sauvegarde des permissions pour ${channel}.` });
                  return;
             }
-
-            await channel.permissionOverwrites.edit(everyoneRole, {
-                [PermissionFlagsBits.SendMessages]: null, // null restores the default permission
-            });
+            
+            const originalPermissions = JSON.parse(originalPermissionsJSON) as OverwriteResolvable[];
+            
+            // This will overwrite all existing permissions with the saved ones.
+            await channel.permissionOverwrites.set(originalPermissions);
 
             await interaction.editReply({ content: `Le salon ${channel} a été déverrouillé.` });
             await channel.send(`🔓 **Salon déverrouillé** par ${interaction.user.toString()}.`);

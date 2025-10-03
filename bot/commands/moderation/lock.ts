@@ -1,12 +1,12 @@
 
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, TextChannel, ChatInputCommandInteraction, MessageFlags, OverwriteResolvable } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, TextChannel, ChatInputCommandInteraction, MessageFlags, OverwriteResolvable, Collection, Role } from 'discord.js';
 import type { Command } from '@/types';
-import { getServerConfig } from '@/lib/db';
+import { getServerConfig, lockChannel, isChannelLocked } from '@/lib/db';
 
 const LockCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('lock')
-        .setDescription('Verrouille un salon pour le rôle @everyone.')
+        .setDescription('Verrouille un salon, empêchant les non-modérateurs de parler.')
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
         .addChannelOption(option =>
             option.setName('channel')
@@ -32,22 +32,27 @@ const LockCommand: Command = {
             return;
         }
 
-        // TODO: Check for command permissions from config
-
         const channel = (interaction.options.getChannel('channel') || interaction.channel) as TextChannel;
         const reason = interaction.options.getString('reason') || 'Aucune raison spécifiée.';
-        const everyoneRole = interaction.guild.roles.everyone;
+        
+        if (isChannelLocked(channel.id)) {
+            await interaction.editReply({ content: `Le salon ${channel} est déjà verrouillé.` });
+            return;
+        }
 
         try {
-            // Check if channel is already locked for @everyone
-            const currentPermissions = channel.permissionOverwrites.cache.get(everyoneRole.id);
-            if (currentPermissions && currentPermissions.deny.has(PermissionFlagsBits.SendMessages)) {
-                 await interaction.editReply({ content: `Le salon ${channel} est déjà verrouillé.` });
-                 return;
-            }
+            // 1. Save original permissions
+            const originalPermissions = channel.permissionOverwrites.cache.map(overwrite => ({
+                id: overwrite.id,
+                type: overwrite.type,
+                allow: overwrite.allow.bitfield.toString(),
+                deny: overwrite.deny.bitfield.toString()
+            }));
+            lockChannel(channel.id, JSON.stringify(originalPermissions));
 
-            await channel.permissionOverwrites.edit(everyoneRole, {
-                [PermissionFlagsBits.SendMessages]: false,
+            // 2. Apply new permissions
+            await channel.permissionOverwrites.edit(interaction.guild.roles.everyone, {
+                SendMessages: false,
             });
 
             await interaction.editReply({ content: `Le salon ${channel} a été verrouillé.` });
