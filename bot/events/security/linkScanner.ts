@@ -13,10 +13,8 @@ export const name = Events.MessageCreate;
 export async function execute(message: Message) {
     if (!message.guild || message.author.bot || !message.member) return;
 
-    const config = await getServerConfig(message.guild.id, 'adaptive-anti-raid');
-    const isPremium = config?.premium || false;
-
-    if (!config?.enabled || !config.link_scanner_enabled || !isPremium) {
+    const config = await getServerConfig(message.guild.id, 'link-scanner');
+    if (!config?.enabled || !config.premium) {
         return;
     }
 
@@ -68,14 +66,16 @@ export async function execute(message: Message) {
                 }
             }
 
-            // Delete the message
-            try {
-                await message.delete();
-                const replyMsg = await message.channel.send(`> **${message.author.toString()}, votre message a été supprimé par la modération automatique.** Raison : ${result.reason}.`);
-                setTimeout(() => replyMsg.delete().catch(() => {}), 10000);
-            } catch (error: any) {
-                if (error.code !== 10008) { // Ignore "Unknown Message" error
-                    console.error(`[Link-Scanner] Failed to delete message ${message.id}:`, error);
+            // Take action based on config
+            if (config.action === 'delete') {
+                try {
+                    await message.delete();
+                    const replyMsg = await message.channel.send(`> **${message.author.toString()}, votre message a été supprimé par la modération automatique.** Raison : ${result.reason}.`);
+                    setTimeout(() => replyMsg.delete().catch(() => {}), 10000);
+                } catch (error: any) {
+                    if (error.code !== 10008) { // Ignore "Unknown Message" error
+                        console.error(`[Link-Scanner] Failed to delete message ${message.id}:`, error);
+                    }
                 }
             }
         }

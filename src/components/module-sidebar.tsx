@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -75,8 +76,9 @@ const navCategories = [
         name: 'Sécurité',
         items: [
             { href: 'anti-bot', label: 'Anti-Bot', icon: ShieldCheck },
-            { href: 'filtre-image-ia', label: 'Filtre d\'Image IA', icon: ScanSearch, isPremium: true },
-            { href: 'anti-raid', label: 'Anti-Raid & Liens', icon: Fingerprint, isPremium: true },
+            { href: 'anti-raid', label: 'Anti-Raid', icon: ShieldAlert },
+            { href: 'scanner-liens-ia', label: 'Scanner de Liens IA', icon: ScanSearch, isPremium: true },
+            { href: 'filtre-image-ia', label: 'Filtre d\'Image IA', icon: Camera, isPremium: true },
             { href: 'captcha', label: 'Captcha', icon: Fingerprint, isPremium: true },
             { href: 'backup', label: 'Backup', icon: DatabaseBackup },
             { href: 'securite-avancee', label: 'Sécurité Avancée', icon: ShieldAlert },

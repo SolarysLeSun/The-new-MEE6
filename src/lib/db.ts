@@ -243,14 +243,17 @@ const defaultConfigs: DefaultConfigs = {
             critical: 'ban'
         }
     },
-    'adaptive-anti-raid': { 
-        enabled: false, 
+    'anti-raid': { 
+        enabled: true, 
+        premium: false,
+        sensitivity: 'medium', 
+        action: 'lockdown',
+        alert_channel_id: null,
+    },
+    'link-scanner': {
+        enabled: false,
         premium: true,
-        raid_detection_enabled: false, 
-        raid_sensitivity: 'medium', 
-        raid_action: 'lockdown',
-        link_scanner_enabled: false,
-        link_scanner_action: 'delete',
+        action: 'delete',
         alert_channel_id: null,
         exempt_roles: [],
         allow_nsfw_links: false

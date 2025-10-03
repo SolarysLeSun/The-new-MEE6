@@ -16,17 +16,16 @@ const sensitivityThresholds = {
 export const name = Events.GuildMemberAdd;
 
 export async function execute(member: GuildMember) {
-    const antiRaidConfig = await getServerConfig(member.guild.id, 'adaptive-anti-raid');
-    const isPremium = antiRaidConfig?.premium || false;
-
-    if (!antiRaidConfig?.enabled || !antiRaidConfig.raid_detection_enabled || !isPremium) {
+    const antiRaidConfig = await getServerConfig(member.guild.id, 'anti-raid');
+    
+    if (!antiRaidConfig?.enabled) {
         return;
     }
 
     const now = Date.now();
     const joins = guildJoinsCache.get(member.guild.id) || [];
     
-    const sensitivity = antiRaidConfig.raid_sensitivity as 'low' | 'medium' | 'high';
+    const sensitivity = antiRaidConfig.sensitivity as 'low' | 'medium' | 'high';
     const { members: joinThreshold, seconds: timeframeSeconds } = sensitivityThresholds[sensitivity];
     const timeframeMs = timeframeSeconds * 1000;
 
@@ -53,7 +52,7 @@ export async function execute(member: GuildMember) {
                     .addFields(
                         { name: 'Membres ayant rejoint', value: `${recentJoins.length}`, inline: true },
                         { name: 'Fenêtre de temps', value: `${timeframeSeconds} secondes`, inline: true },
-                        { name: 'Action entreprise', value: `\`${antiRaidConfig.raid_action}\``, inline: true }
+                        { name: 'Action entreprise', value: `\`${antiRaidConfig.action}\``, inline: true }
                     )
                     .setTimestamp();
                 await alertChannel.send({ embeds: [embed] });
@@ -61,7 +60,7 @@ export async function execute(member: GuildMember) {
         }
 
         // Take action
-        switch (antiRaidConfig.raid_action) {
+        switch (antiRaidConfig.action) {
             case 'lockdown':
                 // TODO: Implement server lockdown logic. This is complex.
                 // It might involve changing permissions for @everyone on all channels,
