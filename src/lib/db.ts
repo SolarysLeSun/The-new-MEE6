@@ -252,7 +252,8 @@ const defaultConfigs: DefaultConfigs = {
         link_scanner_enabled: false,
         link_scanner_action: 'delete',
         alert_channel_id: null,
-        exempt_roles: []
+        exempt_roles: [],
+        allow_nsfw_links: false
     },
     'private-rooms': { 
         enabled: true, 
@@ -847,4 +848,3 @@ export function getUserRank(userId: string, guildId: string): number {
     const result = stmt.get(guildId, userId) as { rank: number } | undefined;
     return result?.rank || 1;
 }
-

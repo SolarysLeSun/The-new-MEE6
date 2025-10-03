@@ -33,6 +33,7 @@ interface AntiRaidConfig {
     link_scanner_action: 'warn' | 'delete';
     alert_channel_id: string | null;
     exempt_roles: string[];
+    allow_nsfw_links: boolean;
 }
 interface DiscordChannel {
     id: string;
@@ -213,9 +214,9 @@ function AntiRaidPageContent({ isPremium }: { isPremium: boolean }) {
             {/* Section Scanner de Liens */}
             <div className="space-y-4">
                 <div>
-                    <h2 className="text-xl font-bold">Scanner de Liens</h2>
+                    <h2 className="text-xl font-bold">Scanner de Liens IA</h2>
                     <p className="text-muted-foreground">
-                        Analyse les liens envoyés sur le serveur pour détecter les menaces (liens non autorisés).
+                        Analyse les liens envoyés sur le serveur pour détecter les arnaques et le contenu indésirable.
                     </p>
                 </div>
                 <Card>
@@ -236,14 +237,24 @@ function AntiRaidPageContent({ isPremium }: { isPremium: boolean }) {
                                     <SelectValue placeholder="Sélectionner une action" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="warn">Avertir dans le salon</SelectItem>
+                                    <SelectItem value="warn">Avertir dans le salon d'alertes</SelectItem>
                                     <SelectItem value="delete">Supprimer le message</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
+                         <Separator />
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <Label htmlFor="allow-nsfw" className="font-bold text-sm uppercase text-muted-foreground">Autoriser les liens +18</Label>
+                                <p className="text-sm text-muted-foreground/80">
+                                    Si désactivé, les liens menant à du contenu pour adultes seront supprimés.
+                                </p>
+                            </div>
+                            <Switch id="allow-nsfw" checked={config.allow_nsfw_links} onCheckedChange={(val) => handleValueChange('allow_nsfw_links', val)} />
+                        </div>
                         <Separator />
                         <div className="space-y-2">
-                            <Label htmlFor="exempt-roles" className="font-bold text-sm uppercase text-muted-foreground">Rôles exemptés du scan de liens</Label>
+                            <Label htmlFor="exempt-roles" className="font-bold text-sm uppercase text-muted-foreground">Rôles exemptés du scan</Label>
                             <p className="text-sm text-muted-foreground/80">
                                 Les liens envoyés par les utilisateurs avec ces rôles ne seront pas supprimés/signalés.
                             </p>
