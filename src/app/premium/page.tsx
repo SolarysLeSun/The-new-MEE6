@@ -4,7 +4,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, KeyRound, Star, Bot } from 'lucide-react';
+import { CheckCircle, KeyRound, Star, XCircle, Bot } from 'lucide-react';
 import { AppHeader } from '@/components/app-header';
 import RippleGrid from '@/components/ripple-grid';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -25,16 +25,25 @@ import {
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
-const premiumFeatures = [
-    "Accès à toutes les fonctionnalités IA",
-    "Commandes exclusives (/moveall, etc.)",
-    "Génération d'images et de contenu",
-    "Personnages IA autonomes (bientôt)",
-    "Support prioritaire sur Discord",
-    "Et bien plus encore à venir..."
+const featureComparison = [
+    { feature: "Modération (ban, kick, mute, warn)", free: true, premium: true },
+    { feature: "Auto-Modération & Filtres de mots", free: true, premium: true },
+    { feature: "Logs détaillés des événements", free: true, premium: true },
+    { feature: "Sécurité de base (Anti-Raid, Anti-Bot)", free: true, premium: true },
+    { feature: "Système de niveaux et d'XP", free: true, premium: true },
+    { feature: "Assistant Communautaire IA (FAQ)", free: false, premium: true },
+    { feature: "Assistant Modération IA (Anti-toxicité)", free: false, premium: true },
+    { feature: "Filtre d'Images & Liens IA", free: false, premium: true },
+    { feature: "Générateur de contenu IA (Annonces, Règles)", free: false, premium: true },
+    { feature: "Salons Vocaux Intelligents (IA Vocaux)", free: false, premium: true },
+    { feature: "Commandes de masse (/moveall, /decoall)", free: false, premium: true },
+    { feature: "Constructeur de Serveur IA", free: false, premium: true },
+    { feature: "Système de Captcha", free: false, premium: true },
+    { feature: "Support prioritaire sur Discord", free: false, premium: true },
 ];
 
 interface ServerInfo {
@@ -159,12 +168,15 @@ function PremiumActivationDialog({ children }: { children: React.ReactNode }) {
     )
 }
 
-const PricingCard = ({ plan, price, period, description, children, badgeText }: { plan: string, price: string, period: string, description?: string, children: React.ReactNode, badgeText?: string }) => (
-    <Card className="flex flex-col bg-card/60 backdrop-blur-sm shadow-lg border-primary/20">
+const PricingCard = ({ plan, price, period, description, children, isBestValue }: { plan: string, price: string, period: string, description?: string, children: React.ReactNode, isBestValue?: boolean }) => (
+    <Card className={cn(
+        "flex flex-col bg-card/60 backdrop-blur-sm shadow-lg border-primary/20 relative",
+        isBestValue && "border-primary shadow-primary/20"
+    )}>
+         {isBestValue && <Badge variant="destructive" className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary border-none">Meilleur Choix</Badge>}
         <CardHeader>
             <div className="flex justify-between items-center">
                 <CardTitle>{plan}</CardTitle>
-                {badgeText && <Badge variant="destructive" className="bg-primary border-none">{badgeText}</Badge>}
             </div>
             <div className="flex items-baseline gap-1 pt-2">
                 <span className="text-4xl font-bold">{price}</span>
@@ -172,7 +184,7 @@ const PricingCard = ({ plan, price, period, description, children, badgeText }: 
             </div>
              {description && <CardDescription className="pt-1 !text-green-400 font-semibold">{description}</CardDescription>}
         </CardHeader>
-        <CardContent className="flex-1">
+        <CardContent className="flex-1 flex flex-col">
             {children}
         </CardContent>
     </Card>
@@ -186,6 +198,8 @@ export default function PremiumPage() {
         lifetime: 44.99
     };
     const yearlySavings = (prices.monthly * 12 - prices.yearly).toFixed(2);
+    const lifetimeSavingsVsMonthly = Math.floor(prices.lifetime / prices.monthly);
+    const lifetimeSavingsVsYearly = (prices.lifetime / prices.yearly).toFixed(1);
 
 
     return (
@@ -219,76 +233,74 @@ export default function PremiumPage() {
                         </CardDescription>
                     </div>
                 
-                    <Tabs defaultValue="yearly" className="w-full max-w-4xl">
+                    <Tabs defaultValue="yearly" className="w-full max-w-5xl mx-auto">
                         <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto">
                             <TabsTrigger value="monthly">Mensuel</TabsTrigger>
                             <TabsTrigger value="yearly" className="relative data-[state=active]:bg-primary/20 data-[state=active]:text-primary-foreground">
                                 Annuel
-                                <Badge variant="destructive" className="absolute -top-2 -right-4 bg-primary border-none">Économisez {yearlySavings}€</Badge>
                             </TabsTrigger>
                             <TabsTrigger value="lifetime">À vie</TabsTrigger>
                         </TabsList>
                         
-                        <TabsContent value="monthly">
-                            <PricingCard plan="Mensuel" price={`${prices.monthly.toFixed(2)}€`} period="/mois">
-                                <ul className="space-y-3 text-card-foreground my-6">
-                                    {premiumFeatures.map((feature, index) => (
-                                        <li key={index} className="flex items-center gap-3">
-                                            <CheckCircle className="h-5 w-5 text-green-500" />
-                                            <span>{feature}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                                <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
-                                    <Button size="lg" className="w-full h-12 text-lg">Acheter Premium</Button>
-                                </a>
-                            </PricingCard>
-                        </TabsContent>
-                        <TabsContent value="yearly">
-                            <PricingCard plan="Annuel" price={`${prices.yearly.toFixed(2)}€`} period="/an" description={`Économisez ${yearlySavings}€ par rapport à l'offre mensuelle !`} badgeText="Meilleur Choix">
-                                <ul className="space-y-3 text-card-foreground my-6">
-                                    {premiumFeatures.map((feature, index) => (
-                                        <li key={index} className="flex items-center gap-3">
-                                            <CheckCircle className="h-5 w-5 text-green-500" />
-                                            <span>{feature}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                                <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
-                                    <Button size="lg" className="w-full h-12 text-lg">Acheter Premium</Button>
-                                </a>
-                            </PricingCard>
-                        </TabsContent>
-                        <TabsContent value="lifetime">
-                             <PricingCard plan="À vie" price={`${prices.lifetime.toFixed(2)}€`} period="paiement unique" description="Rentabilisé en moins de 5 mois.">
-                                <ul className="space-y-3 text-card-foreground my-6">
-                                    {premiumFeatures.map((feature, index) => (
-                                        <li key={index} className="flex items-center gap-3">
-                                            <CheckCircle className="h-5 w-5 text-green-500" />
-                                            <span>{feature}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                                <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
-                                    <Button size="lg" className="w-full h-12 text-lg">Acheter Premium</Button>
-                                </a>
-                            </PricingCard>
-                        </TabsContent>
+                        <div className="mt-8 grid md:grid-cols-3 gap-8">
+                             <TabsContent value="monthly" className="mt-0">
+                                <PricingCard plan="Mensuel" price={`${prices.monthly.toFixed(2)}€`} period="/mois">
+                                    <div className="flex-1"/>
+                                    <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
+                                        <Button size="lg" className="w-full h-12 text-lg">Acheter</Button>
+                                    </a>
+                                </PricingCard>
+                            </TabsContent>
+                            <TabsContent value="yearly" className="mt-0">
+                                <PricingCard plan="Annuel" price={`${prices.yearly.toFixed(2)}€`} period="/an" description={`Économisez ${yearlySavings}€ par rapport à l'offre mensuelle !`} isBestValue>
+                                    <div className="flex-1"/>
+                                    <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
+                                        <Button size="lg" className="w-full h-12 text-lg">Acheter</Button>
+                                    </a>
+                                </PricingCard>
+                            </TabsContent>
+                            <TabsContent value="lifetime" className="mt-0">
+                                 <PricingCard plan="À vie" price={`${prices.lifetime.toFixed(2)}€`} period="paiement unique" description={`Rentabilisé en ${lifetimeSavingsVsMonthly} mois.`}>
+                                    <div className="flex-1"/>
+                                    <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
+                                        <Button size="lg" className="w-full h-12 text-lg">Acheter</Button>
+                                    </a>
+                                </PricingCard>
+                            </TabsContent>
+                        </div>
                     </Tabs>
-
-                    <Card className="w-full max-w-4xl mt-8 bg-card/60 backdrop-blur-sm shadow-lg border-primary/20">
+                    
+                    <Card className="w-full max-w-5xl mt-12 bg-card/60 backdrop-blur-sm shadow-lg">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Bot />Option Bot Personnalisé</CardTitle>
+                            <CardTitle>Comparatif des Fonctionnalités</CardTitle>
                         </CardHeader>
                         <CardContent>
-                             <p className="text-2xl font-bold">+ 3€ <span className="text-sm font-normal text-muted-foreground">/mois</span></p>
-                             <p className="text-xs text-muted-foreground mt-2">
-                               Note : Cette option est un complément qui nécessite un abonnement Premium actif. Elle vous permet d'avoir une version privée de Marcus avec un nom, un avatar et un statut de votre choix. Contactez <a href="mailto:contact@marcusbot.fr" className="text-primary hover:underline">contact@marcusbot.fr</a> pour la mise en place.
-                            </p>
+                             <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                    <TableHead>Fonctionnalité</TableHead>
+                                    <TableHead className="text-center">Gratuit</TableHead>
+                                    <TableHead className="text-center text-primary">Premium</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {featureComparison.map(({ feature, free, premium }) => (
+                                    <TableRow key={feature}>
+                                        <TableCell className="font-medium">{feature}</TableCell>
+                                        <TableCell className="text-center">
+                                            {free ? <CheckCircle className="inline-block text-green-500" /> : <XCircle className="inline-block text-muted-foreground/50" />}
+                                        </TableCell>
+                                         <TableCell className="text-center">
+                                            {premium ? <CheckCircle className="inline-block text-green-500" /> : <XCircle className="inline-block text-muted-foreground/50" />}
+                                        </TableCell>
+                                    </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
                         </CardContent>
                     </Card>
 
-                    <div className="w-full max-w-4xl mt-8">
+                    <div className="w-full max-w-4xl mt-12 mx-auto">
                         <PremiumActivationDialog>
                             <Button size="lg" variant="secondary" className="w-full h-12 text-md">
                                 <KeyRound className="mr-2"/>
