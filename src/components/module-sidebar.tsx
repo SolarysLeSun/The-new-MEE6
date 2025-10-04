@@ -38,6 +38,7 @@ import {
   FileText,
   Code,
   Dice5,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,12 @@ const navCategories = [
             { href: 'auto-moderation', label: 'Auto-Modération', icon: Bot },
             { href: 'lock', label: 'Lock/Unlock', icon: Lock },
             { href: 'logs', label: 'Logs', icon: FileClock },
+        ]
+    },
+    {
+        name: 'Administration',
+        items: [
+            { href: 'administration', label: 'Outils Admin', icon: Shield }
         ]
     },
     {
@@ -238,4 +245,3 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
   );
 }
 
-    
