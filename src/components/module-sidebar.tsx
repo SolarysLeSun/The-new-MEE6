@@ -37,6 +37,7 @@ import {
   Info,
   FileText,
   Code,
+  Dice5,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -91,6 +92,12 @@ const navCategories = [
             { href: 'salons-prives', label: 'Salons Privés', icon: Ticket },
             { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, isPremium: true },
             { href: 'accueil-integration', label: 'Accueil & Intégration', icon: UserPlus },
+        ]
+    },
+     {
+        name: 'Divertissement',
+        items: [
+            { href: 'commandes-fun', label: 'Commandes Fun', icon: Dice5 },
         ]
     },
     {
@@ -230,3 +237,5 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
     </>
   );
 }
+
+    
