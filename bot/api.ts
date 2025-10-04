@@ -10,7 +10,7 @@ import { generateKeywords } from '@/ai/flows/keyword-generation-flow';
 import { knowledgeCreationFlow } from '@/ai/flows/knowledge-creation-flow';
 import { randomBytes } from 'crypto';
 
-const API_PORT = process.env.BOT_API_PORT || 3001;
+const API_PORT = process.env.BOT_API_PORT || 3630; // toujour le port 3630 !!
 
 // --- Panel User Authentication ---
 
