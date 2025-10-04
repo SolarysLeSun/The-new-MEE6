@@ -24,7 +24,7 @@ export async function initializeBotAuth() {
             },
             body: new URLSearchParams({
                 grant_type: 'client_credentials',
-                scope: 'bot applications.commands', // Important scopes for the bot itself
+                scope: 'bot applications.commands', // Corrected scope
                 client_id: clientId,
                 client_secret: clientSecret,
             }),

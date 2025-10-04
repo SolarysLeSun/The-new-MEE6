@@ -15,6 +15,7 @@ import { generateTextContent } from '@/ai/flows/content-creation-flow';
 import { announcementFlow } from '@/ai/flows/announcement-flow';
 import { autoTranslateFlow } from '@/ai/flows/auto-translate-flow';
 import { handleOnboardingResponse } from './events/onboarding/aiOnboarding';
+import { patchNoteFlow } from '@/ai/flows/patchnote-flow';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -102,9 +103,8 @@ client.once(Events.ClientReady, async (readyClient) => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
     
     // Set the bot's presence
-    const panelUrl = process.env.PANEL_BASE_URL || 'http://localhost:9002';
     readyClient.user.setPresence({
-        activities: [{ name: `Panel: ${panelUrl}`, type: ActivityType.Playing }],
+        activities: [{ name: `marcusbot.fr`, type: ActivityType.Playing }],
         status: 'online',
     });
     
@@ -587,13 +587,16 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
             if (customFields.length === 0) {
                  // If no custom fields, just create the channel directly.
-                 // This is a simplified path for the old behavior.
-                 // A better implementation would be to call the modal handler directly.
-                 await handlePrivateRoomModal(interaction as any); // Risky cast
+                 await handlePrivateRoomModal(interaction as any);
                  return;
             }
 
             for (const field of customFields) {
+                // Fix: Ensure label is not empty
+                if (!field.label || field.label.trim() === '') {
+                    console.warn(`[PrivateRoom] Skipping custom field with empty label for guild ${interaction.guild.id}`);
+                    continue;
+                }
                 const textInput = new TextInputBuilder()
                     .setCustomId(field.id)
                     .setLabel(field.label)
@@ -657,3 +660,4 @@ startBot();
 // This is a temporary solution to make the client available to other files
 // A better solution would be to use dependency injection.
 (global as any).discordClient = client;
+
