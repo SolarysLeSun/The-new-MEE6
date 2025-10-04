@@ -55,7 +55,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
-const navCategories = [
+export const navCategories = [
     {
         name: 'Général',
         items: [

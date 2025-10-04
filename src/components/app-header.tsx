@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ChevronDown, LogOut } from 'lucide-react';
 import Link from 'next/link';
+import { CommandMenu } from './command-menu';
 
 function MarcusLogo() {
   return (
@@ -26,6 +27,7 @@ export function AppHeader() {
   const supportServerUrl = "https://discord.gg/WSpz7FqFsC";
 
   return (
+    <>
     <header className="absolute top-0 left-0 right-0 z-20">
         <div className="container mx-auto flex h-20 items-center justify-between px-4">
             <Link href="/" className="flex items-center gap-3">
@@ -40,7 +42,8 @@ export function AppHeader() {
                 Premium
                 </Link>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+                <CommandMenu />
                 <a href={discordInviteUrl} target="_blank" rel="noopener noreferrer">
                     <Button>
                         Ajouter le Bot
@@ -49,5 +52,6 @@ export function AppHeader() {
             </div>
         </div>
     </header>
+    </>
   );
 }
