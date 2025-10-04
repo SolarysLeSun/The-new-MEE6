@@ -37,10 +37,6 @@ export const ttsFlow = ai.defineFlow(
           voiceConfig: {
             prebuiltVoiceConfig: { voiceName: 'Algenib' },
           },
-          // Gemini returns raw PCM audio data, which needs to be encoded into a WAV file.
-          // We specify the sample rate here to ensure the data is in the expected format.
-          audioEncoding: 'LINEAR16',
-          sampleRateHertz: 24000, 
         },
       },
       prompt: text,
