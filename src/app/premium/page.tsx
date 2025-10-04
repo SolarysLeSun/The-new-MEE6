@@ -183,7 +183,7 @@ export default function PremiumPage() {
     const prices = {
         monthly: 9.99,
         yearly: 24.99,
-        lifetime: 45.00
+        lifetime: 44.99
     };
     const yearlySavings = (prices.monthly * 12 - prices.yearly).toFixed(2);
 
@@ -253,7 +253,7 @@ export default function PremiumPage() {
                         </PricingCard>
                     </TabsContent>
                     <TabsContent value="lifetime">
-                         <PricingCard plan="À vie" price={`${prices.lifetime.toFixed(2)}€`} period="paiement unique" badgeText="Valeur Ultime" description="Rentabilisé en moins de 2 ans.">
+                         <PricingCard plan="À vie" price={`${prices.lifetime.toFixed(2)}€`} period="paiement unique" badgeText="Valeur Ultime" description="Rentabilisé en moins de 5 mois.">
                              <ul className="space-y-3 text-card-foreground my-6">
                                 {premiumFeatures.map((feature, index) => (
                                     <li key={index} className="flex items-center gap-3">
