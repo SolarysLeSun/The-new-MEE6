@@ -1,5 +1,4 @@
 
-
 import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -158,10 +157,10 @@ async function handleSuggestionModal(interaction: ModalSubmitInteraction) {
         if (config.upvote_emoji) await message.react(config.upvote_emoji);
         if (config.downvote_emoji) await message.react(config.downvote_emoji);
         
-        await interaction.editReply({ content: '✅ Votre suggestion a été envoyée avec succès !' });
+        await interaction.editReply({ content: '<:Oui:1421563353888723084> Votre suggestion a été envoyée avec succès !' });
     } catch (e) {
         console.error("Failed to send suggestion", e);
-        await interaction.editReply({ content: '❌ Une erreur est survenue lors de l\'envoi de votre suggestion.' });
+        await interaction.editReply({ content: '<:Non:1421563259537850471> Une erreur est survenue lors de l\'envoi de votre suggestion.' });
     }
 }
 
@@ -185,11 +184,11 @@ async function handleBotSuggestionModal(interaction: ModalSubmitInteraction) {
             .setTimestamp();
         
         await developer.send({ embeds: [embed] });
-        await interaction.editReply({ content: '✅ Votre idée a bien été envoyée au développeur. Merci pour votre contribution !' });
+        await interaction.editReply({ content: '<:Oui:1421563353888723084> Votre idée a bien été envoyée au développeur. Merci pour votre contribution !' });
 
     } catch (error) {
         console.error("Failed to send bot suggestion DM:", error);
-        await interaction.editReply({ content: '❌ Une erreur est survenue lors de l\'envoi de votre idée. Le développeur a peut-être fermé ses messages privés.' });
+        await interaction.editReply({ content: '<:Non:1421563259537850471> Une erreur est survenue lors de l\'envoi de votre idée. Le développeur a peut-être fermé ses messages privés.' });
     }
 }
 
@@ -252,7 +251,7 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
     }
 
     await interaction.message.edit({ embeds: [newEmbed] });
-    await interaction.editReply({ content: '✅ Le contenu a été modifié. Vous pouvez le modifier à nouveau ou le publier.', ephemeral: true });
+    await interaction.editReply({ content: '<:Oui:1421563353888723084> Le contenu a été modifié. Vous pouvez le modifier à nouveau ou le publier.', ephemeral: true });
 }
 
 async function handleTranslationSelect(interaction: StringSelectMenuInteraction) {
@@ -317,6 +316,7 @@ async function handlePrivateRoomModal(interaction: ModalSubmitInteraction) {
         // Replace custom field variables
         for (let i = 0; i < (config.custom_fields?.length || 0); i++) {
             const field = config.custom_fields[i];
+            if (!field.label) continue;
             const value = interaction.fields.getTextInputValue(field.id);
             channelName = channelName.replace(`{champ${i + 1}}`, value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
         }
@@ -343,6 +343,7 @@ async function handlePrivateRoomModal(interaction: ModalSubmitInteraction) {
         if (config.custom_fields?.length > 0) {
             initialMessage += "\n\n**Détails fournis :**";
             for (const field of config.custom_fields) {
+                if (!field.label) continue;
                 const value = interaction.fields.getTextInputValue(field.id);
                 initialMessage += `\n**${field.label}:** ${value}`;
             }
@@ -362,7 +363,7 @@ async function handleReminderButton(interaction: ButtonInteraction) {
 
     if (!delayStr || !destination || !base64Message) return;
 
-    await interaction.reply({ content: `✅ D'accord ! Je vous rappellerai à nouveau ce message dans **${delayStr}**.`, ephemeral: true });
+    await interaction.reply({ content: `<:Oui:1421563353888723084> D'accord ! Je vous rappellerai à nouveau ce message dans **${delayStr}**.`, ephemeral: true });
 
     const message = Buffer.from(base64Message, 'base64').toString('utf-8');
     const delayMs = ms(delayStr);
@@ -537,9 +538,9 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 const targetChannel = await client.channels.fetch(channelId).catch(() => null) as TextChannel;
                 if (targetChannel) {
                     await targetChannel.send({ embeds: [embed] });
-                    await interaction.update({ content: '✅ Annonce publiée avec succès !', components: [], embeds: [] });
+                    await interaction.update({ content: '<:Oui:1421563353888723084> Annonce publiée avec succès !', components: [], embeds: [] });
                 } else {
-                    await interaction.update({ content: '❌ Erreur : Le salon d\'annonce est introuvable.', components: [], embeds: [] });
+                    await interaction.update({ content: '<:Non:1421563259537850471> Erreur : Le salon d\'annonce est introuvable.', components: [], embeds: [] });
                 }
             } else if (footerText.includes('admin_announce')) {
                 await interaction.update({ content: '🚀 Envoi de l\'annonce globale en cours...', components: [], embeds: [] });
@@ -572,7 +573,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                         failures.push({ id: serverId, name: guild?.name || 'ID Inconnu', reason: `Erreur API: ${error.message}` });
                     }
                 }
-                const summaryMessage = `✅ Annonce envoyée avec succès à **${successCount}** serveurs. Échec pour **${failures.length}** serveurs.`;
+                const summaryMessage = `<:Oui:1421563353888723084> Annonce envoyée avec succès à **${successCount}** serveurs. Échec pour **${failures.length}** serveurs.`;
                 await interaction.followUp({ content: summaryMessage, ephemeral: true });
 
                 if (failures.length > 0) {
@@ -588,7 +589,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 }
             } else { // Fallback for iacontent
                 await interaction.channel.send({ embeds: [embed] });
-                await interaction.update({ content: '✅ Contenu publié avec succès !', components: [], embeds: [] });
+                await interaction.update({ content: '<:Oui:1421563353888723084> Contenu publié avec succès !', components: [], embeds: [] });
             }
             return;
         }

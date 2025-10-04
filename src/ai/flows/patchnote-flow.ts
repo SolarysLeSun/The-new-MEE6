@@ -32,6 +32,13 @@ const patchNotePrompt = ai.definePrompt({
     model: 'googleai/gemini-2.0-flash',
     prompt: `You are an expert technical writer and editor for a software project. Your task is to take a raw patch note and refine it for public release on Discord.
 
+--- Graphic Charter ---
+You MUST use these custom emojis where appropriate. Always use the full format <:name:id>.
+- Title Prefix: <:fleche:1421563500190371932>
+- List Item: <:point_h:1421563605630845009>
+- Important Warning: <:warn:1421563647909560462>
+--- End of Charter ---
+
 The user has provided the following details:
 - Raw Text: "{{{rawText}}}"
 - Original Author: {{{authorName}}}
@@ -40,10 +47,10 @@ The user has provided the following details:
 
 Your instructions are:
 1.  Determine the author. If 'isOfficial' is true, the author is "L'équipe officielle de Marcus". Otherwise, it is the original author's name.
-2.  Create a standard title: "Notes de mise à jour".
+2.  Create a standard title, prefixed with the arrow emoji: "<:fleche:1421563500190371932> Notes de mise à jour".
 3.  Process the 'rawText' based on the 'correctionMode':
     -   If mode is 'simple': Perform only basic spelling and grammar correction. The sentence structure and original wording must be preserved as much as possible.
-    -   If mode is 'upgrade': You have full creative freedom. Rewrite and reformulate the text for maximum clarity, impact, and professionalism. You can change sentence structure, add bullet points, and use Discord markdown (like **bold**, *italics*, \`code\`, and > quotes) to improve readability. The core meaning must be retained.
+    -   If mode is 'upgrade': You have full creative freedom. Rewrite and reformulate the text for maximum clarity, impact, and professionalism. You can change sentence structure, add bullet points (using the list item emoji), and use Discord markdown (like **bold**, *italics*, \`code\`, and > quotes) to improve readability. The core meaning must be retained.
 4.  Return the final title, author, and processed content.
 
 Begin processing now.

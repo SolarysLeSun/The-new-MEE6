@@ -34,6 +34,13 @@ const textGenPrompt = ai.definePrompt({
     prompt: `You are a creative writer and community manager for a Discord server.
 Your task is to write or modify a piece of content based on a specified type and topic.
 
+--- Graphic Charter ---
+You MUST use these custom emojis where appropriate. Always use the full format <:name:id>.
+- Title Prefix (for rules, announcements, etc.): <:fleche:1421563500190371932>
+- List Item: <:point_h:1421563605630845009>
+- Important Warning: <:warn:1421563647909560462>
+--- End of Charter ---
+
 {{#if modificationRequest}}
 ---
 Task: MODIFY EXISTING CONTENT
@@ -56,12 +63,11 @@ Custom Instructions: {{{customInstructions}}}
 {{/if}}
 
 Please generate a short, descriptive title for the content, and the content itself.
-For a rule, the title should be like "📝 Règle : [Sujet]".
-For an announcement, the title should be like "📢 Annonce : [Sujet]".
+Use the title prefix emoji from the charter. For a rule, the title should be like "<:fleche:1421563500190371932> Règle : [Sujet]". For an announcement, like "<:fleche:1421563500190371932> Annonce : [Sujet]".
 ---
 {{/if}}
 
-Ensure the final content is well-written, engaging, and perfectly suited for a Discord community. Format it appropriately using Discord markdown (like **bold** or *italics*) where necessary.
+Ensure the final content is well-written, engaging, and perfectly suited for a Discord community. Format it appropriately using Discord markdown (like **bold** or *italics*) and the emojis from the charter where necessary.
 `,
 });
 

@@ -79,17 +79,17 @@ const IAContentCommand: Command = {
                             .setCustomId('publish_content')
                             .setLabel('Publier')
                             .setStyle(ButtonStyle.Success)
-                            .setEmoji('✅'),
+                            .setEmoji('<:Oui:1421563353888723084>'),
                         new ButtonBuilder()
                             .setCustomId('modify_content')
                             .setLabel('Modifier')
                             .setStyle(ButtonStyle.Primary)
-                            .setEmoji('✏️'),
+                            .setEmoji('<:Option:1421563335094042796>'),
                         new ButtonBuilder()
                             .setCustomId('cancel_content')
                             .setLabel('Annuler')
                             .setStyle(ButtonStyle.Danger)
-                            .setEmoji('🗑️')
+                            .setEmoji('<:Non:1421563259537850471>')
                     );
                     
                     await interaction.editReply({ embeds: [embed], components: [row] });

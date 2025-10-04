@@ -41,7 +41,7 @@ const RappelCommand: Command = {
             return;
         }
 
-        await interaction.reply({ content: `✅ D'accord ! Je vous rappellerai votre message dans **${delayStr}**.`, ephemeral: true });
+        await interaction.reply({ content: `<:Oui:1421563353888723084> D'accord ! Je vous rappellerai votre message dans **${delayStr}**.`, ephemeral: true });
 
         setTimeout(async () => {
             const embed = new EmbedBuilder()

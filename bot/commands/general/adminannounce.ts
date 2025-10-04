@@ -58,7 +58,7 @@ const AdminAnnounceCommand: Command = {
                     authorName: interaction.user.username,
                     targetLanguage: targetLanguage || undefined,
                 });
-                title = `📢 ${result.title}`;
+                title = result.title;
                 description = result.description;
             } catch (error) {
                 console.error('[AdminAnnounce] Erreur de l\'IA, envoi du texte brut.', error);
@@ -83,12 +83,12 @@ const AdminAnnounceCommand: Command = {
                 .setCustomId('modify_content')
                 .setLabel('Modifier')
                 .setStyle(ButtonStyle.Primary)
-                .setEmoji('✏️'),
+                .setEmoji('<:Option:1421563335094042796>'),
             new ButtonBuilder()
                 .setCustomId('cancel_content')
                 .setLabel('Annuler')
                 .setStyle(ButtonStyle.Danger)
-                .setEmoji('🗑️')
+                .setEmoji('<:Non:1421563259537850471>')
         );
 
         await interaction.editReply({
