@@ -4,7 +4,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, KeyRound, Star, Bot, BarChartHorizontal } from 'lucide-react';
+import { CheckCircle, KeyRound, Star, Bot } from 'lucide-react';
 import { AppHeader } from '@/components/app-header';
 import RippleGrid from '@/components/ripple-grid';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -164,7 +164,7 @@ const PricingCard = ({ plan, price, period, description, children, badgeText }: 
         <CardHeader>
             <div className="flex justify-between items-center">
                 <CardTitle>{plan}</CardTitle>
-                {badgeText && <Badge variant="destructive">{badgeText}</Badge>}
+                {badgeText && <Badge variant="destructive" className="bg-primary border-none">{badgeText}</Badge>}
             </div>
             <div className="flex items-baseline gap-1 pt-2">
                 <span className="text-4xl font-bold">{price}</span>
@@ -189,7 +189,7 @@ export default function PremiumPage() {
 
 
     return (
-        <PageTransitionWrapper className="relative min-h-screen w-full bg-background text-foreground">
+        <div className="relative min-h-screen w-full bg-background text-foreground">
              <div className="absolute inset-0 z-0">
                 <RippleGrid
                     gridColor="#ffffff10"
@@ -213,6 +213,9 @@ export default function PremiumPage() {
                         <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500">Marcus Premium</h1>
                         <CardDescription className="text-lg text-muted-foreground mt-2 max-w-2xl mx-auto">
                             Débloquez tout le potentiel de votre serveur Discord avec nos offres flexibles.
+                        </CardDescription>
+                         <CardDescription className="text-xl font-bold text-white mt-4 max-w-2xl mx-auto border-2 border-primary/30 bg-primary/10 p-3 rounded-lg">
+                           Chaque achat vous donne droit à <span className="text-primary">3 clés d'activation</span>, valables sur 3 serveurs Discord.
                         </CardDescription>
                     </div>
                 
@@ -257,7 +260,7 @@ export default function PremiumPage() {
                             </PricingCard>
                         </TabsContent>
                         <TabsContent value="lifetime">
-                            <PricingCard plan="À vie" price={`${prices.lifetime.toFixed(2)}€`} period="paiement unique" description="Rentabilisé en moins de 5 mois.">
+                             <PricingCard plan="À vie" price={`${prices.lifetime.toFixed(2)}€`} period="paiement unique" description="Rentabilisé en moins de 5 mois.">
                                 <ul className="space-y-3 text-card-foreground my-6">
                                     {premiumFeatures.map((feature, index) => (
                                         <li key={index} className="flex items-center gap-3">
@@ -276,14 +279,11 @@ export default function PremiumPage() {
                     <Card className="w-full max-w-4xl mt-8 bg-card/60 backdrop-blur-sm shadow-lg border-primary/20">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2"><Bot />Option Bot Personnalisé</CardTitle>
-                            <CardDescription>
-                                Une version privée de Marcus, hébergée pour vous, avec le nom, l'avatar et le statut de votre choix. 
-                            </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-2xl font-bold">+ 3€ <span className="text-sm font-normal text-muted-foreground">/mois</span></p>
-                            <p className="text-xs text-muted-foreground mt-2">
-                            Cette option nécessite un abonnement actif. Contactez <a href="mailto:contact@marcusbot.fr" className="text-primary hover:underline">contact@marcusbot.fr</a> pour la mise en place.
+                             <p className="text-2xl font-bold">+ 3€ <span className="text-sm font-normal text-muted-foreground">/mois</span></p>
+                             <p className="text-xs text-muted-foreground mt-2">
+                               Note : Cette option est un complément qui nécessite un abonnement Premium actif. Elle vous permet d'avoir une version privée de Marcus avec un nom, un avatar et un statut de votre choix. Contactez <a href="mailto:contact@marcusbot.fr" className="text-primary hover:underline">contact@marcusbot.fr</a> pour la mise en place.
                             </p>
                         </CardContent>
                     </Card>
@@ -297,11 +297,8 @@ export default function PremiumPage() {
                         </PremiumActivationDialog>
                     </div>
                     
-                    <p className="text-xs text-center text-muted-foreground mt-8 max-w-2xl mx-auto">
-                        Note: L'achat d'une offre vous donnera accès à 3 clés d'activation, vous permettant de bénéficier des avantages premium sur 3 serveurs Discord distincts. Le bouton d'achat vous redirigera vers Ko-fi.
-                    </p>
                 </PageTransitionWrapper>
             </main>
-        </PageTransitionWrapper>
+        </div>
     );
 }
