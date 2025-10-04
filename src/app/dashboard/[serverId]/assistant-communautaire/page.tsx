@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { MessageSquare, Trash2, PlusCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
 import { Badge } from '@/components/ui/badge';
 import { GlobalAiStatusAlert } from '@/components/global-ai-status-alert';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { Combobox } from '@/components/ui/combobox';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -130,6 +131,11 @@ function CommunityAssistantPageContent({ isPremium, serverId }: { isPremium: boo
         return <PageSkeleton />;
     }
 
+    const roleOptions = [
+        { value: 'none', label: '@everyone' },
+        ...roles.filter(r => r.name !== '@everyone').map(role => ({ value: role.id, label: role.name }))
+    ];
+
     return (
         <PremiumFeatureWrapper isPremium={isPremium}>
             <PageTransitionWrapper className="space-y-8">
@@ -204,22 +210,15 @@ function CommunityAssistantPageContent({ isPremium, serverId }: { isPremium: boo
                         <CardContent>
                             <div className="space-y-2">
                                 <Label htmlFor={`role-select-${faqCommand.key}`} className="text-sm font-medium">Rôle minimum requis</Label>
-                                <Select 
+                                <Combobox
+                                    options={roleOptions}
                                     value={config.command_permissions?.[faqCommand.key] || 'none'}
-                                    onValueChange={(value) => handlePermissionChange(faqCommand.key, value)}
-                                >
-                                    <SelectTrigger id={`role-select-${faqCommand.key}`} className="w-full">
-                                        <SelectValue placeholder="Sélectionner un rôle" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectGroup>
-                                            <SelectItem value="none">@everyone</SelectItem>
-                                            {roles.filter(r => r.name !== '@everyone').map(role => (
-                                                <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                                            ))}
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
+                                    onChange={(value) => handlePermissionChange(faqCommand.key, value)}
+                                    placeholder="Sélectionner un rôle"
+                                    searchPlaceholder="Rechercher un rôle..."
+                                    emptyPlaceholder="Aucun rôle trouvé."
+                                    className="w-full"
+                                />
                             </div>
                         </CardContent>
                     </Card>
@@ -325,5 +324,3 @@ if (typeof window !== 'undefined' && !(window as any).uuidv4) {
         });
     }
 }
-
-    

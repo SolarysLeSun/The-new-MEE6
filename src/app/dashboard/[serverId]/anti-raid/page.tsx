@@ -7,11 +7,12 @@ import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { Switch } from '@/components/ui/switch';
+import { Combobox } from '@/components/ui/combobox';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -105,6 +106,11 @@ export default function AntiRaidPage() {
     if (loading || !config) {
         return <AntiRaidPageSkeleton />;
     }
+
+    const channelOptions = [
+        { value: 'none', label: 'Aucun' },
+        ...channels.map(c => ({ value: c.id, label: `# ${c.name}` }))
+    ];
     
     return (
     <PageTransitionWrapper className="space-y-8 max-w-4xl">
@@ -141,23 +147,15 @@ export default function AntiRaidPage() {
                         <p className="text-sm text-muted-foreground/80">
                             Le salon où envoyer les notifications lorsqu'un raid est détecté.
                         </p>
-                        <Select 
+                        <Combobox
+                            options={channelOptions}
                             value={config.alert_channel_id || 'none'}
-                            onValueChange={(val) => handleValueChange('alert_channel_id', val === 'none' ? null : val)}
-                        >
-                            <SelectTrigger id="alert-channel" className="w-full md:w-[280px]">
-                                <SelectValue placeholder="Sélectionner un salon" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectLabel>Salons textuels</SelectLabel>
-                                    <SelectItem value="none">Aucun</SelectItem>
-                                    {channels.map(channel => (
-                                        <SelectItem key={channel.id} value={channel.id}># {channel.name}</SelectItem>
-                                    ))}
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
+                            onChange={(value) => handleValueChange('alert_channel_id', value === 'none' ? null : value)}
+                            placeholder="Sélectionner un salon"
+                            searchPlaceholder="Rechercher un salon..."
+                            emptyPlaceholder="Aucun salon trouvé."
+                            className="w-full md:w-[280px]"
+                        />
                     </div>
                     <Separator/>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">

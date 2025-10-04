@@ -13,21 +13,14 @@ import {
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  SelectGroup,
-} from '@/components/ui/select';
-import { Voicemail, Languages, AlertTriangle } from 'lucide-react';
+import { Languages, Voicemail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Combobox } from '@/components/ui/combobox';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -131,6 +124,11 @@ export default function ManualControlPage() {
         return <ManualControlPageSkeleton />;
     }
 
+    const roleOptions = [
+        { value: 'none', label: '@everyone' },
+        ...roles.filter(r => r.name !== '@everyone').map(role => ({ value: role.id, label: role.name }))
+    ];
+
   return (
     <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
@@ -181,24 +179,15 @@ export default function ManualControlPage() {
                   >
                     Rôle minimum requis
                   </Label>
-                  <Select
+                  <Combobox
+                    options={roleOptions}
                     value={config.command_permissions?.[command.key] || 'none'}
-                    onValueChange={(val) => handlePermissionChange(command.key, val)}
-                  >
-                    <SelectTrigger id={`role-select-${command.key}`} className="w-full">
-                      <SelectValue placeholder="Sélectionner un rôle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="none">@everyone</SelectItem>
-                        {roles.filter(r => r.name !== '@everyone').map(role => (
-                          <SelectItem key={role.id} value={role.id}>
-                            {role.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                    onChange={(value) => handlePermissionChange(command.key, value)}
+                    placeholder="Sélectionner un rôle"
+                    searchPlaceholder="Rechercher un rôle..."
+                    emptyPlaceholder="Aucun rôle trouvé."
+                    className="w-full"
+                  />
                 </div>
               </CardContent>
             </Card>

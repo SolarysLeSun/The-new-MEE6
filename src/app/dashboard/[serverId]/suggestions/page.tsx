@@ -8,11 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
-import { Lightbulb, Settings } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { Combobox } from '@/components/ui/combobox';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -145,6 +145,16 @@ export default function SuggestionsPage() {
         return <SuggestionsPageSkeleton />;
     }
 
+    const channelOptions = [
+        { value: 'none', label: 'Désactivé' },
+        ...channels.map(c => ({ value: c.id, label: `# ${c.name}` }))
+    ];
+
+    const roleOptions = [
+        { value: 'none', label: command.key === 'suggest' ? '@everyone' : 'Admin seulement' },
+        ...roles.filter(r => r.name !== '@everyone').map(role => ({ value: role.id, label: role.name }))
+    ];
+
   return (
     <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
@@ -182,28 +192,15 @@ export default function SuggestionsPage() {
                 Le salon où les nouvelles suggestions pour le serveur seront publiées.
               </p>
             </div>
-            <Select 
-                value={config.suggestion_channel_id || 'none'} 
-                onValueChange={(val) => handleValueChange('suggestion_channel_id', val === 'none' ? null : val)}
-            >
-              <SelectTrigger
-                id="suggestion-channel"
+            <Combobox
+                options={channelOptions}
+                value={config.suggestion_channel_id || 'none'}
+                onChange={(value) => handleValueChange('suggestion_channel_id', value === 'none' ? null : value)}
+                placeholder="Sélectionner un salon"
+                searchPlaceholder="Rechercher un salon..."
+                emptyPlaceholder="Aucun salon trouvé."
                 className="w-full md:w-[280px]"
-              >
-                <SelectValue placeholder="Sélectionner un salon" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Salons textuels</SelectLabel>
-                  <SelectItem value="none">Désactivé</SelectItem>
-                  {channels.map((channel) => (
-                    <SelectItem key={channel.id} value={channel.id}>
-                      # {channel.name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+            />
           </div>
         </CardContent>
       </Card>
@@ -236,22 +233,18 @@ export default function SuggestionsPage() {
                   >
                     Rôle minimum requis
                   </Label>
-                  <Select
+                  <Combobox
+                    options={[
+                        { value: 'none', label: command.key === 'suggest' ? '@everyone' : 'Admin seulement' },
+                        ...roles.filter(r => r.name !== '@everyone').map(role => ({ value: role.id, label: role.name }))
+                    ]}
                     value={config.command_permissions?.[command.key] || 'none'}
-                    onValueChange={(val) => handlePermissionChange(command.key, val)}
-                  >
-                    <SelectTrigger id={`role-select-${command.key}`} className="w-full">
-                      <SelectValue placeholder="Sélectionner un rôle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectGroup>
-                            <SelectItem value="none">{command.key === 'suggest' ? "@everyone" : "Admin seulement"}</SelectItem>
-                            {roles.filter(r => r.name !== '@everyone').map(role => (
-                                <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                            ))}
-                        </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                    onChange={(value) => handlePermissionChange(command.key, value)}
+                    placeholder="Sélectionner un rôle"
+                    searchPlaceholder="Rechercher un rôle..."
+                    emptyPlaceholder="Aucun rôle trouvé."
+                    className="w-full"
+                  />
                   {command.key === 'suggest' && <p className="text-xs text-muted-foreground pt-1">La sous-commande `/suggest bot` est toujours disponible pour tout le monde.</p>}
                 </div>
               </CardContent>

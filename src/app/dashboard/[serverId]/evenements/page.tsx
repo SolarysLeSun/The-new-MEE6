@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
@@ -15,6 +16,7 @@ import { useServerInfo } from '@/hooks/use-server-info';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { Combobox } from '@/components/ui/combobox';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -107,6 +109,11 @@ function EventsPageContent({ isPremium }: { isPremium: boolean }) {
     if (loading || !config) {
         return <Skeleton className="w-full h-[500px]" />;
     }
+
+    const roleOptions = [
+        { value: 'none', label: '@everyone' },
+        ...roles.filter(r => r.name !== '@everyone').map(role => ({ value: role.id, label: role.name }))
+    ];
 
     return (
     <PremiumFeatureWrapper isPremium={isPremium}>
@@ -226,22 +233,15 @@ function EventsPageContent({ isPremium }: { isPremium: boolean }) {
                         >
                             Rôle minimum requis
                         </Label>
-                        <Select
+                        <Combobox
+                            options={roleOptions}
                             value={config.command_permissions?.[command.key] || 'none'}
-                            onValueChange={(value) => handlePermissionChange(command.key, value)}
-                        >
-                            <SelectTrigger id={`role-select-${command.key}`} className="w-full">
-                                <SelectValue placeholder="Sélectionner un rôle" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem value="none">@everyone</SelectItem>
-                                    {roles.filter(r => r.name !== '@everyone').map(role => (
-                                        <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                                    ))}
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
+                            onChange={(value) => handlePermissionChange(command.key, value)}
+                            placeholder="Sélectionner un rôle"
+                            searchPlaceholder="Rechercher un rôle..."
+                            emptyPlaceholder="Aucun rôle trouvé."
+                            className="w-full"
+                        />
                         </div>
                     </CardContent>
                     </Card>

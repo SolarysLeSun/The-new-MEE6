@@ -5,7 +5,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Lock } from 'lucide-react';
@@ -14,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { Combobox } from '@/components/ui/combobox';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -126,6 +126,11 @@ export default function LockPage() {
         return <LockPageSkeleton />;
     }
 
+    const roleOptions = [
+        { value: 'none', label: 'Admin seulement' },
+        ...roles.map(r => ({ value: r.id, label: r.name }))
+    ];
+
     return (
         <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
             <div>
@@ -194,22 +199,15 @@ export default function LockPage() {
                             <CardContent>
                                 <div className="space-y-2">
                                     <Label htmlFor={`role-select-${command.key}`} className="text-sm font-medium">Rôle minimum requis</Label>
-                                    <Select 
+                                    <Combobox
+                                        options={roleOptions}
                                         value={config.command_permissions[command.key] || 'none'}
-                                        onValueChange={(value) => handlePermissionChange(command.key, value)}
-                                    >
-                                        <SelectTrigger id={`role-select-${command.key}`} className="w-full">
-                                            <SelectValue placeholder="Sélectionner un rôle" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectGroup>
-                                                <SelectItem value="none">Admin seulement</SelectItem>
-                                                {roles.map(role => (
-                                                    <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                                                ))}
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
+                                        onChange={(value) => handlePermissionChange(command.key, value)}
+                                        placeholder="Sélectionner un rôle"
+                                        searchPlaceholder="Rechercher un rôle..."
+                                        emptyPlaceholder="Aucun rôle trouvé."
+                                        className="w-full"
+                                    />
                                 </div>
                             </CardContent>
                         </Card>
