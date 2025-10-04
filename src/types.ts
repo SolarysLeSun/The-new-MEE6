@@ -51,7 +51,6 @@ export type Module =
     | 'announcements'
     | 'leveling'
     | 'fun-commands'
-    | 'utils'
     | 'admin';
 
 export interface ModuleConfig {

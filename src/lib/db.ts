@@ -150,6 +150,7 @@ const defaultConfigs: DefaultConfigs = {
             mute: null,
             warn: null,
             listwarns: null,
+            kickvoc: null,
         }
     },
     'general-commands': {
@@ -443,7 +444,13 @@ const defaultConfigs: DefaultConfigs = {
             react: null,
             randomnickname: null,
         }
-    }
+    },
+    'admin': {
+        enabled: true,
+        command_permissions: {
+            restart: null,
+        },
+    },
 };
 
 export function initializeDatabase() {
@@ -765,23 +772,23 @@ export function redeemPremiumKey(key: string, guildId: string, userId: string): 
 
 // --- Delegated Permissions ---
 
-export function grantPermission(userId: string, permissionKey: 'genpremium', grantedBy: string): void {
+export function grantPermission(userId: string, permissionKey: 'genpremium' | 'botrestart', grantedBy: string): void {
     const stmt = db.prepare('INSERT OR REPLACE INTO delegated_permissions (user_id, permission_key, granted_by) VALUES (?, ?, ?)');
     stmt.run(userId, permissionKey, grantedBy);
 }
 
-export function revokePermission(userId: string, permissionKey: 'genpremium'): void {
+export function revokePermission(userId: string, permissionKey: 'genpremium' | 'botrestart'): void {
     const stmt = db.prepare('DELETE FROM delegated_permissions WHERE user_id = ? AND permission_key = ?');
     stmt.run(userId, permissionKey);
 }
 
-export function hasPermission(userId: string, permissionKey: 'genpremium'): boolean {
+export function hasPermission(userId: string, permissionKey: 'genpremium' | 'botrestart'): boolean {
     const stmt = db.prepare('SELECT 1 FROM delegated_permissions WHERE user_id = ? AND permission_key = ?');
     const result = stmt.get(userId, permissionKey);
     return !!result;
 }
 
-export function getDelegatedUsersForPermission(permissionKey: 'genpremium'): string[] {
+export function getDelegatedUsersForPermission(permissionKey: 'genpremium' | 'botrestart'): string[] {
     const stmt = db.prepare('SELECT user_id FROM delegated_permissions WHERE permission_key = ?');
     const rows = stmt.all(permissionKey) as { user_id: string }[];
     return rows.map(row => row.user_id);
