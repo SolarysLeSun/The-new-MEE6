@@ -1,9 +1,11 @@
 
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, Collection } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, Collection, PermissionFlagsBits } from 'discord.js';
 import type { Command } from '../../../src/types';
-import { getServerConfig } from '../../../src/lib/db';
+import { getServerConfig, checkTesterStatus } from '../../../src/lib/db';
 import * as fs from 'fs';
 import * as path from 'path';
+
+const OWNER_ID = '556529963877138442';
 
 // Helper function to capitalize first letter
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -37,7 +39,7 @@ const MarcusCommand: Command = {
     async execute(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply({ ephemeral: true });
 
-        if (!interaction.guildId) {
+        if (!interaction.guildId || !interaction.member) {
             await interaction.editReply({ content: "Une erreur est survenue." });
             return;
         }
@@ -48,16 +50,42 @@ const MarcusCommand: Command = {
             return;
         }
         
-        const commands = interaction.client.commands;
+        // --- Permission Check ---
+        const isOwner = interaction.user.id === OWNER_ID;
+        const testerStatus = checkTesterStatus(interaction.user.id, interaction.guildId);
+        const isAdmin = (interaction.member.permissions as Readonly<PermissionFlagsBits>).has(PermissionFlagsBits.Administrator);
+        
+        // --- Command Filtering ---
+        const allCommands = interaction.client.commands;
         const commandCategories = new Collection<string, Command[]>();
+        
+        const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'adminannounce', 'delegate', 'restart', 'panelmessage', 'status'];
+        const testerCommands = ['mp', 'webhook', 'tester'];
         
         const commandsPath = path.join(__dirname, '..');
         
-        for (const command of commands.values()) {
-            // Do not show owner commands in the list
-            if (['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'adminannounce'].includes(command.data.name)) {
+        for (const command of allCommands.values()) {
+            const commandName = command.data.name;
+
+            // Always hide owner commands unless the user is the owner
+            if (ownerCommands.includes(commandName) && !isOwner) {
                 continue;
             }
+            
+            // Hide tester commands unless the user is a tester or owner
+            if (testerCommands.includes(commandName) && !testerStatus.isTester && !isOwner) {
+                continue;
+            }
+
+            // For regular users, only show general commands and commands they have explicit permission for.
+            if (!isOwner && !isAdmin && !testerStatus.isTester) {
+                const defaultPermissions = command.data.default_member_permissions;
+                // If a command requires any permission by default, hide it from lambda users
+                if (defaultPermissions && BigInt(defaultPermissions) !== BigInt(0)) {
+                    continue;
+                }
+            }
+            
             const category = getCommandCategory(command, commandsPath);
             if (!commandCategories.has(category)) {
                 commandCategories.set(category, []);
@@ -68,7 +96,7 @@ const MarcusCommand: Command = {
         const helpEmbed = new EmbedBuilder()
             .setColor(0x00BFFF)
             .setTitle('📜 Liste des Commandes de Marcus')
-            .setDescription('Voici toutes les commandes que vous pouvez utiliser.')
+            .setDescription('Voici les commandes que vous pouvez utiliser.')
             .setTimestamp()
             .setFooter({ text: `Demandé par ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() });
 
