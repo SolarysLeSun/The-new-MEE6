@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CheckCircle, KeyRound, Star } from 'lucide-react';
+import { CheckCircle, KeyRound, Star, Bot } from 'lucide-react';
 import { AppHeader } from '@/components/app-header';
 import RippleGrid from '@/components/ripple-grid';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -22,6 +22,8 @@ import {
   SelectGroup,
 } from "@/components/ui/select"
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -156,6 +158,24 @@ function PremiumActivationDialog({ children }: { children: React.ReactNode }) {
     )
 }
 
+const PricingCard = ({ plan, price, period, bestValue, children }: { plan: string, price: string, period: string, bestValue?: boolean, children: React.ReactNode }) => (
+    <Card className="flex flex-col">
+        <CardHeader>
+            <div className="flex justify-between items-center">
+                <CardTitle>{plan}</CardTitle>
+                {bestValue && <Badge variant="destructive" className="bg-primary border-none">Meilleur Choix</Badge>}
+            </div>
+            <div className="flex items-baseline gap-1 pt-2">
+                <span className="text-4xl font-bold">{price}</span>
+                <span className="text-muted-foreground">{period}</span>
+            </div>
+        </CardHeader>
+        <CardContent className="flex-1">
+            {children}
+        </CardContent>
+    </Card>
+);
+
 export default function PremiumPage() {
     const koFiUrl = 'https://ko-fi.com/M4M21555O9';
 
@@ -174,47 +194,100 @@ export default function PremiumPage() {
             <AppHeader />
             
             <main className="relative z-10 container mx-auto flex flex-col items-center justify-center px-4 py-24 sm:py-32">
-                <Card className="max-w-2xl w-full bg-card/60 backdrop-blur-sm shadow-lg border-primary/20">
-                    <CardHeader className="text-center pb-4">
-                        <div className="flex justify-center mb-4">
-                             <div className="p-3 bg-yellow-400/10 rounded-full border-2 border-yellow-400/30">
-                                <Star className="h-8 w-8 text-yellow-400"/>
-                            </div>
+                <div className="text-center pb-12">
+                    <div className="flex justify-center mb-4">
+                            <div className="p-3 bg-yellow-400/10 rounded-full border-2 border-yellow-400/30">
+                            <Star className="h-8 w-8 text-yellow-400"/>
                         </div>
-                        <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500">Marcus Premium</h1>
-                        <CardDescription className="text-lg text-muted-foreground mt-2">
-                            Débloquez tout le potentiel de votre serveur Discord.
+                    </div>
+                    <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500">Marcus Premium</h1>
+                    <CardDescription className="text-lg text-muted-foreground mt-2 max-w-2xl mx-auto">
+                        Débloquez tout le potentiel de votre serveur Discord avec nos offres flexibles.
+                    </CardDescription>
+                </div>
+                
+                <Tabs defaultValue="yearly" className="w-full max-w-4xl">
+                    <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto">
+                        <TabsTrigger value="monthly">Mensuel</TabsTrigger>
+                        <TabsTrigger value="yearly">Annuel</TabsTrigger>
+                        <TabsTrigger value="lifetime">À vie</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="monthly">
+                        <PricingCard plan="Mensuel" price="9,99€" period="/mois">
+                             <ul className="space-y-3 text-card-foreground my-6">
+                                {premiumFeatures.map((feature, index) => (
+                                    <li key={index} className="flex items-center gap-3">
+                                        <CheckCircle className="h-5 w-5 text-green-500" />
+                                        <span>{feature}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
+                                <Button size="lg" className="w-full h-12 text-lg">Acheter Premium</Button>
+                            </a>
+                        </PricingCard>
+                    </TabsContent>
+                    <TabsContent value="yearly">
+                         <PricingCard plan="Annuel" price="24,99€" period="/an" bestValue>
+                             <ul className="space-y-3 text-card-foreground my-6">
+                                {premiumFeatures.map((feature, index) => (
+                                    <li key={index} className="flex items-center gap-3">
+                                        <CheckCircle className="h-5 w-5 text-green-500" />
+                                        <span>{feature}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
+                                <Button size="lg" className="w-full h-12 text-lg">Acheter Premium</Button>
+                            </a>
+                        </PricingCard>
+                    </TabsContent>
+                    <TabsContent value="lifetime">
+                         <PricingCard plan="À vie" price="45€" period="paiement unique">
+                             <ul className="space-y-3 text-card-foreground my-6">
+                                {premiumFeatures.map((feature, index) => (
+                                    <li key={index} className="flex items-center gap-3">
+                                        <CheckCircle className="h-5 w-5 text-green-500" />
+                                        <span>{feature}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
+                                <Button size="lg" className="w-full h-12 text-lg">Acheter Premium</Button>
+                            </a>
+                        </PricingCard>
+                    </TabsContent>
+                </Tabs>
+
+                <Card className="w-full max-w-4xl mt-8 bg-card/60 backdrop-blur-sm shadow-lg border-primary/20">
+                     <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Bot />Option Bot Personnalisé</CardTitle>
+                        <CardDescription>
+                            Une version privée de Marcus, hébergée pour vous, avec le nom, l'avatar et le statut de votre choix.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="text-center my-6">
-                            <p className="text-5xl font-bold">19,99€</p>
-                            <p className="text-muted-foreground">par serveur / an</p>
-                        </div>
-                        <ul className="space-y-3 text-card-foreground">
-                            {premiumFeatures.map((feature, index) => (
-                                <li key={index} className="flex items-center gap-3">
-                                    <CheckCircle className="h-5 w-5 text-green-500" />
-                                    <span className="text-base">{feature}</span>
-                                </li>
-                            ))}
-                        </ul>
-                        <div className="grid grid-cols-1 gap-4 pt-4">
-                             <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
-                                <Button size="lg" className="w-full h-12 text-lg">
-                                    Acheter Premium
-                                </Button>
-                            </a>
-                             <PremiumActivationDialog>
-                                <Button size="lg" variant="secondary" className="w-full h-12 text-md">
-                                    <KeyRound className="mr-2"/>
-                                    J'ai déjà une clé d'activation
-                                </Button>
-                            </PremiumActivationDialog>
-                        </div>
-                         <p className="text-xs text-center text-muted-foreground pt-4">Le statut Premium s'applique à un seul serveur Discord par clé ou par abonnement. Le bouton d'achat vous redirigera vers Ko-fi pour le moment.</p>
+                    <CardContent>
+                        <p className="text-2xl font-bold">+ 3€ <span className="text-sm font-normal text-muted-foreground">/mois</span></p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                           Cette option nécessite un abonnement actif et un contact direct avec le support pour la mise en place.
+                        </p>
                     </CardContent>
                 </Card>
+
+                 <div className="w-full max-w-4xl mt-8">
+                     <PremiumActivationDialog>
+                        <Button size="lg" variant="secondary" className="w-full h-12 text-md">
+                            <KeyRound className="mr-2"/>
+                            J'ai déjà une clé d'activation
+                        </Button>
+                    </PremiumActivationDialog>
+                 </div>
+
+                 <p className="text-xs text-center text-muted-foreground mt-8 max-w-2xl mx-auto">
+                    Note: L'achat d'une offre vous donnera accès à 3 clés d'activation, vous permettant de bénéficier des avantages premium sur 3 serveurs Discord distincts. Le bouton d'achat vous redirigera vers Ko-fi.
+                </p>
+
             </main>
         </PageTransitionWrapper>
     );
