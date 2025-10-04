@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,6 +16,7 @@ import { Combobox } from '@/components/ui/combobox';
 import { Button } from '@/components/ui/button';
 import { v4 as uuidv4 } from 'uuid';
 import type { CustomField } from '@/types';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -194,7 +194,7 @@ export default function PrivateRoomsPage() {
     ];
 
   return (
-    <div className="space-y-8 text-white max-w-4xl">
+    <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Salons Privés</h1>
         <p className="text-muted-foreground mt-2">
@@ -397,7 +397,7 @@ export default function PrivateRoomsPage() {
           ))}
         </div>
       </div>
-    </div>
+    </PageTransitionWrapper>
   );
 }
 

@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useServerInfo } from '@/hooks/use-server-info';
 import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
 import { Badge } from '@/components/ui/badge';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -109,7 +110,7 @@ export default function TesterCommandsPage() {
     }
 
   return (
-    <div className="space-y-8 text-white max-w-4xl">
+    <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             Commandes Spéciales
@@ -123,7 +124,7 @@ export default function TesterCommandsPage() {
       <Separator />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {specialCommands.map(command => (
+            {specialCommands.map((command) => (
                 <Card key={command.name} className="flex flex-col">
                     <CardHeader>
                         <CardTitle className="flex items-center justify-between">
@@ -169,7 +170,7 @@ export default function TesterCommandsPage() {
                 </Card>
             ))}
         </div>
-    </div>
+    </PageTransitionWrapper>
   );
 }
 

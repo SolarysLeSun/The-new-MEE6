@@ -7,11 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import ShinyText from '@/components/ui/shiny-text';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Wrench } from 'lucide-react';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 
 
 export default function PersonasPage() {
   return (
-    <div className="space-y-8 text-white max-w-7xl mx-auto">
+    <PageTransitionWrapper className="space-y-8 text-white max-w-7xl mx-auto">
       <div>
         <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold tracking-tight">
@@ -53,6 +54,6 @@ export default function PersonasPage() {
             </Card>
         </div>
       </div>
-    </div>
+    </PageTransitionWrapper>
   );
 }
