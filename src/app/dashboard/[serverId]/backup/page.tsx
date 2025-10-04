@@ -5,7 +5,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { DatabaseBackup, AlertTriangle } from 'lucide-react';
@@ -14,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { Combobox } from '@/components/ui/combobox';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -105,6 +105,11 @@ export default function BackupPage() {
         return <BackupPageSkeleton />;
     }
 
+    const roleOptions = [
+        { value: 'none', label: 'Administrateur seulement' },
+        ...roles.filter(r => r.name !== '@everyone').map(role => ({ value: role.id, label: role.name }))
+    ];
+
     return (
         <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
             <div>
@@ -161,22 +166,15 @@ export default function BackupPage() {
                     <Separator/>
                     <div className="space-y-2">
                         <Label htmlFor={`role-select-${backupCommand.key}`} className="text-sm font-medium">Rôle minimum requis pour <code className="bg-muted text-foreground px-1 py-0.5 rounded-md">/backup</code></Label>
-                        <Select 
+                        <Combobox
+                            options={roleOptions}
                             value={config.command_permissions?.[backupCommand.key] || 'none'}
-                            onValueChange={(value) => handlePermissionChange(backupCommand.key, value)}
-                        >
-                            <SelectTrigger id={`role-select-${backupCommand.key}`} className="w-full">
-                                <SelectValue placeholder="Sélectionner un rôle" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem value="none">Administrateur seulement</SelectItem>
-                                    {roles.filter(r => r.name !== '@everyone').map(role => (
-                                        <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                                    ))}
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
+                            onChange={(value) => handlePermissionChange(backupCommand.key, value)}
+                            placeholder="Sélectionner un rôle"
+                            searchPlaceholder="Rechercher un rôle..."
+                            emptyPlaceholder="Aucun rôle trouvé."
+                            className="w-full"
+                        />
                     </div>
                 </CardContent>
             </Card>
