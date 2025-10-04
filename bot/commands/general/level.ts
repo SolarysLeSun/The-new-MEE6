@@ -1,4 +1,5 @@
 
+
 import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags, AttachmentBuilder, EmbedBuilder } from 'discord.js';
 import type { Command } from '@/types';
 import { getServerConfig, getUserLevel, getUserRank } from '@/lib/db';
@@ -58,17 +59,9 @@ const LevelCommand: Command = {
             const embed = new EmbedBuilder()
                 .setColor(config.level_card_bar_color ? parseInt(config.level_card_bar_color.replace('#', ''), 16) : 0x3498DB)
                 .setAuthor({ name: `Statistiques de ${member.displayName}`, iconURL: targetUser.displayAvatarURL() || undefined })
-                .setImage(`attachment://level-card.png`);
+                .setImage(cardUrl.toString());
 
-            // We need to fetch the image from our card URL and send it as an attachment.
-            // This is a workaround for Discord's caching behavior with dynamic images.
-            const response = await fetch(cardUrl.toString());
-            if (!response.ok) throw new Error('Failed to fetch level card image.');
-            const imageBuffer = await response.arrayBuffer();
-
-            const attachment = new AttachmentBuilder(Buffer.from(imageBuffer), { name: 'level-card.png' });
-
-            await interaction.editReply({ embeds: [embed], files: [attachment] });
+            await interaction.editReply({ embeds: [embed] });
 
         } catch (error) {
             console.error('[LevelCommand] Error displaying level card:', error);
@@ -78,3 +71,4 @@ const LevelCommand: Command = {
 };
 
 export default LevelCommand;
+
