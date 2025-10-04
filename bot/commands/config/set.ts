@@ -28,6 +28,24 @@ const SetCommand: Command = {
                         .setRequired(true)))
         .addSubcommand(subcommand =>
             subcommand
+                .setName('welcome-channel')
+                .setDescription('Définit le salon pour les messages de bienvenue.')
+                .addChannelOption(option =>
+                    option.setName('salon')
+                        .setDescription('Le salon textuel pour la bienvenue.')
+                        .addChannelTypes(ChannelType.GuildText)
+                        .setRequired(true)))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('announcement-channel')
+                .setDescription('Définit le salon pour les annonces du serveur.')
+                .addChannelOption(option =>
+                    option.setName('salon')
+                        .setDescription('Le salon textuel pour les annonces.')
+                        .addChannelTypes(ChannelType.GuildText)
+                        .setRequired(true)))
+        .addSubcommand(subcommand =>
+            subcommand
                 .setName('premium-key')
                 .setDescription('Active le statut Premium sur ce serveur avec une clé.')
                 .addStringOption(option =>
@@ -72,6 +90,26 @@ const SetCommand: Command = {
                     break;
                 }
 
+                case 'welcome-channel': {
+                    const channel = interaction.options.getChannel('salon', true) as TextChannel;
+                    const welcomeConfig = getServerConfig(interaction.guild.id, 'welcome-message');
+                    if (welcomeConfig) {
+                        updateServerConfig(interaction.guild.id, 'welcome-message', { ...welcomeConfig, welcome_channel_id: channel.id, enabled: true });
+                        await interaction.editReply({ content: `✅ Le salon de bienvenue a été défini sur ${channel} et le module a été activé.` });
+                    }
+                    break;
+                }
+
+                case 'announcement-channel': {
+                    const channel = interaction.options.getChannel('salon', true) as TextChannel;
+                    const announceConfig = getServerConfig(interaction.guild.id, 'announcements');
+                    if (announceConfig) {
+                        updateServerConfig(interaction.guild.id, 'announcements', { ...announceConfig, announcement_channel_id: channel.id, enabled: true });
+                        await interaction.editReply({ content: `✅ Le salon d'annonces a été défini sur ${channel} et le module a été activé.` });
+                    }
+                    break;
+                }
+
                 case 'premium-key': {
                     const key = interaction.options.getString('clé', true);
                     const targetUser = interaction.options.getUser('utilisateur') || interaction.user;
@@ -103,5 +141,3 @@ const SetCommand: Command = {
 };
 
 export default SetCommand;
-
-    
