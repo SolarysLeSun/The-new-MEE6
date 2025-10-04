@@ -51,7 +51,8 @@ export type Module =
     | 'announcements'
     | 'leveling'
     | 'fun-commands'
-    | 'admin';
+    | 'admin'
+    | 'utils';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale

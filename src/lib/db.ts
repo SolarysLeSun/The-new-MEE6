@@ -452,6 +452,13 @@ const defaultConfigs: DefaultConfigs = {
             restart: null,
         },
     },
+    'utils': {
+        enabled: true,
+        command_permissions: {
+            save: null,
+            patchnote: null,
+        }
+    },
 };
 
 export function initializeDatabase() {
