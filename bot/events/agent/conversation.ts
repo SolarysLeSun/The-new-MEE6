@@ -72,24 +72,21 @@ async function handleConversationalAgent(message: Message) {
 
     const config = await getServerConfig(message.guild.id, 'conversational-agent');
 
+    // This check is slightly redundant because the calling function already checks for enabled.
+    // However, it's good practice for a handler to be self-contained.
     if (!config?.enabled || !config.premium) {
         return;
     }
-    
-    const isMentioned = message.mentions.has(message.client.user.id);
-    const isInDedicatedChannel = message.channel.id === config.dedicated_channel_id;
 
-    if (!isMentioned && !isInDedicatedChannel) {
-        return;
-    }
-
-    const userMessage = message.content.replace(/<@!?\d+>/, '').trim();
+    const userMessage = message.content.replace(/<@!?\d+>/g, '').trim();
     const imageAttachment = message.attachments.find(att => imageMimeTypes.some(mime => att.contentType?.startsWith(mime)));
     
+    // Don't respond to empty messages (e.g. a ping with no text)
     if (!userMessage && !imageAttachment) {
         return;
     }
     
+    const isInDedicatedChannel = message.channel.id === config.dedicated_channel_id;
     console.log(`[Agent] Received message from ${message.author.tag} in ${message.guild.name}. Trigger: ${isInDedicatedChannel ? 'Dedicated Channel' : 'Mention'}`);
 
     try {
@@ -221,7 +218,7 @@ export async function execute(message: Message) {
     // Determine if the message is for the conversational agent
     const agentConfig = await getServerConfig(message.guild.id, 'conversational-agent');
     const isForAgent =
-        agentConfig?.enabled &&
+        agentConfig?.enabled && agentConfig.premium &&
         (message.channel.id === agentConfig.dedicated_channel_id || message.mentions.has(message.client.user.id));
     
     // If it's for the agent, let it handle it exclusively.
