@@ -37,6 +37,7 @@ import {
   Megaphone,
   Info,
   FileText,
+  Code,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -87,6 +88,7 @@ const navCategories = [
     {
         name: 'Automatisation',
         items: [
+            { href: 'commandes-personnalisees', label: 'Commandes Personnalisées', icon: Code, isPremium: true, isDisabled: true },
             { href: 'salons-prives', label: 'Salons Privés', icon: Ticket },
             { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, isPremium: true },
             { href: 'autoroles', label: 'Autoroles', icon: BadgePlus },
@@ -208,7 +210,7 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
                                             <Info className="h-4 w-4 text-orange-400"/>
                                        </TooltipTrigger>
                                        <TooltipContent>
-                                           <p>Ce module est en cours de refonte.</p>
+                                           <p>Ce module est en cours de développement.</p>
                                        </TooltipContent>
                                    </Tooltip>
                                )}
