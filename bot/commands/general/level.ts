@@ -38,6 +38,12 @@ const LevelCommand: Command = {
         try {
             const levelInfo = getUserLevel(targetUser.id, interaction.guild.id);
             const rank = getUserRank(targetUser.id, interaction.guild.id);
+            
+            const progressPercentage = (levelInfo.xp / levelInfo.requiredXp) * 100;
+            const progressBarLength = 20;
+            const filledBlocks = Math.round((progressBarLength * progressPercentage) / 100);
+            const emptyBlocks = progressBarLength - filledBlocks;
+            const progressBar = '█'.repeat(filledBlocks) + '░'.repeat(emptyBlocks);
 
             const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/card/${interaction.guild.id}/${targetUser.id}`);
             cardUrl.searchParams.append('displayName', member.displayName);
@@ -59,7 +65,13 @@ const LevelCommand: Command = {
             const embed = new EmbedBuilder()
                 .setColor(config.level_card_bar_color ? parseInt(config.level_card_bar_color.replace('#', ''), 16) : 0x3498DB)
                 .setAuthor({ name: `Statistiques de ${member.displayName}`, iconURL: targetUser.displayAvatarURL() || undefined })
-                .setImage(cardUrl.toString());
+                .setImage(cardUrl.toString())
+                .addFields(
+                    { name: 'Niveau', value: `**${levelInfo.level}**`, inline: true },
+                    { name: 'Classement', value: `#**${rank}**`, inline: true },
+                    { name: 'Progression', value: `\`${levelInfo.xp} / ${levelInfo.requiredXp} XP\``, inline: false },
+                    { name: ' ', value: `\`${progressBar}\``, inline: false }
+                );
 
             await interaction.editReply({ embeds: [embed] });
 
@@ -71,4 +83,3 @@ const LevelCommand: Command = {
 };
 
 export default LevelCommand;
-
