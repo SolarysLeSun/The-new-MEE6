@@ -164,7 +164,7 @@ const PricingCard = ({ plan, price, period, description, children, badgeText }: 
         <CardHeader>
             <div className="flex justify-between items-center">
                 <CardTitle>{plan}</CardTitle>
-                {badgeText && <Badge variant="destructive" className="bg-primary border-none">{badgeText}</Badge>}
+                {badgeText && <Badge variant="destructive">{badgeText}</Badge>}
             </div>
             <div className="flex items-baseline gap-1 pt-2">
                 <span className="text-4xl font-bold">{price}</span>
@@ -203,100 +203,104 @@ export default function PremiumPage() {
             <AppHeader />
             
             <main className="relative z-10 container mx-auto flex flex-col items-center justify-center px-4 py-24 sm:py-32">
-                <div className="text-center pb-12">
-                    <div className="flex justify-center mb-4">
-                            <div className="p-3 bg-yellow-400/10 rounded-full border-2 border-yellow-400/30">
-                            <Star className="h-8 w-8 text-yellow-400"/>
+                 <PageTransitionWrapper>
+                    <div className="text-center pb-12">
+                        <div className="flex justify-center mb-4">
+                                <div className="p-3 bg-yellow-400/10 rounded-full border-2 border-yellow-400/30">
+                                <Star className="h-8 w-8 text-yellow-400"/>
+                            </div>
                         </div>
-                    </div>
-                    <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500">Marcus Premium</h1>
-                    <CardDescription className="text-lg text-muted-foreground mt-2 max-w-2xl mx-auto">
-                        Débloquez tout le potentiel de votre serveur Discord avec nos offres flexibles.
-                    </CardDescription>
-                </div>
-                
-                <Tabs defaultValue="yearly" className="w-full max-w-4xl">
-                    <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto">
-                        <TabsTrigger value="monthly">Mensuel</TabsTrigger>
-                        <TabsTrigger value="yearly">Annuel</TabsTrigger>
-                        <TabsTrigger value="lifetime">À vie</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="monthly">
-                        <PricingCard plan="Mensuel" price={`${prices.monthly.toFixed(2)}€`} period="/mois">
-                             <ul className="space-y-3 text-card-foreground my-6">
-                                {premiumFeatures.map((feature, index) => (
-                                    <li key={index} className="flex items-center gap-3">
-                                        <CheckCircle className="h-5 w-5 text-green-500" />
-                                        <span>{feature}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                            <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
-                                <Button size="lg" className="w-full h-12 text-lg">Acheter Premium</Button>
-                            </a>
-                        </PricingCard>
-                    </TabsContent>
-                    <TabsContent value="yearly">
-                         <PricingCard plan="Annuel" price={`${prices.yearly.toFixed(2)}€`} period="/an" description={`Économisez ${yearlySavings}€ par an !`} badgeText="Meilleur Choix">
-                             <ul className="space-y-3 text-card-foreground my-6">
-                                {premiumFeatures.map((feature, index) => (
-                                    <li key={index} className="flex items-center gap-3">
-                                        <CheckCircle className="h-5 w-5 text-green-500" />
-                                        <span>{feature}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                            <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
-                                <Button size="lg" className="w-full h-12 text-lg">Acheter Premium</Button>
-                            </a>
-                        </PricingCard>
-                    </TabsContent>
-                    <TabsContent value="lifetime">
-                         <PricingCard plan="À vie" price={`${prices.lifetime.toFixed(2)}€`} period="paiement unique" badgeText="Valeur Ultime" description="Rentabilisé en moins de 5 mois.">
-                             <ul className="space-y-3 text-card-foreground my-6">
-                                {premiumFeatures.map((feature, index) => (
-                                    <li key={index} className="flex items-center gap-3">
-                                        <CheckCircle className="h-5 w-5 text-green-500" />
-                                        <span>{feature}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                            <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
-                                <Button size="lg" className="w-full h-12 text-lg">Acheter Premium</Button>
-                            </a>
-                        </PricingCard>
-                    </TabsContent>
-                </Tabs>
-
-                <Card className="w-full max-w-4xl mt-8 bg-card/60 backdrop-blur-sm shadow-lg border-primary/20">
-                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Bot />Option Bot Personnalisé</CardTitle>
-                        <CardDescription>
-                            Une version privée de Marcus, hébergée pour vous, avec le nom, l'avatar et le statut de votre choix.
+                        <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500">Marcus Premium</h1>
+                        <CardDescription className="text-lg text-muted-foreground mt-2 max-w-2xl mx-auto">
+                            Débloquez tout le potentiel de votre serveur Discord avec nos offres flexibles.
                         </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-2xl font-bold">+ 3€ <span className="text-sm font-normal text-muted-foreground">/mois</span></p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                           Cette option nécessite un abonnement actif et un contact direct avec le support pour la mise en place.
-                        </p>
-                    </CardContent>
-                </Card>
+                    </div>
+                
+                    <Tabs defaultValue="yearly" className="w-full max-w-4xl">
+                        <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto">
+                            <TabsTrigger value="monthly">Mensuel</TabsTrigger>
+                            <TabsTrigger value="yearly" className="relative data-[state=active]:bg-primary/20 data-[state=active]:text-primary-foreground">
+                                Annuel
+                                <Badge variant="destructive" className="absolute -top-2 -right-4 bg-primary border-none">Économisez {yearlySavings}€</Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="lifetime">À vie</TabsTrigger>
+                        </TabsList>
+                        
+                        <TabsContent value="monthly">
+                            <PricingCard plan="Mensuel" price={`${prices.monthly.toFixed(2)}€`} period="/mois">
+                                <ul className="space-y-3 text-card-foreground my-6">
+                                    {premiumFeatures.map((feature, index) => (
+                                        <li key={index} className="flex items-center gap-3">
+                                            <CheckCircle className="h-5 w-5 text-green-500" />
+                                            <span>{feature}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                                <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
+                                    <Button size="lg" className="w-full h-12 text-lg">Acheter Premium</Button>
+                                </a>
+                            </PricingCard>
+                        </TabsContent>
+                        <TabsContent value="yearly">
+                            <PricingCard plan="Annuel" price={`${prices.yearly.toFixed(2)}€`} period="/an" description={`Économisez ${yearlySavings}€ par rapport à l'offre mensuelle !`} badgeText="Meilleur Choix">
+                                <ul className="space-y-3 text-card-foreground my-6">
+                                    {premiumFeatures.map((feature, index) => (
+                                        <li key={index} className="flex items-center gap-3">
+                                            <CheckCircle className="h-5 w-5 text-green-500" />
+                                            <span>{feature}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                                <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
+                                    <Button size="lg" className="w-full h-12 text-lg">Acheter Premium</Button>
+                                </a>
+                            </PricingCard>
+                        </TabsContent>
+                        <TabsContent value="lifetime">
+                            <PricingCard plan="À vie" price={`${prices.lifetime.toFixed(2)}€`} period="paiement unique" description="Rentabilisé en moins de 5 mois.">
+                                <ul className="space-y-3 text-card-foreground my-6">
+                                    {premiumFeatures.map((feature, index) => (
+                                        <li key={index} className="flex items-center gap-3">
+                                            <CheckCircle className="h-5 w-5 text-green-500" />
+                                            <span>{feature}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                                <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
+                                    <Button size="lg" className="w-full h-12 text-lg">Acheter Premium</Button>
+                                </a>
+                            </PricingCard>
+                        </TabsContent>
+                    </Tabs>
 
-                 <div className="w-full max-w-4xl mt-8">
-                     <PremiumActivationDialog>
-                        <Button size="lg" variant="secondary" className="w-full h-12 text-md">
-                            <KeyRound className="mr-2"/>
-                            J'ai déjà une clé d'activation
-                        </Button>
-                    </PremiumActivationDialog>
-                 </div>
-                 
-                 <p className="text-xs text-center text-muted-foreground mt-8 max-w-2xl mx-auto">
-                    Note: L'achat d'une offre vous donnera accès à 3 clés d'activation, vous permettant de bénéficier des avantages premium sur 3 serveurs Discord distincts. Le bouton d'achat vous redirigera vers Ko-fi.
-                </p>
+                    <Card className="w-full max-w-4xl mt-8 bg-card/60 backdrop-blur-sm shadow-lg border-primary/20">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><Bot />Option Bot Personnalisé</CardTitle>
+                            <CardDescription>
+                                Une version privée de Marcus, hébergée pour vous, avec le nom, l'avatar et le statut de votre choix. 
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-2xl font-bold">+ 3€ <span className="text-sm font-normal text-muted-foreground">/mois</span></p>
+                            <p className="text-xs text-muted-foreground mt-2">
+                            Cette option nécessite un abonnement actif. Contactez <a href="mailto:contact@marcusbot.fr" className="text-primary hover:underline">contact@marcusbot.fr</a> pour la mise en place.
+                            </p>
+                        </CardContent>
+                    </Card>
 
+                    <div className="w-full max-w-4xl mt-8">
+                        <PremiumActivationDialog>
+                            <Button size="lg" variant="secondary" className="w-full h-12 text-md">
+                                <KeyRound className="mr-2"/>
+                                J'ai déjà une clé d'activation
+                            </Button>
+                        </PremiumActivationDialog>
+                    </div>
+                    
+                    <p className="text-xs text-center text-muted-foreground mt-8 max-w-2xl mx-auto">
+                        Note: L'achat d'une offre vous donnera accès à 3 clés d'activation, vous permettant de bénéficier des avantages premium sur 3 serveurs Discord distincts. Le bouton d'achat vous redirigera vers Ko-fi.
+                    </p>
+                </PageTransitionWrapper>
             </main>
         </PageTransitionWrapper>
     );
