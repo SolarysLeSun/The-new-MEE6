@@ -32,7 +32,7 @@ const linkScannerPrompt = ai.definePrompt({
 
 You need to check for two things:
 1.  **Suspicious Activity:** Look for signs of scams, phishing, or malware.
-    -   Does the URL use common scam patterns (e.g., \`free-nitro\`, \`steamcommunity-login.com\`, shortened URLs like bit.ly in a suspicious context)?
+    -   Does the URL use common scam patterns (e.g., 'free-nitro', 'steamcommunity-login.com', shortened URLs like bit.ly in a suspicious context)?
     -   Does the message text use urgent or too-good-to-be-true language (e.g., "Cliquez ici vite !", "Gagnez un iPhone gratuit")?
     -   Is the combination of the text and the link suspicious?
     -   If you detect this, set 'isSuspicious' to true and provide a reason like "Lien potentiellement dangereux (arnaque/phishing)".
