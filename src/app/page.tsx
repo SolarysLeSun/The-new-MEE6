@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Bot, Hammer, ShieldCheck, Sparkles, Server, MessageSquare, Award, ArrowRight } from 'lucide-react';
+import { Bot, Hammer, ShieldCheck, Sparkles, Server, MessageSquare, Award, ArrowRight, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 import RippleGrid from '@/components/ripple-grid';
 import { AppHeader } from '@/components/app-header';
@@ -57,13 +57,19 @@ export default function PresentationPage() {
                     <p className="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground">
                         Marcus est une solution tout-en-un pour la modération, la sécurité, l'automatisation et l'animation de votre serveur, avec des fonctionnalités IA de pointe pour une gestion intelligente.
                     </p>
-                    <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
                         <a href={discordInviteUrl} target="_blank" rel="noopener noreferrer">
                             <Button size="lg" className="w-full sm:w-auto text-lg py-7 px-8 bg-primary hover:bg-primary/90 transition-transform duration-200 hover:scale-105">
-                                Ajouter Marcus à votre serveur
+                                Ajouter Marcus
                                 <ArrowRight className="ml-2"/>
                             </Button>
                         </a>
+                        <Link href="/dashboard">
+                             <Button size="lg" variant="secondary" className="w-full sm:w-auto text-lg py-7 px-8">
+                                <LayoutDashboard className="mr-2"/>
+                                Accéder au Panel
+                            </Button>
+                        </Link>
                         <a href={supportServerUrl} target="_blank" rel="noopener noreferrer">
                             <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg py-7 px-8">
                                 Rejoindre le support

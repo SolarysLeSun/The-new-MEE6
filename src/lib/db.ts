@@ -433,6 +433,7 @@ const defaultConfigs: DefaultConfigs = {
         cooldown_seconds: 60,
         level_up_message: 'Félicitations {user}, vous avez atteint le niveau {level} !',
         level_up_channel_id: null,
+        mention_user_on_levelup: true,
         level_card_background_url: null,
         level_card_bar_color: '#FFFFFF',
         level_card_text_color: '#FFFFFF',

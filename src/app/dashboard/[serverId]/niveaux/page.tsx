@@ -32,6 +32,7 @@ interface LevelingConfig {
     cooldown_seconds: number;
     level_up_message: string;
     level_up_channel_id: string | null;
+    mention_user_on_levelup: boolean;
     level_card_background_url: string | null;
     level_card_bar_color: string | null;
     level_card_text_color: string | null;
@@ -321,8 +322,19 @@ export default function LevelingPage() {
                         </div>
                         <div className="space-y-2">
                             <Label>Message de montée de niveau</Label>
-                            <p className="text-sm text-muted-foreground">Variables: {'{user}'} (mention), {'{level}'}</p>
+                            <p className="text-sm text-muted-foreground">Variables: {'{user}'} (mentionne l'utilisateur), {'{username}'} (nom de l'utilisateur sans mention)</p>
                             <Textarea defaultValue={config.level_up_message} onBlur={(e) => handleValueChange('level_up_message', e.target.value)} />
+                        </div>
+                         <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                                <Label htmlFor="mention-user">Mentionner l'utilisateur dans l'annonce</Label>
+                                <p className="text-sm text-muted-foreground">Si désactivé, utilise le nom au lieu de la mention.</p>
+                            </div>
+                            <Switch
+                                id="mention-user"
+                                checked={config.mention_user_on_levelup ?? true}
+                                onCheckedChange={(val) => handleValueChange('mention_user_on_levelup', val)}
+                            />
                         </div>
                         <Separator/>
                          <div className="space-y-2">
