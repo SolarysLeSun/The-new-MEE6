@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Trash2, Shield, Gem, Settings, MessageSquare, Mic, MousePointerClick, Video } from 'lucide-react';
+import { PlusCircle, Trash2, Shield, Gem, Settings, MessageSquare, Mic, MousePointerClick, Video, Award } from 'lucide-react';
 import type { RoleReward, XPBoost } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
@@ -39,6 +39,7 @@ interface LevelingConfig {
     role_rewards: RoleReward[];
     xp_boost_roles: XPBoost[];
     xp_boost_channels: XPBoost[];
+    command_permissions: { [key: string]: string | null };
 }
 interface DiscordChannel {
     id: string;
@@ -49,6 +50,11 @@ interface DiscordRole {
     id: string;
     name: string;
 }
+
+const levelingCommands = [
+    { name: '/level', key: 'level', description: 'Affiche le niveau et l\'XP d\'un utilisateur.' },
+    { name: '/topxp', key: 'topxp', description: 'Affiche le classement du serveur.' },
+]
 
 function PageSkeleton() {
     return <Skeleton className="h-screen w-full" />;
@@ -138,6 +144,12 @@ export default function LevelingPage() {
         handleValueChange(key, list);
     }, [config]);
 
+     const handlePermissionChange = (commandKey: string, roleId: string) => {
+        if (!config) return;
+        const newPermissions = { ...config.command_permissions, [commandKey]: roleId === 'none' ? null : roleId };
+        handleValueChange('command_permissions', newPermissions);
+    };
+
     if (loading || !config) {
         return <PageSkeleton />;
     }
@@ -179,10 +191,11 @@ export default function LevelingPage() {
         </Card>
 
         <Tabs defaultValue="gains">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="gains">Gains d'XP</TabsTrigger>
                 <TabsTrigger value="recompenses">Récompenses</TabsTrigger>
                 <TabsTrigger value="personnalisation">Personnalisation</TabsTrigger>
+                <TabsTrigger value="commandes">Commandes</TabsTrigger>
             </TabsList>
             
             <TabsContent value="gains">
@@ -330,6 +343,32 @@ export default function LevelingPage() {
                 </Card>
             </TabsContent>
 
+             <TabsContent value="commandes">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Commandes</CardTitle>
+                        <CardDescription>Gérez les permissions des commandes liées au système de niveaux.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {levelingCommands.map(command => (
+                            <div key={command.key} className="flex items-center justify-between p-4 border rounded-lg">
+                                <div>
+                                    <h3 className="font-semibold">{command.name}</h3>
+                                    <p className="text-sm text-muted-foreground">{command.description}</p>
+                                </div>
+                                <div className="w-56">
+                                    <Combobox
+                                        options={[ { value: 'none', label: '@everyone' }, ...roleOptions]}
+                                        value={config.command_permissions?.[command.key] || 'none'}
+                                        onChange={(value) => handlePermissionChange(command.key, value)}
+                                        placeholder="Sélectionner un rôle"
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+            </TabsContent>
         </Tabs>
 
     </PageTransitionWrapper>

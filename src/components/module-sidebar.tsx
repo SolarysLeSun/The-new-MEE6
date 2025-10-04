@@ -41,6 +41,7 @@ import {
   Dice5,
   Shield,
   Star,
+  Award,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -65,7 +66,7 @@ export const navCategories = [
             { href: 'assistant-communautaire', label: 'Assistant Communautaire', icon: MessageSquare, isPremium: true },
             { href: 'suggestions', label: 'Suggestions', icon: Lightbulb },
             { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages },
-            { href: 'niveaux', label: 'Niveaux & XP', icon: Star },
+            { href: 'niveaux', label: 'Niveaux & XP', icon: Award },
         ]
     },
     {

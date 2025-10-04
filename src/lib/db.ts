@@ -440,6 +440,10 @@ const defaultConfigs: DefaultConfigs = {
         role_rewards: [],
         xp_boost_roles: [],
         xp_boost_channels: [],
+        command_permissions: {
+            level: null,
+            topxp: null,
+        },
     },
     'fun-commands': {
         enabled: true,
@@ -961,6 +965,20 @@ export function getUserRank(userId: string, guildId: string): number {
     `);
     const result = stmt.get(guildId, userId) as { rank: number } | undefined;
     return result?.rank || 1;
+}
+
+export function getGuildLeaderboard(guildId: string, limit: number = 10): (UserLevel & { user_id: string })[] {
+    const stmt = db.prepare(`
+        SELECT user_id, xp, level FROM user_levels
+        WHERE guild_id = ?
+        ORDER BY xp DESC
+        LIMIT ?
+    `);
+    const rows = stmt.all(guildId, limit) as { user_id: string; xp: number; level: number }[];
+    return rows.map(row => ({
+        ...row,
+        requiredXp: calculateRequiredXp(row.level)
+    }));
 }
 
     
