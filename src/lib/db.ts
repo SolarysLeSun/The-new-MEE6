@@ -181,7 +181,12 @@ const defaultConfigs: DefaultConfigs = {
         faq_scan_enabled: false,
         command_permissions: {
             faq: null
-        }
+        },
+        scheduled_suggestions_enabled: false,
+        suggestion_frequency: 'daily',
+        suggestion_channel_id: null,
+        suggestion_tags: 'film de science-fiction, jeu de stratégie',
+        suggestion_prompt: 'Sois enthousiaste et donne envie de découvrir ta suggestion !',
     },
     'auto-moderation': {
         enabled: false,

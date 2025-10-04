@@ -24,5 +24,6 @@ import '@/ai/flows/link-scanner-flow.ts';
 import '@/ai/flows/transcript-summary-flow.ts';
 import '@/ai/flows/role-assignment-flow.ts';
 import '@/ai/flows/patchnote-flow.ts';
+import '@/ai/flows/scheduled-suggestion-flow.ts';
 
 import '@/ai/tools/discord-structure-tool.ts';

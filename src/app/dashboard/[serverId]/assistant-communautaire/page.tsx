@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { MessageSquare, Trash2, PlusCircle } from 'lucide-react';
+import { MessageSquare, Trash2, PlusCircle, CalendarClock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { GlobalAiStatusAlert } from '@/components/global-ai-status-alert';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { Combobox } from '@/components/ui/combobox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -33,12 +34,24 @@ interface CommunityAssistantConfig {
     knowledge_base: KnowledgeBaseItem[];
     command_permissions: { [key: string]: string | null };
     faq_scan_enabled: boolean;
+    // New fields for scheduled suggestions
+    scheduled_suggestions_enabled?: boolean;
+    suggestion_frequency?: 'daily' | 'weekly' | 'disabled';
+    suggestion_channel_id?: string | null;
+    suggestion_tags?: string;
+    suggestion_prompt?: string;
 }
 
 interface DiscordRole {
     id: string;
     name: string;
 }
+interface DiscordChannel {
+    id: string;
+    name: string;
+    type: number;
+}
+
 
 const faqCommand = {
     name: '/faq',
@@ -51,6 +64,7 @@ function CommunityAssistantPageContent({ isPremium, serverId }: { isPremium: boo
 
     const [config, setConfig] = useState<CommunityAssistantConfig | null>(null);
     const [roles, setRoles] = useState<DiscordRole[]>([]);
+    const [channels, setChannels] = useState<DiscordChannel[]>([]);
     const [loading, setLoading] = useState(true);
     const [sliderValue, setSliderValue] = useState([75]);
 
@@ -70,6 +84,7 @@ function CommunityAssistantPageContent({ isPremium, serverId }: { isPremium: boo
 
                 setConfig(configData);
                 setRoles(serverDetailsData.roles);
+                setChannels(serverDetailsData.channels.filter((c: DiscordChannel) => c.type === 0));
                 setSliderValue([configData.confidence_threshold || 75]);
             } catch (error) {
                 toast({ title: "Erreur", description: "Impossible de charger la configuration.", variant: "destructive" });
@@ -135,6 +150,11 @@ function CommunityAssistantPageContent({ isPremium, serverId }: { isPremium: boo
         { value: 'none', label: '@everyone' },
         ...roles.filter(r => r.name !== '@everyone').map(role => ({ value: role.id, label: role.name }))
     ];
+    
+    const textChannelOptions = [
+        { value: 'none', label: 'Aucun' },
+        ...channels.map(c => ({ value: c.id, label: `# ${c.name}` }))
+    ];
 
     return (
         <PremiumFeatureWrapper isPremium={isPremium}>
@@ -143,7 +163,7 @@ function CommunityAssistantPageContent({ isPremium, serverId }: { isPremium: boo
                 {/* Section Options */}
                 <Card>
                     <CardHeader>
-                        <h2 className="text-xl font-bold">Options</h2>
+                        <h2 className="text-xl font-bold">Options de la FAQ</h2>
                         <p className="text-muted-foreground">
                             Personnalisez le comportement de l'assistant communautaire.
                         </p>
@@ -189,80 +209,117 @@ function CommunityAssistantPageContent({ isPremium, serverId }: { isPremium: boo
                     </CardContent>
                 </Card>
                 
-                <Separator />
+                 {/* Section Suggestions Programmées */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><CalendarClock/>Suggestions Programmées</CardTitle>
+                        <CardDescription>Faites en sorte que l'IA anime la communauté en postant des suggestions de contenu à intervalle régulier.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                         <div className="flex items-center justify-between">
+                            <div>
+                                <Label htmlFor="enable-scheduled-suggestions" className="font-bold">Activer les suggestions programmées</Label>
+                            </div>
+                            <Switch id="enable-scheduled-suggestions" checked={config.scheduled_suggestions_enabled ?? false} onCheckedChange={(val) => handleValueChange('scheduled_suggestions_enabled', val)} />
+                        </div>
+                        <Separator />
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label>Fréquence</Label>
+                                 <Select value={config.suggestion_frequency || 'disabled'} onValueChange={(val) => handleValueChange('suggestion_frequency', val)}>
+                                    <SelectTrigger><SelectValue/></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="disabled">Désactivé</SelectItem>
+                                        <SelectItem value="daily">Journalier</SelectItem>
+                                        <SelectItem value="weekly">Hebdomadaire</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                             <div className="space-y-2">
+                                <Label>Salon de publication</Label>
+                                <Combobox
+                                    options={textChannelOptions}
+                                    value={config.suggestion_channel_id || 'none'}
+                                    onChange={(value) => handleValueChange('suggestion_channel_id', value === 'none' ? null : value)}
+                                    placeholder="Sélectionner un salon"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Thèmes / Tags des suggestions</Label>
+                            <p className="text-sm text-muted-foreground/80">Séparez les thèmes par des virgules (ex: film de science-fiction, jeu de stratégie, anime des années 90).</p>
+                            <Input placeholder="film de science-fiction, jeu de stratégie..." defaultValue={config.suggestion_tags} onBlur={(e) => handleValueChange('suggestion_tags', e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Instructions pour l'IA</Label>
+                             <p className="text-sm text-muted-foreground/80">Donnez un style à l'IA (ex: "Sois enthousiaste", "Fais une blague avant chaque suggestion").</p>
+                            <Textarea placeholder="Sois toujours très enthousiaste et utilise des emojis." defaultValue={config.suggestion_prompt} onBlur={(e) => handleValueChange('suggestion_prompt', e.target.value)} />
+                        </div>
+                    </CardContent>
+                </Card>
 
                 {/* Section Commandes */}
-                <div className="space-y-6">
-                    <div>
-                    <h2 className="text-xl font-bold">Commandes</h2>
-                    <p className="text-muted-foreground">
-                        Gérez les permissions pour la commande de ce module.
-                    </p>
-                    </div>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <MessageSquare className="w-5 h-5 text-primary" />
-                                <span>{faqCommand.name}</span>
-                            </CardTitle>
-                            <CardDescription>{faqCommand.description}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <Label htmlFor={`role-select-${faqCommand.key}`} className="text-sm font-medium">Rôle minimum requis</Label>
+                <Card>
+                     <CardHeader>
+                        <CardTitle>Permissions de la Commande</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                             <div className="flex-1">
+                                <h3 className="font-semibold flex items-center gap-2">
+                                    <MessageSquare className="w-5 h-5 text-primary" />
+                                    <span>{faqCommand.name}</span>
+                                </h3>
+                                <p className="text-sm text-muted-foreground">{faqCommand.description}</p>
+                            </div>
+                            <div className="w-full md:w-60">
+                                 <Label className="text-xs font-medium">Rôle minimum requis</Label>
                                 <Combobox
                                     options={roleOptions}
                                     value={config.command_permissions?.[faqCommand.key] || 'none'}
                                     onChange={(value) => handlePermissionChange(faqCommand.key, value)}
                                     placeholder="Sélectionner un rôle"
-                                    searchPlaceholder="Rechercher un rôle..."
-                                    emptyPlaceholder="Aucun rôle trouvé."
-                                    className="w-full"
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <Separator />
-
-                {/* Section Questions & Réponses */}
-                <div className="space-y-4">
-                    <div>
-                        <h2 className="text-xl font-bold">Base de connaissances</h2>
-                        <p className="text-muted-foreground">
-                            Définissez ici les paires de questions et réponses que l'assistant utilisera.
-                        </p>
-                    </div>
-                    <Card className="p-6">
-                    <div className="space-y-4">
-                        {config.knowledge_base.map((item, index) => (
-                        <div key={item.id} className="p-4 border rounded-lg bg-card-foreground/5">
-                            <div className="flex justify-between items-center mb-4">
-                                <Label className="text-base font-semibold">Question {index + 1}</Label>
-                                <Button variant="ghost" size="icon" onClick={() => removeKnowledgeBaseItem(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                            </div>
-                            <div className="space-y-2">
-                                <Input 
-                                placeholder="Entrez la question ou des mots-clés" 
-                                defaultValue={item.question}
-                                onBlur={(e) => handleKnowledgeBaseChange(index, 'question', e.target.value)}
-                                />
-                                <Textarea 
-                                placeholder="Entrez la réponse que le bot doit fournir" 
-                                defaultValue={item.answer}
-                                onBlur={(e) => handleKnowledgeBaseChange(index, 'answer', e.target.value)}
                                 />
                             </div>
                         </div>
+                    </CardContent>
+                </Card>
+               
+
+                {/* Section Questions & Réponses */}
+                <Card>
+                    <CardHeader>
+                        <h2 className="text-xl font-bold">Base de connaissances (FAQ)</h2>
+                        <p className="text-muted-foreground">
+                            Définissez ici les paires de questions et réponses que l'assistant utilisera pour répondre à la commande `/faq` ou au scan automatique.
+                        </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {config.knowledge_base.map((item, index) => (
+                        <div key={item.id} className="p-4 border rounded-lg bg-card-foreground/5 space-y-2">
+                            <div className="flex justify-between items-center">
+                                <Label className="font-semibold">Question {index + 1}</Label>
+                                <Button variant="ghost" size="icon" onClick={() => removeKnowledgeBaseItem(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                            </div>
+                            <Input 
+                                placeholder="Entrez la question ou des mots-clés" 
+                                defaultValue={item.question}
+                                onBlur={(e) => handleKnowledgeBaseChange(index, 'question', e.target.value)}
+                            />
+                            <Textarea 
+                                placeholder="Entrez la réponse que le bot doit fournir" 
+                                defaultValue={item.answer}
+                                onBlur={(e) => handleKnowledgeBaseChange(index, 'answer', e.target.value)}
+                            />
+                        </div>
                         ))}
-                    </div>
-                    <Button variant="default" className="mt-6 w-full" onClick={addKnowledgeBaseItem}>
-                        <PlusCircle className="mr-2" />
-                        Ajouter une Question/Réponse
-                    </Button>
-                    </Card>
-                </div>
+                    
+                        <Button variant="outline" className="w-full" onClick={addKnowledgeBaseItem}>
+                            <PlusCircle className="mr-2" />
+                            Ajouter une Question/Réponse
+                        </Button>
+                    </CardContent>
+                </Card>
             </PageTransitionWrapper>
         </PremiumFeatureWrapper>
     );
@@ -281,7 +338,7 @@ export default function CommunityAssistantPage() {
             <Badge className="bg-yellow-400 text-yellow-900">Premium</Badge>
         </h1>
         <p className="text-muted-foreground mt-2">
-          Configurez l'IA pour répondre aux questions fréquentes de votre communauté.
+          Configurez l'IA pour répondre aux questions fréquentes et animer votre communauté avec des suggestions de contenu.
         </p>
       </div>
       

@@ -1,4 +1,5 @@
 
+
 import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -9,6 +10,7 @@ import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, u
 import { startApi } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
+import { startScheduledSuggestions } from './events/system/scheduledSuggestions';
 import { generateTextContent } from '@/ai/flows/content-creation-flow';
 import { announcementFlow } from '@/ai/flows/announcement-flow';
 import { autoTranslateFlow } from '@/ai/flows/auto-translate-flow';
@@ -119,6 +121,9 @@ client.once(Events.ClientReady, async (readyClient) => {
     
     // Start interval for voice XP gain
     startVoiceXPInterval(client);
+
+    // Start interval for scheduled suggestions
+    startScheduledSuggestions(client);
 
     // Start the API for the web panel
     startApi(client);
