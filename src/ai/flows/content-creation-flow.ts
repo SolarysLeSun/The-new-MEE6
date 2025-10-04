@@ -15,7 +15,7 @@ const TextContentInputSchema = z.object({
   topic: z.string().describe('The specific topic for the content.'),
   tone: z.enum(['familiar', 'professional', 'narrative']).describe('The desired tone for the text.'),
   customInstructions: z.string().optional().describe('Optional custom instructions to further guide the AI.'),
-  modificationRequest: z.string().optional().describe("A user's request to modify the previous output. The AI should use the customInstructions as the base text to modify.")
+  modificationRequest: z.string().optional().describe("A user's request to modify the previous output. The customInstructions field will contain the base text to modify.")
 });
 
 const TextContentOutputSchema = z.object({
@@ -39,6 +39,8 @@ You MUST use these custom emojis where appropriate. Always use the full format <
 - Title Prefix (for rules, announcements, etc.): <:fleche:1421563500190371932>
 - List Item: <:point_h:1421563605630845009>
 - Important Warning: <:warn:1421563647909560462>
+- Yes/Confirm: <:Oui:1421563353888723084>
+- No/Cancel: <:Non:1421563259537850471>
 --- End of Charter ---
 
 {{#if modificationRequest}}
@@ -111,3 +113,4 @@ export async function generateImage(input: ImageGenInput): Promise<ImageGenOutpu
 
     return { imageDataUri: undefined };
 }
+
