@@ -4,7 +4,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, KeyRound, Star, XCircle, Bot } from 'lucide-react';
+import { CheckCircle, KeyRound, Star, XCircle, Bot, Sparkles, Hammer } from 'lucide-react';
 import { AppHeader } from '@/components/app-header';
 import RippleGrid from '@/components/ripple-grid';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -44,6 +44,12 @@ const featureComparison = [
     { feature: "Constructeur de Serveur IA", free: false, premium: true },
     { feature: "Système de Captcha", free: false, premium: true },
     { feature: "Support prioritaire sur Discord", free: false, premium: true },
+];
+
+const keyFeatures = [
+    { icon: Sparkles, text: "Accès à toutes les fonctionnalités IA" },
+    { icon: Hammer, text: "Commandes de modération avancées" },
+    { icon: Bot, text: "Automatisation et gain de temps" },
 ];
 
 interface ServerInfo {
@@ -185,23 +191,27 @@ const PricingCard = ({ plan, price, period, description, children, isBestValue }
              {description && <CardDescription className="pt-1 !text-green-400 font-semibold">{description}</CardDescription>}
         </CardHeader>
         <CardContent className="flex-1 flex flex-col">
+            <div className="space-y-3 text-sm flex-1">
+                {keyFeatures.map((feature, index) => (
+                    <div key={index} className="flex items-start gap-3">
+                        <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                        <span>{feature.text}</span>
+                    </div>
+                ))}
+            </div>
             {children}
         </CardContent>
     </Card>
 );
 
 export default function PremiumPage() {
-    const koFiUrl = 'https://ko-fi.com/M4M21555O9';
     const prices = {
         monthly: 9.99,
         yearly: 24.99,
         lifetime: 44.99
     };
     const yearlySavings = (prices.monthly * 12 - prices.yearly).toFixed(2);
-    const lifetimeSavingsVsMonthly = Math.floor(prices.lifetime / prices.monthly);
-    const lifetimeSavingsVsYearly = (prices.lifetime / prices.yearly).toFixed(1);
-
-
+    
     return (
         <div className="relative min-h-screen w-full bg-background text-foreground">
              <div className="absolute inset-0 z-0">
@@ -217,7 +227,7 @@ export default function PremiumPage() {
             <AppHeader />
             
             <main className="relative z-10 container mx-auto flex flex-col items-center justify-center px-4 py-24 sm:py-32">
-                 <PageTransitionWrapper>
+                <PageTransitionWrapper>
                     <div className="text-center pb-12">
                         <div className="flex justify-center mb-4">
                                 <div className="p-3 bg-yellow-400/10 rounded-full border-2 border-yellow-400/30">
@@ -236,70 +246,32 @@ export default function PremiumPage() {
                     <Tabs defaultValue="yearly" className="w-full max-w-5xl mx-auto">
                         <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto">
                             <TabsTrigger value="monthly">Mensuel</TabsTrigger>
-                            <TabsTrigger value="yearly" className="relative data-[state=active]:bg-primary/20 data-[state=active]:text-primary-foreground">
+                            <TabsTrigger value="yearly" className="relative">
                                 Annuel
+                                <Badge className="absolute -top-2 -right-4 bg-primary text-primary-foreground border-none">Économisez !</Badge>
                             </TabsTrigger>
                             <TabsTrigger value="lifetime">À vie</TabsTrigger>
                         </TabsList>
                         
-                        <div className="mt-8 grid md:grid-cols-3 gap-8">
+                        <div className="mt-8">
                              <TabsContent value="monthly" className="mt-0">
                                 <PricingCard plan="Mensuel" price={`${prices.monthly.toFixed(2)}€`} period="/mois">
-                                    <div className="flex-1"/>
-                                    <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
-                                        <Button size="lg" className="w-full h-12 text-lg">Acheter</Button>
-                                    </a>
+                                    <Button size="lg" className="w-full h-12 text-lg mt-6">Acheter</Button>
                                 </PricingCard>
                             </TabsContent>
                             <TabsContent value="yearly" className="mt-0">
                                 <PricingCard plan="Annuel" price={`${prices.yearly.toFixed(2)}€`} period="/an" description={`Économisez ${yearlySavings}€ par rapport à l'offre mensuelle !`} isBestValue>
-                                    <div className="flex-1"/>
-                                    <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
-                                        <Button size="lg" className="w-full h-12 text-lg">Acheter</Button>
-                                    </a>
+                                    <Button size="lg" className="w-full h-12 text-lg mt-6">Acheter</Button>
                                 </PricingCard>
                             </TabsContent>
                             <TabsContent value="lifetime" className="mt-0">
-                                 <PricingCard plan="À vie" price={`${prices.lifetime.toFixed(2)}€`} period="paiement unique" description={`Rentabilisé en ${lifetimeSavingsVsMonthly} mois.`}>
-                                    <div className="flex-1"/>
-                                    <a href={koFiUrl} target='_blank' rel='noopener noreferrer' className='w-full'>
-                                        <Button size="lg" className="w-full h-12 text-lg">Acheter</Button>
-                                    </a>
+                                 <PricingCard plan="À vie" price={`${prices.lifetime.toFixed(2)}€`} period="paiement unique">
+                                    <Button size="lg" className="w-full h-12 text-lg mt-6">Acheter</Button>
                                 </PricingCard>
                             </TabsContent>
                         </div>
                     </Tabs>
                     
-                    <Card className="w-full max-w-5xl mt-12 bg-card/60 backdrop-blur-sm shadow-lg">
-                        <CardHeader>
-                            <CardTitle>Comparatif des Fonctionnalités</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                             <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                    <TableHead>Fonctionnalité</TableHead>
-                                    <TableHead className="text-center">Gratuit</TableHead>
-                                    <TableHead className="text-center text-primary">Premium</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {featureComparison.map(({ feature, free, premium }) => (
-                                    <TableRow key={feature}>
-                                        <TableCell className="font-medium">{feature}</TableCell>
-                                        <TableCell className="text-center">
-                                            {free ? <CheckCircle className="inline-block text-green-500" /> : <XCircle className="inline-block text-muted-foreground/50" />}
-                                        </TableCell>
-                                         <TableCell className="text-center">
-                                            {premium ? <CheckCircle className="inline-block text-green-500" /> : <XCircle className="inline-block text-muted-foreground/50" />}
-                                        </TableCell>
-                                    </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-
                     <div className="w-full max-w-4xl mt-12 mx-auto">
                         <PremiumActivationDialog>
                             <Button size="lg" variant="secondary" className="w-full h-12 text-md">
@@ -308,9 +280,9 @@ export default function PremiumPage() {
                             </Button>
                         </PremiumActivationDialog>
                     </div>
-                    
                 </PageTransitionWrapper>
             </main>
         </div>
     );
 }
+
