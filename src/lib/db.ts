@@ -422,6 +422,16 @@ const defaultConfigs: DefaultConfigs = {
         role_rewards: [],
         xp_boost_roles: [],
         xp_boost_channels: [],
+    },
+    'fun-commands': {
+        enabled: true,
+        command_permissions: {
+            renameall: null,
+            mutemass: null,
+            reactbomb: null,
+            react: null,
+            randomnickname: null,
+        }
     }
 };
 

@@ -50,6 +50,7 @@ export type Module =
     | 'manual-voice-control'
     | 'announcements'
     | 'leveling'
+    | 'fun-commands'
     | 'utils';
 
 export interface ModuleConfig {
