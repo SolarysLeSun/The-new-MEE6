@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,8 +12,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
-import { Voicemail } from 'lucide-react';
+import { Voicemail, BrainCircuit, Trash2, PlusCircle, UserPlus, Sparkles } from 'lucide-react';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
+import type { AiRoleMapping } from '@/types';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { v4 as uuidv4 } from 'uuid';
+import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
+import { useServerInfo } from '@/hooks/use-server-info';
+import { Badge } from '@/components/ui/badge';
+import { GlobalAiStatusAlert } from '@/components/global-ai-status-alert';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -27,6 +36,9 @@ interface AutorolesConfig {
     enabled: boolean;
     on_join_roles: string[];
     on_voice_join_roles: string[];
+    ai_onboarding_enabled: boolean;
+    ai_onboarding_questions: string[];
+    ai_onboarding_roles: AiRoleMapping[];
 }
 
 interface DiscordChannel { id: string; name: string; type: number; }
@@ -55,13 +67,20 @@ function PageSkeleton() {
                     <Skeleton className="h-10 w-full" />
                 </CardContent>
             </Card>
+             <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-48" />
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-32 w-full" />
+                </CardContent>
+            </Card>
         </div>
     );
 }
 
-export default function WelcomePage() {
-    const params = useParams();
-    const serverId = params.serverId as string;
+function WelcomePageContent({ isPremium, serverId }: { isPremium: boolean, serverId: string }) {
     const { toast } = useToast();
 
     const [welcomeConfig, setWelcomeConfig] = useState<WelcomeConfig | null>(null);
@@ -142,13 +161,7 @@ export default function WelcomePage() {
 
     return (
         <PageTransitionWrapper className="space-y-8 max-w-4xl">
-            <div>
-                <h1 className="text-3xl font-bold">Accueil &amp; Intégration</h1>
-                <p className="text-muted-foreground mt-2">
-                Configurez une expérience d'arrivée fluide pour vos nouveaux membres.
-                </p>
-            </div>
-            <Separator />
+            <GlobalAiStatusAlert />
             <Card>
                 <CardHeader>
                     <CardTitle>Message de Bienvenue</CardTitle>
@@ -213,6 +226,95 @@ export default function WelcomePage() {
                     </div>
                 </CardContent>
             </Card>
+
+            <PremiumFeatureWrapper isPremium={isPremium}>
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2"><BrainCircuit/> Intégration par Questionnaire IA <Badge className="bg-yellow-400 text-yellow-900">Premium</Badge></CardTitle>
+                            <Switch id="enable-ai-onboarding" checked={autorolesConfig.ai_onboarding_enabled} onCheckedChange={(val) => handleAutorolesChange('ai_onboarding_enabled', val)} />
+                        </div>
+                        <CardDescription>Le bot posera des questions en message privé à l'arrivée d'un membre pour lui attribuer des rôles en fonction de ses réponses.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div>
+                            <Label className="font-semibold text-lg">Questions</Label>
+                            <p className="text-sm text-muted-foreground">Listez ici les questions que le bot posera au nouvel utilisateur. (Une par ligne)</p>
+                            <Textarea 
+                                className="mt-2"
+                                placeholder={`Exemple :\nQuel est votre jeu principal ?\nPréférez-vous le PVE ou le PVP ?`}
+                                value={(autorolesConfig.ai_onboarding_questions || []).join('\n')}
+                                onChange={(e) => handleAutorolesChange('ai_onboarding_questions', e.target.value.split('\n'))}
+                                rows={4}
+                            />
+                        </div>
+                        <div>
+                             <Label className="font-semibold text-lg">Assignation des Rôles</Label>
+                             <p className="text-sm text-muted-foreground">Associez des mots-clés aux rôles. Si l'IA trouve un mot-clé dans les réponses de l'utilisateur, le rôle associé sera attribué.</p>
+                             <div className="space-y-4 mt-2">
+                                { (autorolesConfig.ai_onboarding_roles || []).map((mapping, index) => (
+                                    <div key={mapping.id} className="grid grid-cols-1 md:grid-cols-3 gap-2 items-center p-4 border rounded-lg bg-card-foreground/5">
+                                        <Select value={mapping.role_id} onValueChange={(val) => {
+                                            const newMappings = [...autorolesConfig.ai_onboarding_roles];
+                                            newMappings[index].role_id = val;
+                                            handleAutorolesChange('ai_onboarding_roles', newMappings);
+                                        }}>
+                                            <SelectTrigger><SelectValue placeholder="Choisir un rôle..." /></SelectTrigger>
+                                            <SelectContent>
+                                                {roles.map(r => <SelectItem key={r.id} value={r.id}>@{r.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <div className="md:col-span-2 flex items-center gap-2">
+                                            <Input
+                                                placeholder="Mots-clés séparés par des virgules"
+                                                value={mapping.keywords.join(', ')}
+                                                onChange={(e) => {
+                                                    const newMappings = [...autorolesConfig.ai_onboarding_roles];
+                                                    newMappings[index].keywords = e.target.value.split(',').map(k => k.trim()).filter(Boolean);
+                                                    handleAutorolesChange('ai_onboarding_roles', newMappings);
+                                                }}
+                                            />
+                                            <Button variant="ghost" size="icon" onClick={() => {
+                                                handleAutorolesChange('ai_onboarding_roles', autorolesConfig.ai_onboarding_roles.filter(m => m.id !== mapping.id));
+                                            }}><Trash2 className="w-4 h-4 text-destructive"/></Button>
+                                        </div>
+                                    </div>
+                                )) }
+                                <Button variant="outline" className="w-full" onClick={() => {
+                                    const newMapping: AiRoleMapping = { id: uuidv4(), role_id: '', keywords: [] };
+                                    handleAutorolesChange('ai_onboarding_roles', [...(autorolesConfig.ai_onboarding_roles || []), newMapping]);
+                                }}>
+                                    <PlusCircle className="mr-2"/>Ajouter une association
+                                </Button>
+                             </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </PremiumFeatureWrapper>
         </PageTransitionWrapper>
     );
+}
+
+
+export default function WelcomePage() {
+    const params = useParams();
+    const serverId = params.serverId as string;
+    const { serverInfo, loading } = useServerInfo();
+    
+    return (
+        <PageTransitionWrapper className="space-y-8 max-w-4xl">
+            <div>
+                <h1 className="text-3xl font-bold flex items-center gap-2"><UserPlus/> Accueil &amp; Intégration</h1>
+                <p className="text-muted-foreground mt-2">
+                Configurez une expérience d'arrivée fluide pour vos nouveaux membres.
+                </p>
+            </div>
+            <Separator />
+            {loading ? <PageSkeleton/> : <WelcomePageContent isPremium={serverInfo?.isPremium || false} serverId={serverId} />}
+        </PageTransitionWrapper>
+    );
+}
+
+if (typeof window !== 'undefined' && !(window as any).uuidv4) {
+    (window as any).uuidv4 = uuidv4;
 }

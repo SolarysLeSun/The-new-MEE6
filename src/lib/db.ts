@@ -373,6 +373,9 @@ const defaultConfigs: DefaultConfigs = {
         enabled: true,
         on_join_roles: [],
         on_voice_join_roles: [],
+        ai_onboarding_enabled: false,
+        ai_onboarding_questions: [],
+        ai_onboarding_roles: [],
     },
     'security-alerts': {
         enabled: true,

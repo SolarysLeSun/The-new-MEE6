@@ -648,3 +648,6 @@ async function startBot() {
 }
 
 startBot();
+// This is a temporary solution to make the client available to other files
+// A better solution would be to use dependency injection.
+(global as any).discordClient = client;

@@ -149,3 +149,9 @@ export interface CustomField {
     label: string;
     placeholder: string;
 }
+
+export interface AiRoleMapping {
+    id: string;
+    role_id: string;
+    keywords: string[];
+}
