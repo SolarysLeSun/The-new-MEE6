@@ -178,7 +178,7 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                     <CardHeader>
                         <CardTitle>Personnalité de l'Agent</CardTitle>
                         <CardDescription>
-                            Définissez qui est votre agent IA et comment il doit se comporter.
+                            Définissez qui est votre agent IA. Pour un assistant classique, laissez ces champs vides.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -188,11 +188,13 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="agent-role">Rôle / Mission</Label>
-                            <Textarea id="agent-role" placeholder="Ex: 'Un agent de support technique pour le serveur de développement' ou 'Un guide malicieux qui donne des indices cryptiques'" defaultValue={config.agent_role} onBlur={(e) => handleValueChange('agent_role', e.target.value)} />
+                            <p className="text-sm text-muted-foreground/80">Décrit sa fonction principale. Ex: "Un expert en jardinage", "Un historien spécialisé sur la Rome Antique".</p>
+                            <Textarea id="agent-role" placeholder="Laissez vide pour un assistant généraliste." defaultValue={config.agent_role} onBlur={(e) => handleValueChange('agent_role', e.target.value)} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="agent-personality">Personnalité et Ton</Label>
-                            <Textarea id="agent-personality" placeholder="Ex: 'Toujours poli et formel', 'Sarcastique et plein d'humour noir', 'Enthousiaste et utilise beaucoup d'emojis'" defaultValue={config.agent_personality} onBlur={(e) => handleValueChange('agent_personality', e.target.value)} />
+                            <p className="text-sm text-muted-foreground/80">Donne un caractère à votre IA. Ex: "Sarcastique et plein d'humour noir", "Enthousiaste et utilise beaucoup d'emojis".</p>
+                            <Textarea id="agent-personality" placeholder="Laissez vide pour une personnalité neutre et serviable." defaultValue={config.agent_personality} onBlur={(e) => handleValueChange('agent_personality', e.target.value)} />
                         </div>
                     </CardContent>
                 </Card>
@@ -200,14 +202,14 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                  {/* Section Prompt Personnalisé */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Instructions Personnalisées</CardTitle>
+                        <CardTitle>Instructions Comportementales</CardTitle>
                         <CardDescription>
-                            Ajoutez des instructions spécifiques ou des règles que l'agent doit toujours suivre.
+                           Définissez ici des règles de comportement que l'agent doit toujours suivre.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Textarea 
-                            placeholder="Ne jamais mentionner la concurrence. Toujours terminer les phrases par 'Bip boop'." 
+                            placeholder="Exemple : Ne jamais mentionner la politique. Toujours répondre en moins de 3 phrases. Ne pas utiliser d'emojis." 
                             rows={4}
                             defaultValue={config.custom_prompt}
                             onBlur={(e) => handleValueChange('custom_prompt', e.target.value)}
@@ -228,7 +230,7 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                             <div>
                                 <Label htmlFor="enable-imagination" className="font-bold">Autoriser l'imagination</Label>
                                 <p className="text-sm text-muted-foreground/80">
-                                    Permet à l'agent d'inventer des réponses et de les ajouter à ses connaissances.
+                                    Permet à l'agent d'inventer des réponses et de les ajouter à ses connaissances si une information est manquante.
                                 </p>
                             </div>
                             <Switch id="enable-imagination" checked={config.allow_imagination ?? false} onCheckedChange={(val) => handleValueChange('allow_imagination', val)} />
@@ -263,23 +265,23 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                         <CardHeader>
                             <CardTitle>Base de connaissances</CardTitle>
                             <CardDescription>
-                                Fournissez à l'agent des informations spécifiques qu'il devra utiliser pour répondre.
+                                C'est la mémoire de votre agent. Fournissez-lui ici toutes les informations, faits et réponses qu'il doit connaître et pouvoir réciter.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {config.knowledge_base.map((item, index) => (
                                 <div key={item.id} className="p-4 border rounded-lg bg-card-foreground/5 space-y-2">
                                     <div className="flex justify-between items-center">
-                                        <Label className="font-semibold">Sujet / Question {index + 1}</Label>
+                                        <Label className="font-semibold">Fait / Question {index + 1}</Label>
                                         <Button variant="ghost" size="icon" onClick={() => removeKnowledgeBaseItem(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                                     </div>
                                     <Input 
-                                        placeholder="Sujet ou question clé" 
+                                        placeholder="Sujet ou question clé (ex: 'règles du serveur', 'comment rejoindre l'équipe')" 
                                         defaultValue={item.question}
                                         onBlur={(e) => handleKnowledgeBaseChange(index, 'question', e.target.value)}
                                     />
                                     <Textarea 
-                                        placeholder="Informations que l'agent doit connaître sur ce sujet." 
+                                        placeholder="Informations et réponse que l'agent doit fournir sur ce sujet." 
                                         defaultValue={item.answer}
                                         onBlur={(e) => handleKnowledgeBaseChange(index, 'answer', e.target.value)}
                                     />
