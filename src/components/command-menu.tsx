@@ -39,17 +39,6 @@ export function CommandMenu() {
 
   return (
     <>
-      <Button
-        variant="outline"
-        className="h-9 w-9 p-0 md:h-10 md:w-28 md:px-3 md:py-2 md:justify-start"
-        onClick={() => setOpen(true)}
-      >
-        <Search className="h-4 w-4 md:mr-2" />
-        <span className="hidden md:inline-flex">Rechercher...</span>
-        <kbd className="hidden md:ml-auto md:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-          <span className="text-xs">⌘</span>K
-        </kbd>
-      </Button>
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput placeholder="Rechercher un module..." />
         <CommandList>
