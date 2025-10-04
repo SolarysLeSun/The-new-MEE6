@@ -1,4 +1,5 @@
 
+
 import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -14,6 +15,7 @@ import { generateTextContent } from '@/ai/flows/content-creation-flow';
 import { announcementFlow } from '@/ai/flows/announcement-flow';
 import { autoTranslateFlow } from '@/ai/flows/auto-translate-flow';
 import { handleOnboardingResponse } from './events/onboarding/aiOnboarding';
+import { patchNoteFlow } from '@/ai/flows/patchnote-flow';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -101,9 +103,8 @@ client.once(Events.ClientReady, async (readyClient) => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
     
     // Set the bot's presence
-    const panelUrl = process.env.PANEL_BASE_URL || 'http://localhost:9002';
     readyClient.user.setPresence({
-        activities: [{ name: `Panel: ${panelUrl}`, type: ActivityType.Playing }],
+        activities: [{ name: `marcusbot.fr`, type: ActivityType.Playing }],
         status: 'online',
     });
     
@@ -660,3 +661,5 @@ startBot();
 // This is a temporary solution to make the client available to other files
 // A better solution would be to use dependency injection.
 (global as any).discordClient = client;
+
+    
