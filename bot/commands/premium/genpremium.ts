@@ -19,7 +19,7 @@ const GenPremiumCommand: Command = {
             option.setName('amount')
                 .setDescription('Nombre de clés à générer. Défaut: 3')
                 .setMinValue(1)
-                .setMaxValue(10)
+                .setMaxValue(25)
                 .setRequired(false)),
 
     async execute(interaction: ChatInputCommandInteraction) {

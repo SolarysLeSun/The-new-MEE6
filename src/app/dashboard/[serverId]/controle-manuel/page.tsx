@@ -21,11 +21,13 @@ import {
   SelectValue,
   SelectGroup,
 } from '@/components/ui/select';
-import { Voicemail } from 'lucide-react';
+import { Voicemail, Languages, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -55,7 +57,8 @@ const manualVoiceCommands = [
   {
       name: '/parle',
       key: 'parle',
-      description: 'Fait parler le bot dans le salon vocal actuel.'
+      description: 'Fait parler le bot dans le salon vocal actuel.',
+      isPremium: true
   }
 ];
 
@@ -133,7 +136,7 @@ export default function ManualControlPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Contrôle Manuel (Vocal)</h1>
         <p className="text-muted-foreground mt-2">
-          Invitez ou déconnectez manuellement le bot des salons vocaux.
+          Invitez, déconnectez ou faites parler le bot manuellement dans les salons vocaux.
         </p>
       </div>
 
@@ -166,6 +169,7 @@ export default function ManualControlPage() {
                 <CardTitle className="flex items-center gap-2">
                   <Voicemail className="w-5 h-5 text-primary" />
                   <span>{command.name}</span>
+                   {command.isPremium && <Badge className="bg-yellow-400 text-yellow-900">Premium</Badge>}
                 </CardTitle>
                 <CardDescription>{command.description}</CardDescription>
               </CardHeader>
@@ -178,7 +182,7 @@ export default function ManualControlPage() {
                     Rôle minimum requis
                   </Label>
                   <Select
-                    value={config.command_permissions[command.key] || 'none'}
+                    value={config.command_permissions?.[command.key] || 'none'}
                     onValueChange={(val) => handlePermissionChange(command.key, val)}
                   >
                     <SelectTrigger id={`role-select-${command.key}`} className="w-full">
@@ -200,6 +204,15 @@ export default function ManualControlPage() {
             </Card>
           ))}
         </div>
+        
+         <Alert className="border-primary/30">
+            <Languages className="h-4 w-4" />
+            <AlertTitle>Bientôt disponible : Traduction Vocale Instantanée</AlertTitle>
+            <AlertDescription>
+                Une future fonctionnalité permettra au bot de traduire en temps réel les paroles des membres entre différentes langues, unifiant ainsi votre communauté internationale.
+            </AlertDescription>
+        </Alert>
+
       </div>
     </PageTransitionWrapper>
   );

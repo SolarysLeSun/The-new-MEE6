@@ -9,7 +9,7 @@ import { Readable } from 'stream';
 const ParleCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('parle')
-        .setDescription('Fait parler le bot dans le salon vocal.')
+        .setDescription('Fait parler le bot dans le salon vocal. (Premium)')
         .setDefaultMemberPermissions(PermissionFlagsBits.UseApplicationCommands)
         .addStringOption(option => 
             option.setName('texte')
@@ -25,6 +25,11 @@ const ParleCommand: Command = {
         const config = await getServerConfig(interaction.guild.id, 'manual-voice-control');
         if (!config?.enabled) {
             await interaction.reply({ content: 'Le module de contrôle vocal est désactivé.', flags: MessageFlags.Ephemeral });
+            return;
+        }
+        
+        if (!config.premium) {
+            await interaction.reply({ content: 'Cette commande est réservée aux serveurs Premium.', flags: MessageFlags.Ephemeral });
             return;
         }
 
