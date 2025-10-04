@@ -103,6 +103,17 @@ const upgradeSchema = () => {
         `);
         console.log('[Database] La table "user_levels" est prête.');
 
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS delegated_permissions (
+                user_id TEXT NOT NULL,
+                permission_key TEXT NOT NULL,
+                granted_by TEXT NOT NULL,
+                granted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, permission_key)
+            );
+        `);
+        console.log('[Database] La table "delegated_permissions" est prête.');
+
 
     } catch (error) {
         console.error('[Database] Erreur lors de la mise à jour du schéma:', error);
@@ -751,6 +762,31 @@ export function redeemPremiumKey(key: string, guildId: string, userId: string): 
 
     return { success: true, message: 'Clé premium activée avec succès !', expires_at: expiresAt };
 }
+
+// --- Delegated Permissions ---
+
+export function grantPermission(userId: string, permissionKey: 'genpremium', grantedBy: string): void {
+    const stmt = db.prepare('INSERT OR REPLACE INTO delegated_permissions (user_id, permission_key, granted_by) VALUES (?, ?, ?)');
+    stmt.run(userId, permissionKey, grantedBy);
+}
+
+export function revokePermission(userId: string, permissionKey: 'genpremium'): void {
+    const stmt = db.prepare('DELETE FROM delegated_permissions WHERE user_id = ? AND permission_key = ?');
+    stmt.run(userId, permissionKey);
+}
+
+export function hasPermission(userId: string, permissionKey: 'genpremium'): boolean {
+    const stmt = db.prepare('SELECT 1 FROM delegated_permissions WHERE user_id = ? AND permission_key = ?');
+    const result = stmt.get(userId, permissionKey);
+    return !!result;
+}
+
+export function getDelegatedUsersForPermission(permissionKey: 'genpremium'): string[] {
+    const stmt = db.prepare('SELECT user_id FROM delegated_permissions WHERE permission_key = ?');
+    const rows = stmt.all(permissionKey) as { user_id: string }[];
+    return rows.map(row => row.user_id);
+}
+
 
 // --- Sanction History ---
 

@@ -1,7 +1,7 @@
 
 import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from 'discord.js';
 import type { Command } from '../../../src/types';
-import { createPremiumKey } from '../../../src/lib/db';
+import { createPremiumKey, hasPermission } from '../../../src/lib/db';
 import ms from 'ms';
 
 const OWNER_ID = '556529963877138442';
@@ -9,7 +9,7 @@ const OWNER_ID = '556529963877138442';
 const GenPremiumCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('genpremium')
-        .setDescription('Génère de nouvelles clés d\'activation premium. (Propriétaire seulement)')
+        .setDescription('Génère de nouvelles clés d\'activation premium. (Accès restreint)')
         .setDMPermission(true) // Can be used in DMs
         .addStringOption(option =>
             option.setName('duration')
@@ -23,8 +23,9 @@ const GenPremiumCommand: Command = {
                 .setRequired(false)),
 
     async execute(interaction: ChatInputCommandInteraction) {
-        if (interaction.user.id !== OWNER_ID) {
-            await interaction.reply({ content: 'Cette commande est réservée au propriétaire du bot.', flags: MessageFlags.Ephemeral });
+        // Check if the user is the owner OR has the delegated permission
+        if (interaction.user.id !== OWNER_ID && !hasPermission(interaction.user.id, 'genpremium')) {
+            await interaction.reply({ content: 'Cette commande est réservée au propriétaire du bot ou aux utilisateurs autorisés.', flags: MessageFlags.Ephemeral });
             return;
         }
 
