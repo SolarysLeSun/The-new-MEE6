@@ -39,10 +39,10 @@ const LevelCommand: Command = {
             const levelInfo = getUserLevel(targetUser.id, interaction.guild.id);
             const rank = getUserRank(targetUser.id, interaction.guild.id);
             
-            const progressPercentage = (levelInfo.xp / levelInfo.requiredXp) * 100;
+            const progressPercentage = Math.max(0, Math.min(100, (levelInfo.xp / levelInfo.requiredXp) * 100));
             const progressBarLength = 20;
-            const filledBlocks = Math.round((progressBarLength * progressPercentage) / 100);
-            const emptyBlocks = progressBarLength - filledBlocks;
+            const filledBlocks = Math.max(0, Math.round((progressBarLength * progressPercentage) / 100));
+            const emptyBlocks = Math.max(0, progressBarLength - filledBlocks);
             const progressBar = '█'.repeat(filledBlocks) + '░'.repeat(emptyBlocks);
 
             const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/card/${interaction.guild.id}/${targetUser.id}`);
