@@ -10,7 +10,7 @@ const RenameAllCommand: Command = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addStringOption(option =>
             option.setName('nickname')
-                .setDescription('Le nouveau surnom pour tous les membres.')
+                .setDescription('Le nouveau surnom. Utilisez {number} pour insérer un numéro unique.')
                 .setRequired(true)),
 
     async execute(interaction: ChatInputCommandInteraction) {
@@ -25,10 +25,11 @@ const RenameAllCommand: Command = {
             return;
         }
 
-        const nickname = interaction.options.getString('nickname', true);
+        const nicknamePattern = interaction.options.getString('nickname', true);
 
-        if (nickname.length > 32) {
-            await interaction.reply({ content: 'Le surnom ne peut pas dépasser 32 caractères.', flags: MessageFlags.Ephemeral });
+        // Preliminary check to see if the base pattern is too long
+        if (nicknamePattern.replace('{number}', '9999').length > 32) { // Assume a large number for safety check
+            await interaction.reply({ content: 'Le modèle de surnom est trop long et dépassera la limite de 32 caractères de Discord.', flags: MessageFlags.Ephemeral });
             return;
         }
 
@@ -39,16 +40,22 @@ const RenameAllCommand: Command = {
             const membersToRename = members.filter(member => !member.permissions.has(PermissionFlagsBits.Administrator));
 
             let renamedCount = 0;
+            let renameCounter = 1;
+
             for (const member of membersToRename.values()) {
+                const finalNickname = nicknamePattern.replace('{number}', String(renameCounter));
+                if (finalNickname.length > 32) continue; // Skip if somehow the name is still too long
+
                 try {
-                    await member.setNickname(nickname, `Renommage de masse par ${interaction.user.tag}`);
+                    await member.setNickname(finalNickname, `Renommage de masse par ${interaction.user.tag}`);
                     renamedCount++;
+                    renameCounter++;
                 } catch (err) {
                     console.log(`Impossible de renommer ${member.user.tag}`);
                 }
             }
 
-            await interaction.editReply(`✅ ${renamedCount} membre(s) ont été renommé(s) en "**${nickname}**".`);
+            await interaction.editReply(`✅ ${renamedCount} membre(s) ont été renommé(s) en utilisant le modèle "**${nicknamePattern}**".`);
 
         } catch (error) {
             console.error('[RenameAll] Error:', error);
