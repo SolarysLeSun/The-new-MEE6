@@ -21,9 +21,13 @@ export async function execute(message: Message | PartialMessage) {
     const logChannel = await message.guild.channels.fetch(targetChannelId).catch(() => null) as TextChannel;
     if (!logChannel || logChannel.id === message.channel.id) return;
 
+    // --- Ghost Ping Detection ---
+    const hasMentions = message.mentions && (message.mentions.users.size > 0 || message.mentions.roles.size > 0);
+    const isGhostPing = hasMentions && !message.author?.bot;
+
     const embed = new EmbedBuilder()
-        .setColor(0xFF470F) // Orange
-        .setTitle('Message Supprimé')
+        .setColor(isGhostPing ? 0xFFA500 : 0xFF470F) // Orange for Ghost Ping, Red for normal delete
+        .setTitle(isGhostPing ? 'Mention Fantôme (Ghost Ping) Détectée' : 'Message Supprimé')
         .setDescription(`Un message de **${message.author?.tag || 'Auteur inconnu'}** a été supprimé dans <#${message.channel.id}>.`)
         .setTimestamp()
         .setFooter({ text: `Auteur ID: ${message.author?.id ?? 'Inconnu'} | Message ID: ${message.id}` });
@@ -32,6 +36,18 @@ export async function execute(message: Message | PartialMessage) {
          embed.addFields(
             { name: 'Contenu', value: `\`\`\`${message.content.substring(0, 1020)}\`\`\``, inline: false },
         );
+    }
+    
+    // Add mentioned users/roles if it's a ghost ping
+    if (isGhostPing && message.mentions) {
+        const mentionedUsers = message.mentions.users.map(u => u.tag).join(', ');
+        const mentionedRoles = message.mentions.roles.map(r => r.name).join(', ');
+        if (mentionedUsers) {
+            embed.addFields({ name: 'Utilisateurs mentionnés', value: mentionedUsers, inline: true });
+        }
+        if (mentionedRoles) {
+            embed.addFields({ name: 'Rôles mentionnés', value: mentionedRoles, inline: true });
+        }
     }
     
     // --- Find and display deleted image ---
@@ -58,7 +74,7 @@ export async function execute(message: Message | PartialMessage) {
             const { executor, target } = deletionLog;
 
             // Check if the log entry is for the deleted message
-            if (target.id === message.author?.id) {
+            if (target.id === message.author?.id && (Date.now() - deletionLog.createdTimestamp < 5000)) {
                 embed.addFields({ name: 'Supprimé par', value: executor?.tag || 'Inconnu', inline: true });
             } else {
                  embed.addFields({ name: 'Supprimé par', value: 'L\'auteur lui-même (ou non-journalisé).', inline: true });
