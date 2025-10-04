@@ -15,6 +15,7 @@ import { announcementFlow } from '@/ai/flows/announcement-flow';
 import { autoTranslateFlow } from '@/ai/flows/auto-translate-flow';
 import { handleOnboardingResponse } from './events/onboarding/aiOnboarding';
 import { patchNoteFlow } from '@/ai/flows/patchnote-flow';
+import ms from 'ms';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -356,6 +357,49 @@ async function handlePrivateRoomModal(interaction: ModalSubmitInteraction) {
     }
 }
 
+async function handleReminderButton(interaction: ButtonInteraction) {
+    const [ , delayStr, destination, base64Message ] = interaction.customId.split('::');
+
+    if (!delayStr || !destination || !base64Message) return;
+
+    await interaction.reply({ content: `✅ D'accord ! Je vous rappellerai à nouveau ce message dans **${delayStr}**.`, ephemeral: true });
+
+    const message = Buffer.from(base64Message, 'base64').toString('utf-8');
+    const delayMs = ms(delayStr);
+    
+    setTimeout(async () => {
+        const embed = new EmbedBuilder()
+            .setColor(0x3498DB)
+            .setTitle('⏰ C\'est l\'heure !')
+            .setDescription(`Il y a **${delayStr}**, vous m'avez demandé de vous rappeler ceci :`)
+            .addFields({ name: 'Votre message', value: message });
+
+        const row = new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(interaction.customId) // Reuse the same customId
+                    .setLabel('Relancer le rappel')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('🔄')
+            );
+
+        try {
+            if (destination === 'mp') {
+                await interaction.user.send({ content: `${interaction.user}`, embeds: [embed], components: [row] });
+            } else if (interaction.channel) {
+                // To avoid sending to a deleted channel, we fetch it first
+                 const originalChannel = await client.channels.fetch(interaction.channelId).catch(() => null);
+                 if (originalChannel && originalChannel.isTextBased()) {
+                     await originalChannel.send({ content: `${interaction.user}`, embeds: [embed], components: [row] });
+                 }
+            }
+        } catch (error) {
+            console.error('[Rappel-Relance] Erreur lors de l\'envoi du rappel :', error);
+        }
+    }, delayMs);
+}
+
+
 client.on(Events.MessageCreate, async (message) => {
     if (message.author.bot) return;
 
@@ -401,6 +445,12 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     if (interaction.isButton()) {
         console.log(`[Interaction] Button clicked: ${interaction.customId}`);
         const { customId } = interaction;
+
+        // --- Reminder Button Handler ---
+        if (customId.startsWith('reschedule_reminder::')) {
+            await handleReminderButton(interaction);
+            return;
+        }
 
         // --- Handler for Anti-Bot Buttons ---
         if (customId.startsWith('approve_bot_') || customId.startsWith('deny_bot_')) {
