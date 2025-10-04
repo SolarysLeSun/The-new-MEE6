@@ -1,5 +1,5 @@
 
-import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, ChannelType, TextChannel } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, ChannelType, TextChannel, User } from 'discord.js';
 import type { Command } from '@/types';
 import { getServerConfig, updateServerConfig, redeemPremiumKey } from '@/lib/db';
 
@@ -33,7 +33,11 @@ const SetCommand: Command = {
                 .addStringOption(option =>
                     option.setName('clé')
                         .setDescription('La clé d\'activation premium fournie par le développeur.')
-                        .setRequired(true))),
+                        .setRequired(true))
+                .addUserOption(option =>
+                    option.setName('utilisateur')
+                        .setDescription('L\'utilisateur à qui attribuer le statut Testeur lié (optionnel).')
+                        .setRequired(false))),
 
     async execute(interaction: ChatInputCommandInteraction) {
         if (!interaction.guild) {
@@ -52,7 +56,7 @@ const SetCommand: Command = {
                     const logsConfig = getServerConfig(interaction.guild.id, 'logs');
 
                     if (modConfig) updateServerConfig(interaction.guild.id, 'moderation', { ...modConfig, log_channel_id: channel.id });
-                    if (logsConfig) updateServerConfig(interaction.guild.id, 'logs', { ...logsConfig, log_channel_id: channel.id });
+                    if (logsConfig) updateServerConfig(interaction.guild.id, 'logs', { ...logsConfig, main_channel_id: channel.id });
                     
                     await interaction.editReply({ content: `✅ Le salon des logs a été défini sur ${channel}.` });
                     break;
@@ -70,13 +74,15 @@ const SetCommand: Command = {
 
                 case 'premium-key': {
                     const key = interaction.options.getString('clé', true);
-                    const result = redeemPremiumKey(key, interaction.guild.id);
+                    const targetUser = interaction.options.getUser('utilisateur') || interaction.user;
+                    const result = redeemPremiumKey(key, interaction.guild.id, targetUser.id);
                     
                     if (result.success) {
+                        const expiryMessage = result.expires_at ? `Votre statut Premium expirera le <t:${Math.floor(result.expires_at.getTime() / 1000)}:F>.` : "Votre statut Premium est à vie.";
                         const embed = new EmbedBuilder()
                             .setColor(0xFFD700)
                             .setTitle('🎉 Premium Activé ! 🎉')
-                            .setDescription('Ce serveur a maintenant accès à toutes les fonctionnalités premium. Merci pour votre soutien !')
+                            .setDescription(`Ce serveur a maintenant accès à toutes les fonctionnalités premium. ${expiryMessage} Merci pour votre soutien !`)
                             .setTimestamp();
                         await interaction.editReply({ embeds: [embed] });
                     } else {
@@ -97,3 +103,5 @@ const SetCommand: Command = {
 };
 
 export default SetCommand;
+
+    

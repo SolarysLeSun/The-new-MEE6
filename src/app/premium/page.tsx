@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select"
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -292,3 +292,5 @@ export default function PremiumPage() {
         </PageTransitionWrapper>
     );
 }
+
+    

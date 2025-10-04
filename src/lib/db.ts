@@ -79,9 +79,16 @@ const upgradeSchema = () => {
                 generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 is_used BOOLEAN DEFAULT FALSE,
                 used_by_guild TEXT,
-                used_at DATETIME
+                used_at DATETIME,
+                expires_at DATETIME
             );
         `);
+         // Check if expires_at column exists
+        const keyColumns = db.pragma('table_info(premium_keys)') as any[];
+        if (!keyColumns.some(col => col.name === 'expires_at')) {
+            console.log('[Database] Mise à jour du schéma : Ajout de la colonne "expires_at" à premium_keys.');
+            db.exec('ALTER TABLE premium_keys ADD COLUMN expires_at DATETIME');
+        }
         console.log('[Database] La table "premium_keys" est prête.');
 
         db.exec(`
@@ -698,16 +705,16 @@ export function createMultipleMemories(memories: Omit<PersonaMemory, 'id' | 'cre
     insertMany(memories);
 }
 
-export function createPremiumKey(generatedBy: string): string {
+export function createPremiumKey(generatedBy: string, expiresAt: Date | null): string {
     const key = `MARCUS-${randomBytes(8).toString('hex').toUpperCase()}`;
-    const stmt = db.prepare('INSERT INTO premium_keys (key, generated_by) VALUES (?, ?)');
-    stmt.run(key, generatedBy);
+    const stmt = db.prepare('INSERT INTO premium_keys (key, generated_by, expires_at) VALUES (?, ?, ?)');
+    stmt.run(key, generatedBy, expiresAt ? expiresAt.toISOString() : null);
     return key;
 }
 
-export function redeemPremiumKey(key: string, guildId: string): { success: boolean; message: string } {
+export function redeemPremiumKey(key: string, guildId: string, userId: string): { success: boolean; message: string; expires_at?: Date | null; } {
     const stmt = db.prepare('SELECT * FROM premium_keys WHERE key = ?');
-    const row = stmt.get(key) as { is_used: number; used_by_guild: string } | undefined;
+    const row = stmt.get(key) as { is_used: number; used_by_guild: string; expires_at: string | null } | undefined;
 
     if (!row) {
         return { success: false, message: 'Clé invalide.' };
@@ -720,12 +727,16 @@ export function redeemPremiumKey(key: string, guildId: string): { success: boole
         return { success: false, message: 'Cette clé a déjà été utilisée par un autre serveur.' };
     }
 
+    const expiresAt = row.expires_at ? new Date(row.expires_at) : null;
+
     const updateStmt = db.prepare('UPDATE premium_keys SET is_used = TRUE, used_by_guild = ?, used_at = CURRENT_TIMESTAMP WHERE key = ?');
     updateStmt.run(guildId, key);
 
     setPremiumStatus(guildId, true);
+    giveTesterStatus(userId, guildId, expiresAt);
 
-    return { success: true, message: 'Clé premium activée avec succès !' };
+
+    return { success: true, message: 'Clé premium activée avec succès !', expires_at: expiresAt };
 }
 
 // --- Sanction History ---
@@ -853,3 +864,5 @@ export function getUserRank(userId: string, guildId: string): number {
     const result = stmt.get(guildId, userId) as { rank: number } | undefined;
     return result?.rank || 1;
 }
+
+    
