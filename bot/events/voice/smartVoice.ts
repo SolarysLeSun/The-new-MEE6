@@ -2,7 +2,7 @@
 
 import { Events, VoiceState, ActivityType, Collection, ChannelType, GuildChannel, NonThreadGuildBasedChannel, VoiceChannel } from 'discord.js';
 import { smartVoiceFlow } from '../../../src/ai/flows/smart-voice-flow';
-import { getServerConfig } from '../../../src/lib/db';
+import { getServerConfig, getGlobalAiStatus } from '../../../src/lib/db';
 
 
 // Simple cache to prevent spamming the API for the same channel within a short time
@@ -12,6 +12,10 @@ const UPDATE_COOLDOWN = 60000; // 1 minute (60,000 ms)
 async function updateChannelName(channel: NonThreadGuildBasedChannel) {
     if (channel.type !== ChannelType.GuildVoice) return;
     
+    // Global AI check
+    const globalAiStatus = getGlobalAiStatus();
+    if (globalAiStatus.disabled) return;
+
     const smartVoiceConfig = await getServerConfig(channel.guild.id, 'smart-voice');
     const isPremium = smartVoiceConfig?.premium || false;
     
@@ -123,3 +127,5 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
         await updateChannelName(oldChannel);
     }
 }
+
+    

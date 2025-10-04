@@ -2,7 +2,7 @@
 import { Events, Message } from 'discord.js';
 import { imageFilterFlow } from '../../../src/ai/flows/image-filter-flow';
 import fetch from 'node-fetch';
-import { getServerConfig } from '../../../src/lib/db';
+import { getServerConfig, getGlobalAiStatus } from '../../../src/lib/db';
 
 const imageMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
 
@@ -26,6 +26,10 @@ export const name = Events.MessageCreate;
 export const once = false;
 
 export async function execute(message: Message) {
+    // Global AI check
+    const globalAiStatus = getGlobalAiStatus();
+    if (globalAiStatus.disabled) return;
+
     if (!message.guild || message.author.bot || !message.member) return;
 
     // Check for image attachments
@@ -71,3 +75,5 @@ export async function execute(message: Message) {
         console.error('[Image-Filter] Error during image analysis flow:', error);
     }
 }
+
+    

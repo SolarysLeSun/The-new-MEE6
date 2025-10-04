@@ -480,3 +480,5 @@ export function startApi(client: Client) {
         console.log(`[Bot API] Le serveur API interne écoute sur le port ${API_PORT}`);
     });
 }
+
+    

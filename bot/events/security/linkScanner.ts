@@ -3,7 +3,7 @@
 'use server';
 
 import { Events, Message, EmbedBuilder, TextChannel } from 'discord.js';
-import { getServerConfig } from '../../../src/lib/db';
+import { getServerConfig, getGlobalAiStatus } from '../../../src/lib/db';
 import { linkScannerFlow } from '../../../src/ai/flows/link-scanner-flow';
 
 const linkRegex = /https?:\/\/[^\s/$.?#].[^\s]*/i;
@@ -11,6 +11,10 @@ const linkRegex = /https?:\/\/[^\s/$.?#].[^\s]*/i;
 export const name = Events.MessageCreate;
 
 export async function execute(message: Message) {
+    // Global AI check
+    const globalAiStatus = getGlobalAiStatus();
+    if (globalAiStatus.disabled) return;
+    
     if (!message.guild || message.author.bot || !message.member) return;
 
     const config = await getServerConfig(message.guild.id, 'link-scanner');
@@ -83,3 +87,5 @@ export async function execute(message: Message) {
         console.error('[Link-Scanner] Error during link analysis flow:', error);
     }
 }
+
+    

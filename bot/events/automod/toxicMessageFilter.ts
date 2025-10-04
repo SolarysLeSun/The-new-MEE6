@@ -1,7 +1,7 @@
 
 import { Events, Message, EmbedBuilder, TextChannel } from 'discord.js';
 import { moderationAiFlow } from '../../../src/ai/flows/moderation-ai-flow';
-import { getServerConfig, getUserSanctionHistory, recordSanction } from '../../../src/lib/db';
+import { getServerConfig, getUserSanctionHistory, recordSanction, getGlobalAiStatus } from '../../../src/lib/db';
 import ms from 'ms';
 
 export const name = Events.MessageCreate;
@@ -17,6 +17,10 @@ export function addBotSentMessage(messageId: string) {
 
 
 export async function execute(message: Message) {
+    // Global AI check
+    const globalAiStatus = getGlobalAiStatus();
+    if (globalAiStatus.disabled) return;
+
     // Ignore messages from bots AND messages that the bot itself just sent as a warning
     if (message.author.bot || !message.guild || !message.content || !message.member || botSentMessages.has(message.id)) {
         if (botSentMessages.has(message.id)) {
@@ -159,3 +163,5 @@ export async function execute(message: Message) {
         console.error('[Mod-AI] Error during message analysis flow:', error);
     }
 }
+
+    
