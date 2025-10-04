@@ -150,11 +150,6 @@ export default function SuggestionsPage() {
         ...channels.map(c => ({ value: c.id, label: `# ${c.name}` }))
     ];
 
-    const roleOptions = [
-        { value: 'none', label: command.key === 'suggest' ? '@everyone' : 'Admin seulement' },
-        ...roles.filter(r => r.name !== '@everyone').map(role => ({ value: role.id, label: role.name }))
-    ];
-
   return (
     <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
