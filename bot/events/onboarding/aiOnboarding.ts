@@ -1,4 +1,5 @@
 
+
 import { Events, GuildMember, Message, DMChannel } from 'discord.js';
 import { getServerConfig } from '../../../src/lib/db';
 import { roleAssignmentFlow } from '../../../src/ai/flows/role-assignment-flow';
@@ -37,7 +38,7 @@ async function askQuestion(channel: DMChannel, userId: string, questions: string
     await channel.send(question);
 }
 
-async function handleOnboardingResponse(message: Message) {
+export async function handleOnboardingResponse(message: Message) {
     if (message.author.bot || !onboadingUsers.has(message.author.id)) {
         return;
     }
@@ -92,6 +93,3 @@ export const name = Events.GuildMemberAdd;
 export async function execute(member: GuildMember) {
     await startOnboarding(member);
 }
-
-// We also need to listen for DM messages
-client.on(Events.MessageCreate, handleOnboardingResponse);

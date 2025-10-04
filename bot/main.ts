@@ -1,4 +1,5 @@
 
+
 import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -13,6 +14,7 @@ import { startVoiceXPInterval } from './events/leveling/voiceXP';
 import { generateTextContent } from '@/ai/flows/content-creation-flow';
 import { announcementFlow } from '@/ai/flows/announcement-flow';
 import { autoTranslateFlow } from '@/ai/flows/auto-translate-flow';
+import { handleOnboardingResponse } from './events/onboarding/aiOnboarding';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -356,6 +358,14 @@ async function handlePrivateRoomModal(interaction: ModalSubmitInteraction) {
         await interaction.editReply({ content: 'Une erreur est survenue lors de la création du salon.' });
     }
 }
+
+client.on(Events.MessageCreate, async (message) => {
+    if (message.author.bot) return;
+
+    if (message.channel.type === ChannelType.DM) {
+        await handleOnboardingResponse(message);
+    }
+});
 
 
 client.on(Events.InteractionCreate, async (interaction: Interaction) => {
