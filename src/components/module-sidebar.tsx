@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -91,7 +90,6 @@ const navCategories = [
             { href: 'commandes-personnalisees', label: 'Commandes Personnalisées', icon: Code, isPremium: true, isDisabled: true },
             { href: 'salons-prives', label: 'Salons Privés', icon: Ticket },
             { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, isPremium: true },
-            { href: 'autoroles', label: 'Autoroles', icon: BadgePlus },
             { href: 'accueil-integration', label: 'Accueil & Intégration', icon: UserPlus },
         ]
     },
