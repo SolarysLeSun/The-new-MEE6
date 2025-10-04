@@ -4,7 +4,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel } from '../types';
+import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage } from '../types';
 import { randomBytes } from 'crypto';
 
 // Assurez-vous que le répertoire de la base de données existe
@@ -31,6 +31,7 @@ const upgradeSchema = () => {
             );
         `);
         db.exec(`INSERT OR IGNORE INTO global_settings (key, value) VALUES ('ai_disabled', '0');`);
+        db.exec(`INSERT OR IGNORE INTO global_settings (key, value) VALUES ('panel_message', NULL);`);
         console.log('[Database] La table "global_settings" est prête.');
 
         db.exec(`
@@ -458,6 +459,8 @@ export function initializeDatabase() {
     console.log('[Database] Initialisation de la base de données terminée.');
 }
 
+// --- Global Settings ---
+
 export function getGlobalAiStatus(): { disabled: boolean; reason: string | null } {
     try {
         const stmt = db.prepare("SELECT value, reason FROM global_settings WHERE key = 'ai_disabled'");
@@ -481,6 +484,33 @@ export function setGlobalAiStatus(disabled: boolean, reason: string | null) {
         console.error('[Database] Failed to set global AI status:', error);
     }
 }
+
+export function getPanelMessage(): PanelMessage | null {
+    try {
+        const stmt = db.prepare("SELECT value FROM global_settings WHERE key = 'panel_message'");
+        const row = stmt.get() as { value: string | null } | undefined;
+        if (row && row.value) {
+            return JSON.parse(row.value) as PanelMessage;
+        }
+        return null;
+    } catch (error) {
+        console.error('[Database] Failed to get panel message:', error);
+        return null;
+    }
+}
+
+export function setPanelMessage(message: PanelMessage | null) {
+    try {
+        const value = message ? JSON.stringify(message) : null;
+        const stmt = db.prepare("UPDATE global_settings SET value = ? WHERE key = 'panel_message'");
+        stmt.run(value);
+        console.log(`[Database] Panel message has been ${message ? 'set' : 'cleared'}.`);
+    } catch (error) {
+        console.error('[Database] Failed to set panel message:', error);
+    }
+}
+
+// --- Server Configs ---
 
 export function getServerConfig(guildId: string, module: Module): ModuleConfig | null {
     // **CORRECTIF AJOUTÉ ICI**
@@ -743,7 +773,7 @@ export function createPremiumKey(generatedBy: string, expiresAt: Date | null): s
     return key;
 }
 
-export function redeemPremiumKey(key: string, guildId: string, userId: string): { success: boolean; message: string; expires_at?: Date | null; } {
+export function redeemPremiumKey(key: string, guildId: string): { success: boolean; message: string; expires_at?: Date | null; } {
     const stmt = db.prepare('SELECT * FROM premium_keys WHERE key = ?');
     const row = stmt.get(key) as { is_used: number; used_by_guild: string; expires_at: string | null } | undefined;
 
@@ -764,8 +794,8 @@ export function redeemPremiumKey(key: string, guildId: string, userId: string): 
     updateStmt.run(guildId, key);
 
     setPremiumStatus(guildId, true);
-    giveTesterStatus(userId, guildId, expiresAt);
-
+    // When a key is redeemed, the redeemer doesn't automatically become a "tester". This is a separate status.
+    // If you want to grant tester status on key redemption, you could call giveTesterStatus here.
 
     return { success: true, message: 'Clé premium activée avec succès !', expires_at: expiresAt };
 }

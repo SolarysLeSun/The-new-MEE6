@@ -145,3 +145,9 @@ export interface AiRoleMapping {
     role_id: string;
     keywords: string[];
 }
+
+export interface PanelMessage {
+    type: 'info' | 'warning' | 'error' | 'urgent' | 'update' | 'announcement';
+    content: string;
+    active: boolean;
+}

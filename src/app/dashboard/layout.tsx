@@ -6,8 +6,9 @@ import { ServerSidebar } from '@/components/server-sidebar';
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, Menu, X } from 'lucide-react';
+import { Loader2, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PanelAlert } from '@/components/panel-alert';
 
 const RippleGrid = dynamic(() => import('@/components/ripple-grid'), {
   ssr: false,
@@ -88,12 +89,13 @@ export default function DashboardLayout({
         <ServerSidebar serverId={params.serverId} />
         <ModuleSidebar serverId={params.serverId} isOpen={isSidebarOpen} setOpen={setSidebarOpen} />
         <main className="flex-1 overflow-y-auto bg-transparent">
-           <div className="md:hidden flex items-center p-4">
+           <div className="sticky top-0 z-20 md:hidden flex items-center p-4 bg-background/80 backdrop-blur-sm border-b border-border">
               <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
                   <Menu className="h-6 w-6" />
               </Button>
             </div>
           <div className="container mx-auto p-6 lg:p-8 pt-0 md:pt-8">
+             <PanelAlert />
              <AuthGuard>{children}</AuthGuard>
           </div>
         </main>

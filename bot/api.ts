@@ -2,7 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes } from 'discord.js';
-import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey } from '@/lib/db';
+import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage } from '@/lib/db';
 import { verifyAndConsumeAuthToken, getBotAccessToken } from './auth';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
@@ -69,6 +69,18 @@ export function startApi(client: Client) {
         res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
     });
 
+    /**
+     * Endpoint to get the current panel message.
+     */
+    app.get('/api/get-panel-message', (req, res) => {
+        try {
+            const message = getPanelMessage();
+            res.status(200).json(message);
+        } catch (error) {
+            console.error('[Bot API] Error fetching panel message:', error);
+            res.status(500).json({ error: 'Failed to fetch panel message.' });
+        }
+    });
 
     /**
      * Endpoint for the panel to verify a user's auth token.
@@ -480,5 +492,3 @@ export function startApi(client: Client) {
         console.log(`[Bot API] Le serveur API interne écoute sur le port ${API_PORT}`);
     });
 }
-
-    
