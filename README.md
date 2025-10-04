@@ -56,6 +56,8 @@ DISCORD_TOKEN="VOTRE_TOKEN_DISCORD"
 DISCORD_CLIENT_ID="VOTRE_CLIENT_ID"
 # Le secret client de votre application Discord
 DISCORD_CLIENT_SECRET="VOTRE_CLIENT_SECRET"
+# L'ID de votre serveur de support, utilisé pour les récompenses de boost
+SUPPORT_SERVER_ID="ID_DE_VOTRE_SERVEUR_SUPPORT"
 
 # --- Google AI (Genkit) ---
 # Votre clé API Google AI pour les fonctionnalités IA
