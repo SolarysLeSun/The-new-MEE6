@@ -3,7 +3,8 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CheckCircle, KeyRound, Star, Bot } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { CheckCircle, KeyRound, Star, Bot, BarChartHorizontal } from 'lucide-react';
 import { AppHeader } from '@/components/app-header';
 import RippleGrid from '@/components/ripple-grid';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -178,6 +179,11 @@ const PricingCard = ({ plan, price, period, bestValue, children }: { plan: strin
 
 export default function PremiumPage() {
     const koFiUrl = 'https://ko-fi.com/M4M21555O9';
+    const prices = {
+        monthly: 9.99,
+        yearly: 24.99,
+        lifetime: 45.00
+    };
 
     return (
         <PageTransitionWrapper className="relative min-h-screen w-full bg-background text-foreground">
@@ -214,7 +220,7 @@ export default function PremiumPage() {
                     </TabsList>
                     
                     <TabsContent value="monthly">
-                        <PricingCard plan="Mensuel" price="9,99€" period="/mois">
+                        <PricingCard plan="Mensuel" price={`${prices.monthly.toFixed(2)}€`} period="/mois">
                              <ul className="space-y-3 text-card-foreground my-6">
                                 {premiumFeatures.map((feature, index) => (
                                     <li key={index} className="flex items-center gap-3">
@@ -229,7 +235,7 @@ export default function PremiumPage() {
                         </PricingCard>
                     </TabsContent>
                     <TabsContent value="yearly">
-                         <PricingCard plan="Annuel" price="24,99€" period="/an" bestValue>
+                         <PricingCard plan="Annuel" price={`${prices.yearly.toFixed(2)}€`} period="/an" bestValue>
                              <ul className="space-y-3 text-card-foreground my-6">
                                 {premiumFeatures.map((feature, index) => (
                                     <li key={index} className="flex items-center gap-3">
@@ -244,7 +250,7 @@ export default function PremiumPage() {
                         </PricingCard>
                     </TabsContent>
                     <TabsContent value="lifetime">
-                         <PricingCard plan="À vie" price="45€" period="paiement unique">
+                         <PricingCard plan="À vie" price={`${prices.lifetime.toFixed(2)}€`} period="paiement unique">
                              <ul className="space-y-3 text-card-foreground my-6">
                                 {premiumFeatures.map((feature, index) => (
                                     <li key={index} className="flex items-center gap-3">
@@ -284,6 +290,40 @@ export default function PremiumPage() {
                     </PremiumActivationDialog>
                  </div>
 
+                 <Card className="w-full max-w-4xl mt-8 bg-card/60 backdrop-blur-sm">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><BarChartHorizontal/>Ratio de rentabilité (comparatif)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Comparaison</TableHead>
+                                    <TableHead>Économie par rapport au mensuel</TableHead>
+                                    <TableHead>Économie par rapport à l'annuel</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <TableRow>
+                                    <TableCell className="font-medium">Annuel vs Mensuel</TableCell>
+                                    <TableCell>{`(${prices.monthly}€ × 12) - ${prices.yearly}€ = `}<span className="font-bold text-green-400">{(prices.monthly * 12 - prices.yearly).toFixed(2)}€/an</span></TableCell>
+                                    <TableCell>—</TableCell>
+                                </TableRow>
+                                <TableRow>
+                                    <TableCell className="font-medium">À vie vs Mensuel</TableCell>
+                                    <TableCell>Rentabilisé en <span className="font-bold text-green-400">~{(prices.lifetime / prices.monthly).toFixed(1)} mois</span></TableCell>
+                                    <TableCell>—</TableCell>
+                                </TableRow>
+                                <TableRow>
+                                    <TableCell className="font-medium">À vie vs Annuel</TableCell>
+                                    <TableCell>—</TableCell>
+                                    <TableCell>Rentabilisé en <span className="font-bold text-green-400">~{(prices.lifetime / prices.yearly).toFixed(1)} ans</span></TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                 </Card>
+
                  <p className="text-xs text-center text-muted-foreground mt-8 max-w-2xl mx-auto">
                     Note: L'achat d'une offre vous donnera accès à 3 clés d'activation, vous permettant de bénéficier des avantages premium sur 3 serveurs Discord distincts. Le bouton d'achat vous redirigera vers Ko-fi.
                 </p>
@@ -292,5 +332,3 @@ export default function PremiumPage() {
         </PageTransitionWrapper>
     );
 }
-
-    
