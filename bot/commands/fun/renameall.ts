@@ -6,12 +6,21 @@ import { getServerConfig } from '@/lib/db';
 const RenameAllCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('renameall')
-        .setDescription('Renomme tous les membres du serveur qui ne sont pas administrateurs.')
+        .setDescription('Renomme ou réinitialise les surnoms des membres du serveur.')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-        .addStringOption(option =>
-            option.setName('nickname')
-                .setDescription('Le nouveau surnom. Utilisez {number} pour insérer un numéro unique.')
-                .setRequired(true)),
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('set')
+                .setDescription('Renomme tous les membres (sauf admins) avec un nouveau modèle.')
+                .addStringOption(option =>
+                    option.setName('nickname')
+                        .setDescription('Le nouveau surnom. Utilisez {number} pour insérer un numéro unique.')
+                        .setRequired(true)))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('reset')
+                .setDescription('Réinitialise le surnom de tous les membres (sauf admins).')),
+
 
     async execute(interaction: ChatInputCommandInteraction) {
         if (!interaction.guild) {
@@ -24,42 +33,57 @@ const RenameAllCommand: Command = {
             await interaction.reply({ content: "Le module de commandes fun est désactivé.", flags: MessageFlags.Ephemeral });
             return;
         }
-
-        const nicknamePattern = interaction.options.getString('nickname', true);
-
-        // Preliminary check to see if the base pattern is too long
-        if (nicknamePattern.replace('{number}', '9999').length > 32) { // Assume a large number for safety check
-            await interaction.reply({ content: 'Le modèle de surnom est trop long et dépassera la limite de 32 caractères de Discord.', flags: MessageFlags.Ephemeral });
-            return;
-        }
-
+        
+        const subcommand = interaction.options.getSubcommand();
         await interaction.deferReply({ ephemeral: true });
 
         try {
-            const members = await interaction.guild.members.fetch();
-            const membersToRename = members.filter(member => !member.permissions.has(PermissionFlagsBits.Administrator));
+            await interaction.guild.members.fetch();
+            const membersToModify = interaction.guild.members.cache.filter(member => 
+                !member.permissions.has(PermissionFlagsBits.Administrator) && !member.user.bot
+            );
 
-            let renamedCount = 0;
-            let renameCounter = 1;
+            let modifiedCount = 0;
 
-            for (const member of membersToRename.values()) {
-                const finalNickname = nicknamePattern.replace('{number}', String(renameCounter));
-                if (finalNickname.length > 32) continue; // Skip if somehow the name is still too long
-
-                try {
-                    await member.setNickname(finalNickname, `Renommage de masse par ${interaction.user.tag}`);
-                    renamedCount++;
-                    renameCounter++;
-                } catch (err) {
-                    console.log(`Impossible de renommer ${member.user.tag}`);
+            if (subcommand === 'set') {
+                const nicknamePattern = interaction.options.getString('nickname', true);
+                if (nicknamePattern.replace('{number}', '9999').length > 32) {
+                    await interaction.editReply({ content: 'Le modèle de surnom est trop long et dépassera la limite de 32 caractères de Discord.', flags: MessageFlags.Ephemeral });
+                    return;
                 }
-            }
 
-            await interaction.editReply(`✅ ${renamedCount} membre(s) ont été renommé(s) en utilisant le modèle "**${nicknamePattern}**".`);
+                let renameCounter = 1;
+                for (const member of membersToModify.values()) {
+                    const finalNickname = nicknamePattern.replace('{number}', String(renameCounter));
+                    if (finalNickname.length > 32) continue;
+
+                    try {
+                        await member.setNickname(finalNickname, `Renommage de masse par ${interaction.user.tag}`);
+                        modifiedCount++;
+                        renameCounter++;
+                    } catch (err) {
+                        console.log(`Impossible de renommer ${member.user.tag}`);
+                    }
+                }
+                 await interaction.editReply(`✅ ${modifiedCount} membre(s) ont été renommé(s) en utilisant le modèle "**${nicknamePattern}**".`);
+
+            } else if (subcommand === 'reset') {
+                 for (const member of membersToModify.values()) {
+                    try {
+                        if (member.nickname) { // Only reset if they have a nickname
+                            await member.setNickname(null, `Réinitialisation des surnoms par ${interaction.user.tag}`);
+                            modifiedCount++;
+                        }
+                    } catch (err) {
+                        console.log(`Impossible de réinitialiser le surnom de ${member.user.tag}`);
+                    }
+                }
+                await interaction.editReply(`✅ Le surnom de ${modifiedCount} membre(s) a été réinitialisé.`);
+            }
 
         } catch (error) {
             console.error('[RenameAll] Error:', error);
-            await interaction.editReply({ content: 'Une erreur est survenue lors du renommage de masse.' });
+            await interaction.editReply({ content: 'Une erreur est survenue lors de l\'opération de masse.' });
         }
     },
 };

@@ -47,7 +47,7 @@ const DecoAllCommand: Command = {
 
         const subcommand = interaction.options.getSubcommand();
         
-        let membersToDisconnect: Collection<string, GuildMember> = new Collection();
+        let membersToDisconnect: GuildMember[] = [];
         let sourceDescription = '';
 
         if (subcommand === 'from_channel') {
@@ -56,20 +56,22 @@ const DecoAllCommand: Command = {
                 await interaction.editReply({ content: 'Le salon source doit être un salon vocal valide.' });
                 return;
             }
-            membersToDisconnect = sourceChannel.members.filter(m => !m.user.bot);
+            membersToDisconnect = Array.from(sourceChannel.members.filter(m => !m.user.bot).values());
             sourceDescription = `du salon **${sourceChannel.name}**`;
 
         } else if (subcommand === 'from_server') {
             const allVoiceChannels = interaction.guild.channels.cache.filter(c => c.type === ChannelType.GuildVoice) as Collection<string, VoiceChannel>;
             allVoiceChannels.forEach(channel => {
                 channel.members.filter(m => !m.user.bot).forEach(member => {
-                    membersToDisconnect.set(member.id, member);
+                    if (!membersToDisconnect.some(m => m.id === member.id)) {
+                        membersToDisconnect.push(member);
+                    }
                 });
             });
             sourceDescription = `de tout le serveur`;
         }
 
-        if (membersToDisconnect.size === 0) {
+        if (membersToDisconnect.length === 0) {
             await interaction.editReply({ content: 'Aucun utilisateur à déconnecter.' });
             return;
         }
@@ -77,7 +79,7 @@ const DecoAllCommand: Command = {
         let disconnectedCount = 0;
         let errorCount = 0;
 
-        await interaction.editReply({ content: `Déconnexion de ${membersToDisconnect.size} utilisateur(s) en cours...` });
+        await interaction.editReply({ content: `Déconnexion de ${membersToDisconnect.length} utilisateur(s) en cours...` });
 
         const disconnectPromises = membersToDisconnect.map(async (member) => {
             try {

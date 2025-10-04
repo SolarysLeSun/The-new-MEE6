@@ -62,7 +62,7 @@ const MoveAllCommand: Command = {
             return;
         }
 
-        let membersToMove: Collection<string, GuildMember> = new Collection();
+        let membersToMove: GuildMember[] = [];
         let sourceDescription = '';
 
         if (subcommand === 'from_channel') {
@@ -75,20 +75,22 @@ const MoveAllCommand: Command = {
                 await interaction.editReply({ content: 'Le salon source et de destination ne peuvent pas être les mêmes.' });
                 return;
             }
-            membersToMove = sourceChannel.members.filter(m => !m.user.bot);
+            membersToMove = Array.from(sourceChannel.members.filter(m => !m.user.bot).values());
             sourceDescription = `du salon **${sourceChannel.name}**`;
 
         } else if (subcommand === 'from_server') {
             const allVoiceChannels = interaction.guild.channels.cache.filter(c => c.type === ChannelType.GuildVoice && c.id !== destinationChannel.id) as Collection<string, VoiceChannel>;
             allVoiceChannels.forEach(channel => {
                 channel.members.filter(m => !m.user.bot).forEach(member => {
-                    membersToMove.set(member.id, member);
+                    if (!membersToMove.some(m => m.id === member.id)) {
+                        membersToMove.push(member);
+                    }
                 });
             });
             sourceDescription = `de tout le serveur`;
         }
 
-        if (membersToMove.size === 0) {
+        if (membersToMove.length === 0) {
             await interaction.editReply({ content: 'Aucun utilisateur à déplacer.' });
             return;
         }
@@ -96,7 +98,7 @@ const MoveAllCommand: Command = {
         let movedCount = 0;
         let errorCount = 0;
 
-        await interaction.editReply({ content: `Déplacement de ${membersToMove.size} utilisateur(s) en cours...` });
+        await interaction.editReply({ content: `Déplacement de ${membersToMove.length} utilisateur(s) en cours...` });
 
         const movePromises = membersToMove.map(async (member) => {
             try {

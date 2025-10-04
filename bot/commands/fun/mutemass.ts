@@ -33,9 +33,13 @@ const MuteMassCommand: Command = {
         try {
             let mutedCount = 0;
             for (const member of channel.members.values()) {
-                if (!member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    await member.voice.setMute(true, `Mute de masse par ${interaction.user.tag}`);
-                    mutedCount++;
+                if (!member.permissions.has(PermissionFlagsBits.Administrator) && !member.user.bot) {
+                    try {
+                        await member.voice.setMute(true, `Mute de masse par ${interaction.user.tag}`);
+                        mutedCount++;
+                    } catch (err) {
+                        console.warn(`[MuteMass] Impossible de rendre muet ${member.user.tag}:`, err);
+                    }
                 }
             }
             await interaction.editReply(`✅ ${mutedCount} membre(s) ont été rendus muets dans le salon ${channel}.`);
