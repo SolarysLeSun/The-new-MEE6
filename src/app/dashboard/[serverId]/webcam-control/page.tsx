@@ -10,11 +10,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ChevronDown } from 'lucide-react';
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -102,17 +99,11 @@ export default function WebcamControlPage() {
         saveConfig({ ...config, [key]: value });
     };
 
-    const handleRoleToggle = (roleId: string) => {
-        if (!config) return;
-        const newExemptRoles = config.exempt_roles.includes(roleId)
-            ? config.exempt_roles.filter(id => id !== roleId)
-            : [...config.exempt_roles, roleId];
-        handleValueChange('exempt_roles', newExemptRoles);
-    };
-
     if (loading || !config) {
         return <WebcamControlPageSkeleton />;
     }
+    
+    const roleOptions = roles.map(r => ({ value: r.id, label: r.name }));
 
   return (
     <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
@@ -173,34 +164,12 @@ export default function WebcamControlPage() {
                  <p className="text-sm text-muted-foreground/80">
                     Les utilisateurs avec ces rôles ne seront pas affectés par la politique ci-dessus.
                 </p>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between">
-                            <div className="flex-1 text-left truncate">
-                                {config.exempt_roles.length > 0 
-                                    ? config.exempt_roles.map(id => (
-                                        <Badge key={id} variant="secondary" className="mr-1 mb-1">{roles.find(r => r.id === id)?.name || id}</Badge>
-                                    ))
-                                    : "Sélectionner des rôles..."}
-                            </div>
-                            <ChevronDown className="ml-2 h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                        <DropdownMenuLabel>Choisir les rôles</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {roles.map(role => (
-                            <DropdownMenuCheckboxItem
-                                key={role.id}
-                                checked={config.exempt_roles.includes(role.id)}
-                                onCheckedChange={() => handleRoleToggle(role.id)}
-                                onSelect={(e) => e.preventDefault()} // Prevent closing menu on select
-                            >
-                                {role.name}
-                            </DropdownMenuCheckboxItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <MultiSelectCombobox
+                    options={roleOptions}
+                    selected={config.exempt_roles || []}
+                    onSelectedChange={(selected) => handleValueChange('exempt_roles', selected)}
+                    placeholder="Sélectionner des rôles..."
+                />
             </div>
         </CardContent>
       </Card>
