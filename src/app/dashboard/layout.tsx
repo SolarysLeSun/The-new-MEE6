@@ -9,6 +9,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Loader2, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PanelAlert } from '@/components/panel-alert';
+import { CommandMenu } from '@/components/command-menu';
 
 const RippleGrid = dynamic(() => import('@/components/ripple-grid'), {
   ssr: false,
@@ -88,13 +89,15 @@ export default function DashboardLayout({
       <div className="relative z-10 flex h-full w-full">
         <ServerSidebar serverId={params.serverId} />
         <ModuleSidebar serverId={params.serverId} isOpen={isSidebarOpen} setOpen={setSidebarOpen} />
-        <main className="flex-1 overflow-y-auto bg-transparent">
-           <div className="sticky top-0 z-20 md:hidden flex items-center p-4 bg-background/80 backdrop-blur-sm border-b border-border">
-              <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
+        <main className="flex-1 overflow-y-auto bg-transparent flex flex-col">
+           <div className="sticky top-0 z-20 flex items-center justify-between p-4 bg-background/80 backdrop-blur-sm border-b border-border">
+              <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
                   <Menu className="h-6 w-6" />
               </Button>
+              <div className="flex-1"></div> {/* Spacer */}
+              <CommandMenu />
             </div>
-          <div className="container mx-auto p-6 lg:p-8 pt-0 md:pt-8">
+          <div className="flex-1 container mx-auto p-6 lg:p-8 pt-0 md:pt-8">
              <PanelAlert />
              <AuthGuard>{children}</AuthGuard>
           </div>

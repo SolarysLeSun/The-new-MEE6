@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ChevronDown, LogOut } from 'lucide-react';
 import Link from 'next/link';
-import { CommandMenu } from './command-menu';
 
 function MarcusLogo() {
   return (
@@ -43,7 +42,6 @@ export function AppHeader() {
                 </Link>
             </div>
             <div className="flex items-center gap-2">
-                <CommandMenu />
                 <a href={discordInviteUrl} target="_blank" rel="noopener noreferrer">
                     <Button>
                         Ajouter le Bot
