@@ -118,7 +118,6 @@ const navCategories = [
      {
         name: 'Outils IA',
         items: [
-            { href: 'ai-suggestions', label: 'Assistant Configuration', icon: GraduationCap },
             { href: 'constructeur-serveur-ia', label: 'Server Builder IA', icon: ToyBrick, isPremium: true },
             { href: 'assistant-moderation-ia', label: 'Assistant Modération IA', icon: Sparkles, isPremium: true },
             { href: 'createur-contenu-ia', label: 'Créateur de Contenu IA', icon: Palette, isPremium: true },
@@ -244,4 +243,3 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
     </>
   );
 }
-
