@@ -44,7 +44,7 @@ async function handleVoiceState(newState: VoiceState) {
 
             // You could also try to send a DM to the user
              try {
-                await newState.member.send(`Votre vidéo ou stream sur le serveur "${newState.guild.name}" a été coupé car il n'est pas autorisé.`);
+                await newState.member.send(`Votre vidéo ou stream sur le serveur "${newState.guild.name}" a été coupé. Raison : ${reason}`);
             } catch (dmError) {
                 console.warn(`[Webcam Control] Could not send DM to ${newState.member.user.tag}.`);
             }
@@ -59,3 +59,4 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     // This will trigger on any voice state change: join, leave, mute, deafen, stream, video
     await handleVoiceState(newState);
 }
+
