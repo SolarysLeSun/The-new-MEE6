@@ -1,29 +1,25 @@
 
+
 import { Events, VoiceState, ActivityType, Collection, ChannelType, GuildChannel, NonThreadGuildBasedChannel, VoiceChannel } from 'discord.js';
 import { smartVoiceFlow } from '../../../src/ai/flows/smart-voice-flow';
 import { getServerConfig } from '../../../src/lib/db';
-import type { InteractiveChannel } from '../../../src/types';
 
 
 // Simple cache to prevent spamming the API for the same channel within a short time
 const channelUpdateCache = new Collection<string, number>();
 const UPDATE_COOLDOWN = 60000; // 1 minute (60,000 ms)
-const DEFAULT_CHANNEL_NAME = "Vocal intéractif";
 
 async function updateChannelName(channel: NonThreadGuildBasedChannel) {
     if (channel.type !== ChannelType.GuildVoice) return;
     
-    // --- Check if the channel is an interactive channel ---
     const smartVoiceConfig = await getServerConfig(channel.guild.id, 'smart-voice');
     const isPremium = smartVoiceConfig?.premium || false;
-    const interactiveChannels = (smartVoiceConfig?.interactive_channels as InteractiveChannel[]) || [];
-    const interactiveChannelInfo = interactiveChannels.find(c => c.id === channel.id);
     
-    // If the module is disabled, not premium, or the channel is not interactive, do nothing.
-    if (!smartVoiceConfig?.enabled || !isPremium || !interactiveChannelInfo) {
+    // Check if the module is enabled, premium, and if the channel is in the interactive category
+    if (!smartVoiceConfig?.enabled || !isPremium || !smartVoiceConfig.interactive_category_id || channel.parentId !== smartVoiceConfig.interactive_category_id) {
         return;
     }
-
+    
     // --- Cooldown check to prevent API spam ---
     const now = Date.now();
     const lastUpdate = channelUpdateCache.get(channel.id);
@@ -33,12 +29,14 @@ async function updateChannelName(channel: NonThreadGuildBasedChannel) {
             return;
         }
     }
+    
+    const defaultChannelName = smartVoiceConfig.default_channel_name || "Vocal intéractif";
 
     // --- Reset channel if empty ---
     if (channel.members.size === 0) {
-        if (channel.name !== DEFAULT_CHANNEL_NAME) {
+        if (channel.name !== defaultChannelName) {
             console.log(`[Smart-Voice] Channel "${channel.name}" is empty. Resetting.`);
-            await channel.setName(DEFAULT_CHANNEL_NAME);
+            await channel.setName(defaultChannelName);
             if (channel instanceof VoiceChannel) {
                 await channel.setTopic('');
             }
@@ -75,11 +73,11 @@ async function updateChannelName(channel: NonThreadGuildBasedChannel) {
         
         const activitiesString = activitiesSummary.length > 0 ? activitiesSummary.join(', ') : 'Just chatting';
         
-        console.log(`[Smart-Voice] Updating channel "${channel.name}" (${channel.id}). Members: ${memberCount}, Theme: ${interactiveChannelInfo.theme}, Activities: ${activitiesString}`);
+        console.log(`[Smart-Voice] Updating channel "${channel.name}" (${channel.id}). Members: ${memberCount}, Activities: ${activitiesString}`);
 
         const result = await smartVoiceFlow({
             currentName: channel.name,
-            theme: interactiveChannelInfo.theme,
+            theme: channel.name, // Using channel name as a proxy for theme, can be improved
             memberCount: memberCount,
             activities: activitiesString,
             customInstructions: smartVoiceConfig.custom_instructions

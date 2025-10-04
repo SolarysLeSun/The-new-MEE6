@@ -293,8 +293,8 @@ const defaultConfigs: DefaultConfigs = {
     'smart-voice': { 
         enabled: false, 
         premium: true,
-        interactive_channels: [], 
-        creation_threshold: 4,
+        interactive_category_id: null,
+        default_channel_name: "Vocal intéractif",
         custom_instructions: ''
     },
     'content-ai': { 

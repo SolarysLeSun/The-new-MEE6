@@ -63,17 +63,6 @@ export type DefaultConfigs = {
 
 // --- Types pour les modules spécifiques ---
 
-export interface InteractiveChannel {
-    id: string;
-    theme: string;
-}
-
-export interface KnowledgeBaseItem {
-    id: string;
-    question: string;
-    answer: string;
-}
-
 export interface Persona {
     id: string;
     guild_id: string;
