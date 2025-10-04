@@ -2,7 +2,6 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { FileText, UploadCloud } from 'lucide-react';
@@ -12,9 +11,9 @@ import { cn } from '@/lib/utils';
 export default function TranscriptViewerPage() {
     const [transcriptHtml, setTranscriptHtml] = useState<string | null>(null);
     const [fileName, setFileName] = useState<string | null>(null);
+    const [isDragActive, setIsDragActive] = useState(false);
 
-    const onDrop = useCallback((acceptedFiles: File[]) => {
-        const file = acceptedFiles[0];
+    const handleFile = (file: File) => {
         if (file && file.type === 'text/html') {
             const reader = new FileReader();
             reader.onload = (event) => {
@@ -23,13 +22,33 @@ export default function TranscriptViewerPage() {
             };
             reader.readAsText(file);
         }
+    };
+    
+    const onDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDragActive(false);
+        if (event.dataTransfer.files && event.dataTransfer.files[0]) {
+            handleFile(event.dataTransfer.files[0]);
+        }
     }, []);
 
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({
-        onDrop,
-        accept: { 'text/html': ['.html'] },
-        maxFiles: 1,
-    });
+    const handleDrag = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.type === "dragenter" || event.type === "dragover") {
+            setIsDragActive(true);
+        } else if (event.type === "dragleave") {
+            setIsDragActive(false);
+        }
+    }, []);
+
+    const handleFileInput = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files && event.target.files[0]) {
+            handleFile(event.target.files[0]);
+        }
+    };
+
 
     return (
         <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
@@ -47,13 +66,23 @@ export default function TranscriptViewerPage() {
                 <CardContent>
                     {!transcriptHtml ? (
                         <div
-                            {...getRootProps()}
+                            onDragEnter={handleDrag}
+                            onDragLeave={handleDrag}
+                            onDragOver={handleDrag}
+                            onDrop={onDrop}
+                            onClick={() => document.getElementById('file-input')?.click()}
                             className={cn(
                                 "flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg cursor-pointer transition-colors",
                                 isDragActive ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
                             )}
                         >
-                            <input {...getInputProps()} />
+                            <input
+                                id="file-input"
+                                type="file"
+                                accept=".html"
+                                className="hidden"
+                                onChange={handleFileInput}
+                            />
                             <UploadCloud className="w-12 h-12 text-muted-foreground mb-4" />
                             {isDragActive ? (
                                 <p className="text-lg font-semibold">Déposez le fichier ici...</p>
