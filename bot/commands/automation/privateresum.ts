@@ -1,20 +1,18 @@
 
-
-import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, ChannelType, TextChannel } from 'discord.js';
 import type { Command } from '../../../src/types';
 import { getServerConfig } from '../../../src/lib/db';
-
+import { transcriptSummaryFlow } from '../../../src/ai/flows/transcript-summary-flow';
 
 const PrivateResumCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('privateresum')
         .setDescription('Génère un résumé IA d\'un salon privé avant son archivage.')
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
-        // TODO: Add an option to specify the channel to summarize, or run it in the channel to be archived.
 
     async execute(interaction: ChatInputCommandInteraction) {
-        if (!interaction.guild) {
-            await interaction.reply({ content: 'Cette commande ne peut être utilisée que dans un serveur.', flags: MessageFlags.Ephemeral });
+        if (!interaction.guild || !interaction.channel || !(interaction.channel instanceof TextChannel)) {
+            await interaction.reply({ content: 'Cette commande ne peut être utilisée que dans un salon textuel.', flags: MessageFlags.Ephemeral });
             return;
         }
         
@@ -27,18 +25,40 @@ const PrivateResumCommand: Command = {
             return;
         }
         
-        // TODO: In a real implementation, you would:
-        // 1. Fetch the message history of the current/specified channel.
-        // 2. Pass the history to a Genkit flow for summarization.
-        // 3. Post the summary.
-        // 4. Archive the channel.
-
-        const embed = new EmbedBuilder()
-            .setColor(0x00FF00)
-            .setTitle("Résumé IA")
-            .setDescription(`📝 Un résumé IA de ce salon serait généré ici avant l'archivage. (Implémentation IA à venir)`);
+        try {
+            await interaction.editReply({ content: 'Lecture du salon en cours... Veuillez patienter.'});
             
-        await interaction.editReply({ embeds: [embed] });
+            const messages = await interaction.channel.messages.fetch({ limit: 100 });
+            const sortedMessages = Array.from(messages.values()).reverse();
+
+            if (sortedMessages.length === 0) {
+                await interaction.editReply({ content: "Il n'y a aucun message à résumer dans ce salon." });
+                return;
+            }
+
+            const transcript = sortedMessages
+                .map(msg => `${msg.author.tag}: ${msg.content}`)
+                .join('\n');
+            
+            await interaction.editReply({ content: 'Génération du résumé par l\'IA... Ceci peut prendre un moment.'});
+
+            const result = await transcriptSummaryFlow({ transcript });
+
+            const embed = new EmbedBuilder()
+                .setColor(0x3498DB)
+                .setTitle(`📝 Résumé IA du salon #${interaction.channel.name}`)
+                .setDescription(result.summary)
+                .setFooter({ text: `Basé sur les ${sortedMessages.length} derniers messages.` });
+            
+            await interaction.channel.send({ embeds: [embed] });
+            await interaction.editReply({ content: `✅ Résumé généré et envoyé dans ${interaction.channel}.` });
+
+            // TODO: Optional - Add a button to the summary embed to confirm channel archival/deletion.
+
+        } catch (error) {
+            console.error('[PrivateResum] Error generating summary:', error);
+            await interaction.editReply({ content: 'Une erreur est survenue lors de la génération du résumé.' });
+        }
     },
 };
 

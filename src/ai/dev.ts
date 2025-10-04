@@ -21,5 +21,6 @@ import '@/ai/flows/tts-flow.ts';
 import '@/ai/flows/knowledge-creation-flow.ts';
 import '@/ai/flows/announcement-flow.ts';
 import '@/ai/flows/link-scanner-flow.ts';
+import '@/ai/flows/transcript-summary-flow.ts';
 
 import '@/ai/tools/discord-structure-tool.ts';
