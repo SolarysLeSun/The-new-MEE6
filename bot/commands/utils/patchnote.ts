@@ -1,6 +1,6 @@
 
 
-import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, TextChannel } from 'discord.js';
 import type { Command } from '@/types';
 import { patchNoteFlow } from '@/ai/flows/patchnote-flow';
 import { getServerConfig, getGlobalAiStatus } from '@/lib/db';
@@ -30,7 +30,7 @@ const PatchNoteCommand: Command = {
                 .setRequired(false)),
 
     async execute(interaction: ChatInputCommandInteraction) {
-        if (!interaction.guild) {
+        if (!interaction.guild || !interaction.channel) {
             await interaction.reply({ content: 'Cette commande ne peut être utilisée que dans un serveur.', ephemeral: true });
             return;
         }
@@ -41,10 +41,10 @@ const PatchNoteCommand: Command = {
             return;
         }
 
-        const isOfficial = interaction.options.getBoolean('officiel') ?? false;
+        let isOfficial = interaction.options.getBoolean('officiel') ?? false;
+        // Force 'isOfficial' to false if the user is not the owner
         if (isOfficial && interaction.user.id !== OWNER_ID) {
-             await interaction.reply({ content: "L'option 'officiel' est réservée au propriétaire du bot.", ephemeral: true });
-            return;
+             isOfficial = false;
         }
         
         await interaction.deferReply({ ephemeral: true });
@@ -66,10 +66,13 @@ const PatchNoteCommand: Command = {
                 .setDescription(result.content)
                 .setColor(isOfficial ? 0xFFD700 : 0x3498DB)
                 .setTimestamp();
+            
+            // Send the public message to the channel
+            await interaction.channel.send({ embeds: [embed] });
 
+            // Send an ephemeral confirmation to the user
             await interaction.editReply({ 
-                content: "Voici votre note de mise à jour, traitée par l'IA :",
-                embeds: [embed]
+                content: "✅ Votre note de mise à jour a été générée et publiée dans ce salon.",
             });
 
         } catch (error) {

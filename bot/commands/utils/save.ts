@@ -1,8 +1,13 @@
 
+
 import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, AttachmentBuilder, MessageFlags } from 'discord.js';
 import type { Command } from '@/types';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import fetch from 'node-fetch';
+
+const TEMPLATE_URL = 'https://raw.githubusercontent.com/softpython2884/FlowUpBase/refs/heads/main/html';
+
 
 const SaveCommand: Command = {
     data: new SlashCommandBuilder()
@@ -21,14 +26,19 @@ const SaveCommand: Command = {
             await interaction.reply({ content: 'Cette commande ne peut être utilisée que dans un salon de serveur.', flags: MessageFlags.Ephemeral });
             return;
         }
-
-        const templateHtml = process.env.TRANSCRIPT_TEMPLATE_HTML;
-        if (!templateHtml) {
-            await interaction.reply({ content: 'Erreur : Le template de transcription n\'est pas configuré par l\'administrateur du bot.', flags: MessageFlags.Ephemeral });
-            return;
-        }
         
         await interaction.deferReply({ ephemeral: true });
+        
+        let templateHtml: string;
+        try {
+            const response = await fetch(TEMPLATE_URL);
+            if (!response.ok) throw new Error(`Failed to fetch template: ${response.statusText}`);
+            templateHtml = await response.text();
+        } catch (error) {
+            console.error('[SaveCommand] Error fetching transcript template:', error);
+            await interaction.editReply({ content: 'Erreur : Impossible de charger le modèle de transcription. Veuillez contacter l\'administrateur du bot.', flags: MessageFlags.Ephemeral });
+            return;
+        }
         
         const limit = interaction.options.getInteger('limit') || 100;
 

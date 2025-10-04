@@ -641,10 +641,6 @@ if (!process.env.DISCORD_CLIENT_ID) {
 if (!process.env.DISCORD_CLIENT_SECRET) {
     throw new Error('DISCORD_CLIENT_SECRET is not defined in your environment variables. Please create a .env file and add it.');
 }
-if (!process.env.TRANSCRIPT_TEMPLATE_HTML) {
-    console.warn('[WARN] TRANSCRIPT_TEMPLATE_HTML is not defined in your environment. The /save command will not work.');
-}
-
 
 async function startBot() {
     try {
