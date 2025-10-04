@@ -5,7 +5,6 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { REST } from '@discordjs/rest';
 import { Routes, APIUser, APIRole, APIChannel } from 'discord-api-types/v10';
-import { getBotAccessToken } from '../../../bot/auth';
 
 const rest = new REST({ version: '10' });
 
@@ -29,7 +28,8 @@ export const getServerStructure = ai.defineTool(
     },
     async ({ guildId }) => {
         try {
-            const token = await getBotAccessToken();
+            const token = process.env.DISCORD_TOKEN;
+            if (!token) throw new Error("DISCORD_TOKEN not configured for tool.");
             rest.setToken(token);
 
             console.log(`[Tool] Fetching structure for guild ${guildId}`);

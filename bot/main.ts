@@ -8,7 +8,6 @@ import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handl
 import type { Command, CustomField } from '@/types';
 import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers } from '@/lib/db';
 import { startApi } from './api';
-import { initializeBotAuth } from './auth';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
 import { generateTextContent } from '@/ai/flows/content-creation-flow';
@@ -75,8 +74,6 @@ const loadEvents = (client: Client) => {
             if (stat.isDirectory()) {
                 traverseDirectory(fullPath);
             } else if (file.endsWith('.ts') || file.endsWith('.js')) {
-                // Ensure system event handlers are loaded
-                // The check for '.js' is to avoid double-loading in the compiled output
                  try {
                     const event = require(fullPath);
                      if (event.name && event.execute) {
@@ -540,7 +537,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                     }
                 }
             } else { // Fallback for iacontent
-                await (interaction.channel as TextChannel).send({ embeds: [embed] });
+                await interaction.channel.send({ embeds: [embed] });
                 await interaction.update({ content: '✅ Contenu publié avec succès !', components: [], embeds: [] });
             }
             return;
@@ -586,13 +583,11 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
             const customFields = (config.custom_fields as CustomField[] || []).slice(0, 3);
 
             if (customFields.length === 0) {
-                 // If no custom fields, just create the channel directly.
                  await handlePrivateRoomModal(interaction as any);
                  return;
             }
 
             for (const field of customFields) {
-                // Fix: Ensure label is not empty
                 if (!field.label || field.label.trim() === '') {
                     console.warn(`[PrivateRoom] Skipping custom field with empty label for guild ${interaction.guild.id}`);
                     continue;
@@ -647,9 +642,9 @@ if (!process.env.DISCORD_CLIENT_SECRET) {
 
 async function startBot() {
     try {
-        await initializeBotAuth();
-        console.log('[Auth] Bot successfully authenticated with Discord API.');
+        console.log('[Auth] Attempting to log in with bot token...');
         await client.login(token);
+        console.log('[Auth] Bot successfully logged in.');
     } catch (error) {
         console.error('Bot failed to start:', error);
         process.exit(1);
@@ -657,7 +652,5 @@ async function startBot() {
 }
 
 startBot();
-// This is a temporary solution to make the client available to other files
-// A better solution would be to use dependency injection.
-(global as any).discordClient = client;
 
+(global as any).discordClient = client;

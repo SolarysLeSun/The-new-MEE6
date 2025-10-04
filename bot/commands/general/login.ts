@@ -1,7 +1,7 @@
 
 import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from 'discord.js';
 import type { Command } from '@/types';
-import { generateAuthToken } from '../../auth';
+import { generateAuthToken } from '../../api';
 
 const LoginCommand: Command = {
     data: new SlashCommandBuilder()
