@@ -57,10 +57,22 @@ export default function CreditsPage() {
                  <div className="inline-block rounded-lg bg-yellow-400/10 p-4">
                     <Clapperboard className="w-12 h-12 text-yellow-400" />
                 </div>
-                <blockquote className="border-l-4 border-yellow-400/50 pl-4 italic text-lg text-white/90 max-w-lg mx-auto">
-                    Vous savez, moi je ne crois pas qu’il y ait de bonne ou de mauvaise situation. Moi, si je devais résumer ma vie aujourd’hui avec vous, je dirais que c’est d’abord des rencontres...
+                <blockquote className="border-l-4 border-yellow-400/50 pl-4 italic text-white/90 max-w-lg mx-auto text-left whitespace-pre-line">
+                    {`Moi, si je devais résumer ma vie aujourd'hui avec vous, je dirais que c'est d'abord des rencontres,
+Des gens qui m'ont tendu la main, peut-être à un moment où je ne pouvais pas, où j'étais seul chez moi.
+Et c'est assez curieux de se dire que les hasards, les rencontres forgent une destinée...
+Parce que quand on a le goût de la chose, quand on a le goût de la chose bien faite,
+Le beau geste, parfois on ne trouve pas l'interlocuteur en face, je dirais, le miroir qui vous aide à avancer.
+Alors ce n'est pas mon cas, comme je le disais là, puisque moi au contraire, j'ai pu ;
+Et je dis merci à la vie, je lui dis merci, je chante la vie, je danse la vie... Je ne suis qu'amour!
+Et finalement, quand beaucoup de gens aujourd'hui me disent :
+"Mais comment fais-tu pour avoir cette humanité ?",
+Eh bien je leur réponds très simplement, je leur dis que c'est ce goût de l'amour,
+Ce goût donc qui m'a poussé aujourd'hui à entreprendre une construction mécanique,
+Mais demain, qui sait, peut-être simplement à me mettre au service de la communauté,
+à faire le don, le don de soi...`}
                 </blockquote>
-                 <p className="text-sm text-muted-foreground">Otis - Astérix et Obélix : Mission Cléopâtre</p>
+                 <p className="text-sm text-muted-foreground pt-2">Otis - Astérix et Obélix : Mission Cléopâtre</p>
             </div>
 
             <div className="text-center pt-8">

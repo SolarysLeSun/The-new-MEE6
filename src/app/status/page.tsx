@@ -3,7 +3,7 @@
 
 import { AppHeader } from "@/components/app-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Circle, Loader2, ServerCrash, XCircle, AlertTriangle, MessageSquareWarning } from "lucide-react";
+import { CheckCircle, Circle, Loader2, ServerCrash, XCircle, AlertTriangle, MessageSquareWarning, Brain } from "lucide-react";
 import RippleGrid from "@/components/ripple-grid";
 import { PageTransitionWrapper } from "@/components/page-transition-wrapper";
 import { useEffect, useState, useCallback, useRef } from "react";
@@ -180,6 +180,8 @@ export default function StatusPage() {
     const [statusHistory, setStatusHistory] = useState<StatusHistoryEntry[]>([]);
     const [eventLog, setEventLog] = useState<string[]>([]);
     const [lastChecked, setLastChecked] = useState<Date | null>(null);
+    const [titleClickCount, setTitleClickCount] = useState(0);
+    const [showEasterEgg, setShowEasterEgg] = useState(false);
 
     const checkStatuses = useCallback(async () => {
         let botApiStatus: ServiceStatus = 'loading';
@@ -261,6 +263,15 @@ export default function StatusPage() {
         : services.some(s => s.status === 'loading')
         ? 'loading'
         : 'operational';
+        
+    const handleTitleClick = () => {
+        const newCount = titleClickCount + 1;
+        setTitleClickCount(newCount);
+        if (newCount >= 3) {
+            setShowEasterEgg(true);
+            setTitleClickCount(0);
+        }
+    };
 
   return (
     <PageTransitionWrapper className="relative min-h-screen w-full bg-background text-foreground">
@@ -281,8 +292,8 @@ export default function StatusPage() {
         <Card className="max-w-4xl mx-auto bg-card/60 backdrop-blur-sm border-white/10">
           <CardHeader>
              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <CardTitle className="text-4xl font-bold text-center sm:text-left">
-                Statut des Services
+                <CardTitle className="text-4xl font-bold text-center sm:text-left cursor-pointer" onClick={handleTitleClick}>
+                    Statut des Services
                 </CardTitle>
                 <ReportProblemDialog/>
             </div>
@@ -329,6 +340,20 @@ export default function StatusPage() {
                     </div>
                  </div>
             ))}
+             {showEasterEgg && (
+                <div className="flex flex-col gap-4 p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-semibold text-lg text-white flex items-center gap-2"><Brain/>Cerveau du créateur</p>
+                            <p className="text-sm text-muted-foreground">État mental du développeur principal.</p>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1 bg-yellow-500/10 text-yellow-400">
+                            <StatusIndicator status="degraded" />
+                            Surchauffe
+                        </div>
+                    </div>
+                </div>
+            )}
             <Separator/>
             <div className="p-4">
                  <CardTitle className="mb-4">Journal d'Événements</CardTitle>

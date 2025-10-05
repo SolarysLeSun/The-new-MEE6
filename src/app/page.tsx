@@ -105,8 +105,6 @@ export default function PresentationPage() {
                         <Link href="/mentions-legales#contact" className="hover:text-white transition-colors">Contact</Link>
                         <Link href="/mentions-legales" className="hover:text-white transition-colors">Mentions Légales</Link>
                         <Link href="/conditions-utilisation" className="hover:text-white transition-colors">Conditions d'Utilisation</Link>
-                        <Link href="/credits" className="hover:text-white transition-colors">Crédits</Link>
-                        <Link href="/recrutement" className="hover:text-white transition-colors">Recrutement</Link>
                         <Link href="/status" className="hover:text-white transition-colors">Statut</Link>
                     </div>
                 </div>
