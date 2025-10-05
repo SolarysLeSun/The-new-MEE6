@@ -21,6 +21,7 @@ import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Combobox } from '@/components/ui/combobox';
+import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -29,6 +30,10 @@ const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/ap
 interface ManualVoiceConfig {
     enabled: boolean;
     command_permissions: { [key: string]: string | null };
+}
+
+interface AutorolesConfig {
+    on_voice_join_roles: string[];
 }
 
 interface DiscordRole {
@@ -59,6 +64,7 @@ function ManualControlPageSkeleton() {
     return (
         <div className="space-y-8">
             <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-48 w-full" />
         </div>
     );
 }
@@ -69,7 +75,8 @@ export default function ManualControlPage() {
     const serverId = params.serverId as string;
     const { toast } = useToast();
 
-    const [config, setConfig] = useState<ManualVoiceConfig | null>(null);
+    const [manualConfig, setManualConfig] = useState<ManualVoiceConfig | null>(null);
+    const [autorolesConfig, setAutorolesConfig] = useState<AutorolesConfig | null>(null);
     const [roles, setRoles] = useState<DiscordRole[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -78,14 +85,18 @@ export default function ManualControlPage() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const [configRes, serverDetailsRes] = await Promise.all([
+                const [manualRes, autorolesRes, serverDetailsRes] = await Promise.all([
                     fetch(`${API_URL}/get-config/${serverId}/manual-voice-control`),
+                    fetch(`${API_URL}/get-config/${serverId}/autoroles`),
                     fetch(`${API_URL}/get-server-details/${serverId}`)
                 ]);
-                if (!configRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch data');
-                const configData = await configRes.json();
+                if (!manualRes.ok || !autorolesRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch data');
+                const manualData = await manualRes.json();
+                const autorolesData = await autorolesRes.json();
                 const serverDetailsData = await serverDetailsRes.json();
-                setConfig(configData);
+                
+                setManualConfig(manualData);
+                setAutorolesConfig(autorolesData);
                 setRoles(serverDetailsData.roles);
             } catch (error) {
                 toast({ title: "Erreur", description: "Impossible de charger la configuration.", variant: "destructive" });
@@ -96,8 +107,8 @@ export default function ManualControlPage() {
         fetchData();
     }, [serverId, toast]);
 
-    const saveConfig = async (newConfig: ManualVoiceConfig) => {
-        setConfig(newConfig); // Optimistic update
+    const saveManualConfig = async (newConfig: ManualVoiceConfig) => {
+        setManualConfig(newConfig); // Optimistic update
         try {
             await fetch(`${API_URL}/update-config/${serverId}/manual-voice-control`, {
                 method: 'POST',
@@ -108,19 +119,37 @@ export default function ManualControlPage() {
             toast({ title: "Erreur de sauvegarde", variant: "destructive" });
         }
     };
+    
+     const saveAutorolesConfig = async (newConfig: AutorolesConfig) => {
+        setAutorolesConfig(newConfig); // Optimistic update
+        try {
+            await fetch(`${API_URL}/update-config/${serverId}/autoroles`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newConfig),
+            });
+        } catch (error) {
+            toast({ title: "Erreur de sauvegarde", variant: "destructive" });
+        }
+    };
 
-    const handleValueChange = (key: keyof ManualVoiceConfig, value: any) => {
-        if (!config) return;
-        saveConfig({ ...config, [key]: value });
+    const handleManualValueChange = (key: keyof ManualVoiceConfig, value: any) => {
+        if (!manualConfig) return;
+        saveManualConfig({ ...manualConfig, [key]: value });
     };
 
     const handlePermissionChange = (commandKey: string, roleId: string) => {
-        if (!config) return;
-        const newPermissions = { ...config.command_permissions, [commandKey]: roleId === 'none' ? null : roleId };
-        handleValueChange('command_permissions', newPermissions);
+        if (!manualConfig) return;
+        const newPermissions = { ...manualConfig.command_permissions, [commandKey]: roleId === 'none' ? null : roleId };
+        handleManualValueChange('command_permissions', newPermissions);
     };
 
-    if (loading || !config) {
+    const handleVoiceRolesChange = (selectedRoles: string[]) => {
+        if (!autorolesConfig) return;
+        saveAutorolesConfig({ ...autorolesConfig, on_voice_join_roles: selectedRoles });
+    };
+
+    if (loading || !manualConfig || !autorolesConfig) {
         return <ManualControlPageSkeleton />;
     }
 
@@ -128,6 +157,8 @@ export default function ManualControlPage() {
         { value: 'none', label: '@everyone' },
         ...roles.filter(r => r.name !== '@everyone').map(role => ({ value: role.id, label: role.name }))
     ];
+    
+    const multiSelectRoleOptions = roles.filter(r => r.name !== '@everyone').map(r => ({ value: r.id, label: r.name }));
 
   return (
     <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
@@ -145,11 +176,32 @@ export default function ManualControlPage() {
                 <div className="flex items-center justify-between">
                     <CardTitle>Activation du module</CardTitle>
                     <Switch
-                        checked={config.enabled}
-                        onCheckedChange={(val) => handleValueChange('enabled', val)}
+                        checked={manualConfig.enabled}
+                        onCheckedChange={(val) => handleManualValueChange('enabled', val)}
                     />
                 </div>
             </CardHeader>
+        </Card>
+
+      {/* Section Rôle en vocal */}
+       <Card>
+            <CardHeader>
+                <CardTitle>Rôle en Vocal</CardTitle>
+                <CardDescription>
+                    Attribuez automatiquement des rôles lorsqu'un membre rejoint un salon vocal, et retirez-les quand il quitte.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-2">
+                    <Label htmlFor="voice-roles" className="font-bold">Rôles à gérer</Label>
+                    <MultiSelectCombobox
+                        options={multiSelectRoleOptions}
+                        selected={autorolesConfig.on_voice_join_roles || []}
+                        onSelectedChange={handleVoiceRolesChange}
+                        placeholder="Sélectionner des rôles..."
+                    />
+                </div>
+            </CardContent>
         </Card>
 
       {/* Section Commandes */}
@@ -181,7 +233,7 @@ export default function ManualControlPage() {
                   </Label>
                   <Combobox
                     options={roleOptions}
-                    value={config.command_permissions?.[command.key] || 'none'}
+                    value={manualConfig.command_permissions?.[command.key] || 'none'}
                     onChange={(value) => handlePermissionChange(command.key, value)}
                     placeholder="Sélectionner un rôle"
                     searchPlaceholder="Rechercher un rôle..."
