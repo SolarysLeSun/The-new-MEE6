@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CheckCircle, Circle, Loader2, ServerCrash, XCircle, AlertTriangle } from "lucide-react";
 import RippleGrid from "@/components/ripple-grid";
 import { PageTransitionWrapper } from "@/components/page-transition-wrapper";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3630/api';
 
-type ServiceStatus = 'operational' | 'degraded' | 'outage' | 'loading';
+type ServiceStatus = 'operational' | 'degraded' | 'outage' | 'loading' | 'disabled';
 
 interface StatusItem {
     name: string;
@@ -32,6 +32,7 @@ const StatusIndicator = ({ status }: { status: ServiceStatus }) => {
         case 'operational':
             return <CheckCircle className="h-5 w-5 text-green-500" />;
         case 'degraded':
+        case 'disabled':
             return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
         case 'outage':
             return <XCircle className="h-5 w-5 text-destructive" />;
@@ -50,6 +51,8 @@ const getStatusText = (status: ServiceStatus) => {
             return "Panne Majeure";
         case 'loading':
             return "Vérification...";
+        case 'disabled':
+            return "Désactivé par Admin";
     }
 };
 
@@ -58,10 +61,11 @@ const StatusHistoryBar = ({ history, serviceName }: { history: StatusHistoryEntr
         <TooltipProvider>
             <div className="flex w-full h-8 rounded-lg bg-muted overflow-hidden">
                 {history.map((entry, index) => {
-                    const status = entry.statuses[serviceName];
+                    const status = entry.statuses[serviceName] || 'loading';
                     const statusColor = {
                         operational: 'bg-green-500',
                         degraded: 'bg-yellow-500',
+                        disabled: 'bg-yellow-500',
                         outage: 'bg-destructive',
                         loading: 'bg-muted-foreground',
                     }[status];
@@ -93,51 +97,70 @@ export default function StatusPage() {
     const [statusHistory, setStatusHistory] = useState<StatusHistoryEntry[]>([]);
     const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
-    useEffect(() => {
-        const checkStatuses = async () => {
-            let botApiStatus: ServiceStatus = 'operational';
-            try {
-                const response = await fetch(`${API_URL}/ping`);
-                if (!response.ok) throw new Error('API response not OK');
-                const data = await response.json();
-                if (data.status !== 'ok') throw new Error('Invalid status from API');
-            } catch (error) {
-                console.error("Bot status check failed:", error);
-                botApiStatus = 'outage';
+    const checkStatuses = useCallback(async () => {
+        let botApiStatus: ServiceStatus = 'loading';
+        let googleAiStatus: ServiceStatus = 'loading';
+    
+        try {
+            const botApiResponse = await fetch(`${API_URL}/ping`);
+            if (botApiResponse.ok && (await botApiResponse.json()).status === 'ok') {
+                botApiStatus = 'operational';
+            } else {
+                throw new Error('API response not OK');
             }
-            
-            // For now, Google AI services status is tied to the bot API status
-            const googleAiStatus = botApiStatus;
+        } catch (error) {
+            console.error("Bot API status check failed:", error);
+            botApiStatus = 'outage';
+        }
+    
+        // Only check AI status if the bot API is operational
+        if (botApiStatus === 'operational') {
+            try {
+                const aiStatusResponse = await fetch(`${API_URL}/global-ai-status`);
+                if (aiStatusResponse.ok) {
+                    const aiData = await aiStatusResponse.json();
+                    googleAiStatus = aiData.disabled ? 'disabled' : 'operational';
+                } else {
+                    googleAiStatus = 'degraded'; // Can't fetch status, but API is up
+                }
+            } catch (error) {
+                console.error("Google AI status check failed:", error);
+                googleAiStatus = 'degraded';
+            }
+        } else {
+            // If bot API is down, we can't know the AI status
+            googleAiStatus = 'outage'; 
+        }
 
-            const newStatuses = {
-                "Panel Web": 'operational',
-                "API & Bot Discord": botApiStatus,
-                "Services Google AI": googleAiStatus,
-            };
-
-            setServices([
-                { name: "Panel Web", status: 'operational', description: "L'interface de configuration est accessible." },
-                { name: "API & Bot Discord", status: botApiStatus, description: "Le cœur du bot qui interagit avec Discord." },
-                { name: "Services Google AI", status: googleAiStatus, description: "Les fonctionnalités d'intelligence artificielle." },
-            ]);
-            
-            setStatusHistory(prev => {
-                const newEntry = { time: new Date(), statuses: newStatuses };
-                // Keep only the last 24 entries
-                return [newEntry, ...prev].slice(0, 24);
-            });
-
-            setLastChecked(new Date());
+        const newStatuses = {
+            "Panel Web": 'operational' as ServiceStatus,
+            "API & Bot Discord": botApiStatus,
+            "Services Google AI": googleAiStatus,
         };
 
+        setServices([
+            { name: "Panel Web", status: 'operational', description: "L'interface de configuration est accessible." },
+            { name: "API & Bot Discord", status: botApiStatus, description: "Le cœur du bot qui interagit avec Discord." },
+            { name: "Services Google AI", status: googleAiStatus, description: "Les fonctionnalités d'intelligence artificielle." },
+        ]);
+        
+        setStatusHistory(prev => {
+            const newEntry = { time: new Date(), statuses: newStatuses };
+            return [newEntry, ...prev].slice(0, 24);
+        });
+
+        setLastChecked(new Date());
+    }, []);
+
+    useEffect(() => {
         checkStatuses();
         const interval = setInterval(checkStatuses, 3600000); // Re-check every hour
         return () => clearInterval(interval);
-    }, []);
+    }, [checkStatuses]);
 
     const overallStatus = services.some(s => s.status === 'outage') 
         ? 'outage' 
-        : services.some(s => s.status === 'degraded') 
+        : services.some(s => s.status === 'degraded' || s.status === 'disabled') 
         ? 'degraded' 
         : services.some(s => s.status === 'loading')
         ? 'loading'
@@ -172,8 +195,9 @@ export default function StatusPage() {
                 )}>
                    {overallStatus === 'operational' && <CheckCircle/>}
                    {overallStatus === 'outage' && <ServerCrash/>}
+                   {overallStatus === 'degraded' && <AlertTriangle/>}
                    {overallStatus === 'loading' && <Loader2 className="animate-spin" />}
-                   {getStatusText(overallStatus)}
+                   {getStatusText(overallStatus === 'degraded' ? 'degraded' : overallStatus)}
                 </div>
                  {lastChecked && <p className="text-xs text-muted-foreground">Dernière vérification : {lastChecked.toLocaleString('fr-FR')}</p>}
             </CardDescription>
@@ -190,7 +214,7 @@ export default function StatusPage() {
                          <div className={cn(
                              "flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1",
                              service.status === 'operational' && 'bg-green-500/10 text-green-400',
-                             service.status === 'degraded' && 'bg-yellow-500/10 text-yellow-400',
+                             (service.status === 'degraded' || service.status === 'disabled') && 'bg-yellow-500/10 text-yellow-400',
                              service.status === 'outage' && 'bg-destructive/10 text-destructive',
                              service.status === 'loading' && 'text-muted-foreground',
                          )}>
@@ -199,7 +223,7 @@ export default function StatusPage() {
                         </div>
                     </div>
                      <div className="pt-2">
-                        <Label className="text-xs text-muted-foreground pb-2">Historique des 24 dernières heures</Label>
+                        <Label className="text-xs text-muted-foreground pb-2">Historique des dernières heures</Label>
                         <StatusHistoryBar history={statusHistory} serviceName={service.name} />
                     </div>
                  </div>
@@ -210,5 +234,3 @@ export default function StatusPage() {
     </PageTransitionWrapper>
   );
 }
-
-  
