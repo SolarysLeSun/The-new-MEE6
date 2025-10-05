@@ -101,12 +101,13 @@ export default function PresentationPage() {
              <footer className="relative z-10 container mx-auto px-4 py-8 border-t border-white/10">
                 <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-muted-foreground">
                     <p>&copy; {new Date().getFullYear()} Marcus Bot, développé par Forgenet. Tous droits réservés.</p>
-                    <div className="flex gap-4 mt-4 sm:mt-0">
+                    <div className="flex flex-wrap gap-4 mt-4 sm:mt-0 justify-center">
                         <Link href="/mentions-legales#contact" className="hover:text-white transition-colors">Contact</Link>
                         <Link href="/mentions-legales" className="hover:text-white transition-colors">Mentions Légales</Link>
                         <Link href="/conditions-utilisation" className="hover:text-white transition-colors">Conditions d'Utilisation</Link>
-                         <Link href="/credits" className="hover:text-white transition-colors">Crédits</Link>
-                         <Link href="/status" className="hover:text-white transition-colors">Statut</Link>
+                        <Link href="/credits" className="hover:text-white transition-colors">Crédits</Link>
+                        <Link href="/recrutement" className="hover:text-white transition-colors">Recrutement</Link>
+                        <Link href="/status" className="hover:text-white transition-colors">Statut</Link>
                     </div>
                 </div>
             </footer>
