@@ -10,6 +10,7 @@ import { updateGuildCommands } from './handlers/commandHandler';
 import { generateKeywords } from '@/ai/flows/keyword-generation-flow';
 import { knowledgeCreationFlow } from '@/ai/flows/knowledge-creation-flow';
 import { randomBytes } from 'crypto';
+import { exec } from 'child_process';
 
 const API_PORT = process.env.BOT_API_PORT || 3001; // toujour le port 3630 !!
 
@@ -569,9 +570,20 @@ export function startApi(client: Client) {
         // In a real-world scenario, this should be an environment variable.
         if (password === 'cresus') {
             addBotLog('[System] Restart requested from web panel.');
-            res.status(200).json({ success: true, message: 'Restart command sent.' });
-            // The process manager (like PM2) will handle the actual restart.
-            setTimeout(() => process.exit(0), 1000); 
+            
+            // Using exec to call pm2 restart. This is more robust.
+            // Note: This assumes the bot process is named 'bot' in PM2.
+            exec('pm2 restart bot', (error, stdout, stderr) => {
+                if (error) {
+                    addBotLog(`[System Restart Error] exec error: ${error}`);
+                    return res.status(500).json({ success: false, error: 'Failed to execute restart command.' });
+                }
+                addBotLog(`[System Restart Success] stdout: ${stdout}`);
+                if (stderr) {
+                    addBotLog(`[System Restart Stderr] ${stderr}`);
+                }
+                res.status(200).json({ success: true, message: 'Restart command sent to process manager.' });
+            });
         } else {
             addBotLog('[System] Failed restart attempt from web panel (wrong password).');
             res.status(401).json({ success: false, error: 'Invalid password.' });
@@ -583,3 +595,5 @@ export function startApi(client: Client) {
         addBotLog(`[API] Internal API server listening on port ${API_PORT}`);
     });
 }
+
+    
