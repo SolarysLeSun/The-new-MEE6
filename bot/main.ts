@@ -557,6 +557,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
             } else if (footerText.includes('admin_announce')) {
                 await interaction.update({ content: '🚀 Envoi de l\'annonce globale en cours...', components: [], embeds: [] });
                 
+                addBotLog(`[Annonce Globale] Envoi de l'annonce : "${embed.title}"`);
                 const allServers = getAllBotServers();
                 let successCount = 0;
                 const failures: { name: string; id: string; reason: string }[] = [];
@@ -717,4 +718,3 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
-
