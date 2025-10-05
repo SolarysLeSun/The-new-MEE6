@@ -105,7 +105,7 @@ const DelegateCommand: Command = {
                     const embed = new EmbedBuilder()
                         .setTitle(`Utilisateurs avec la permission : \`${permission}\``)
                         .setDescription(userTags.join('\n'))
-                        .setColor(0x00BFFF);
+                        .setColor(0xFF7300);
                     await interaction.editReply({ embeds: [embed] });
                     break;
                 }

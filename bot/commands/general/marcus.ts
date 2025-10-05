@@ -59,7 +59,7 @@ const MarcusCommand: Command = {
         const allCommands = interaction.client.commands;
         const commandCategories = new Collection<string, Command[]>();
         
-        const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'adminannounce', 'delegate', 'restart', 'panelmessage', 'status'];
+        const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'adminannounce', 'delegate', 'restart', 'panelmessage', 'status', 'statusevent', 'owner'];
         const testerCommands = ['mp', 'webhook', 'tester'];
         
         const commandsPath = path.join(__dirname, '..');
@@ -94,11 +94,11 @@ const MarcusCommand: Command = {
         }
 
         const helpEmbed = new EmbedBuilder()
-            .setColor(0x00BFFF)
+            .setColor(0xFF7300)
             .setTitle('📜 Liste des Commandes de Marcus')
             .setDescription('Voici les commandes que vous pouvez utiliser.')
             .setTimestamp()
-            .setFooter({ text: `Demandé par ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() });
+            .setFooter({ text: `Demandé par ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() || undefined });
 
         const sortedCategories = new Collection(Array.from(commandCategories.entries()).sort());
 

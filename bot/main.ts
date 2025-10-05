@@ -1,5 +1,4 @@
 
-
 import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -150,10 +149,10 @@ async function handleSuggestionModal(interaction: ModalSubmitInteraction) {
     const description = interaction.fields.getTextInputValue('suggestion_description');
 
     const embed = new EmbedBuilder()
-        .setAuthor({ name: `Suggestion de ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
+        .setAuthor({ name: `Suggestion de ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() || undefined })
         .setTitle(title)
         .setDescription(description)
-        .setColor(0x5865F2)
+        .setColor(0xFF7300)
         .setTimestamp()
         .setFooter({ text: `ID Utilisateur: ${interaction.user.id}` });
         

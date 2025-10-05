@@ -47,7 +47,9 @@ export default function PresentationPage() {
             
             <main className="relative z-10 container mx-auto px-4 py-16 sm:py-24 text-center">
                  <PageTransitionWrapper>
-                    <Badge variant="outline" className="mb-4 border-primary/50 text-primary">Créé par Forgenet.fr</Badge>
+                    <a href="https://forgenet.fr" target="_blank" rel="noopener noreferrer">
+                        <Badge variant="outline" className="mb-4 border-primary/50 text-primary hover:bg-primary/10 transition-colors">Créé par Forgenet.fr</Badge>
+                    </a>
                     <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white">
                         Le Bot Discord Ultime, <br/>
                         <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-orange-400 to-primary">

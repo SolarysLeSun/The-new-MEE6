@@ -35,6 +35,7 @@ const generalCommands = [
     { name: '/ping', key: 'ping', description: 'Vérifie la latence du bot.' },
     { name: '/traduire', key: 'traduire', description: 'Traduit un texte dans une langue spécifique.' },
     { name: '/say', key: 'say', description: 'Fait parler le bot dans le salon.' },
+    { name: 'Traduire le message', key: 'translate_message', description: 'Traduit un message depuis le menu contextuel.' },
 ];
 
 export default function GeneralCommandsPage() {
@@ -234,5 +235,3 @@ function PageSkeleton() {
         </div>
     );
 }
-
-    

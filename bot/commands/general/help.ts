@@ -22,7 +22,7 @@ const HelpCommand: Command = {
         }
 
         const helpEmbed = new EmbedBuilder()
-            .setColor(0x00BFFF)
+            .setColor(0xFF7300)
             .setTitle('👋 Bonjour, je suis Marcus !')
             .setDescription('Votre assistant de gestion et d\'animation pour ce serveur Discord.')
             .addFields(
@@ -40,7 +40,7 @@ const HelpCommand: Command = {
                 }
             )
             .setTimestamp()
-            .setFooter({ text: `Demandé par ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() });
+            .setFooter({ text: `Demandé par ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() || undefined });
         
         await interaction.editReply({ embeds: [helpEmbed] });
     },

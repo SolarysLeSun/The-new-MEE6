@@ -36,7 +36,7 @@ const ReferralCommand: Command = {
             const referralCount = getUniqueReferralCount(interaction.guild.id);
 
             const embed = new EmbedBuilder()
-                .setColor(0x00BFFF)
+                .setColor(0xFF7300)
                 .setTitle(`🔗 Votre Code de Parrainage`)
                 .setDescription(`Partagez ce code avec d'autres administrateurs de serveurs pour gagner des récompenses !`)
                 .addFields(
@@ -75,7 +75,7 @@ const ReferralCommand: Command = {
             try {
                 recordReferral(referrerGuildId, interaction.guild.id, interaction.guild.ownerId);
                 
-                await interaction.editReply({ content: `✅ Merci ! Le serveur parrain a bien été crédité.`, flags: MessageFlags.Ephemeral });
+                await interaction.editReply({ content: `<:Oui:1421563353888723084> Merci ! Le serveur parrain a bien été crédité.`, flags: MessageFlags.Ephemeral });
 
                 // Check for reward
                 const newReferralCount = getUniqueReferralCount(referrerGuildId);

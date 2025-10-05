@@ -15,7 +15,7 @@ const adminTools = [
     {
         name: '/ghostping-locate',
         icon: LocateFixed,
-        description: 'Scanne les messages récemment supprimés dans un salon pour y trouver des mentions d\'utilisateurs ou de rôles qui ont été effacées.'
+        description: 'Scanne les messages récemment supprimés dans un salon pour y trouver des mentions d\'utilisateurs ou de rôles qui ont été effacées (fonctionnalité illustrative).'
     },
     {
         name: '/server-clone',
@@ -47,7 +47,7 @@ export default function AdministrationPage() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <CardDescription>{tool.description}</CardDescription>
+                    <p className="text-muted-foreground">{tool.description}</p>
                 </CardContent>
             </Card>
         ))}
