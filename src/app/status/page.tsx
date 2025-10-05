@@ -6,11 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CheckCircle, Circle, Loader2, ServerCrash, XCircle, AlertTriangle } from "lucide-react";
 import RippleGrid from "@/components/ripple-grid";
 import { PageTransitionWrapper } from "@/components/page-transition-wrapper";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3630/api';
 
@@ -95,7 +96,15 @@ export default function StatusPage() {
         { name: "Services Google AI", status: 'loading', description: "Les fonctionnalités d'intelligence artificielle." },
     ]);
     const [statusHistory, setStatusHistory] = useState<StatusHistoryEntry[]>([]);
+    const [eventLog, setEventLog] = useState<string[]>([]);
     const [lastChecked, setLastChecked] = useState<Date | null>(null);
+
+    const prevServicesRef = useRef<StatusItem[]>(services);
+
+    const logEvent = (message: string) => {
+        const time = new Date().toLocaleTimeString('fr-FR');
+        setEventLog(prev => [`[${time}] ${message}`, ...prev].slice(0, 15));
+    };
 
     const checkStatuses = useCallback(async () => {
         let botApiStatus: ServiceStatus = 'loading';
@@ -109,11 +118,9 @@ export default function StatusPage() {
                 throw new Error('API response not OK');
             }
         } catch (error) {
-            console.error("Bot API status check failed:", error);
             botApiStatus = 'outage';
         }
     
-        // Only check AI status if the bot API is operational
         if (botApiStatus === 'operational') {
             try {
                 const aiStatusResponse = await fetch(`${API_URL}/global-ai-status`);
@@ -121,30 +128,37 @@ export default function StatusPage() {
                     const aiData = await aiStatusResponse.json();
                     googleAiStatus = aiData.disabled ? 'disabled' : 'operational';
                 } else {
-                    googleAiStatus = 'degraded'; // Can't fetch status, but API is up
+                    googleAiStatus = 'degraded';
                 }
             } catch (error) {
-                console.error("Google AI status check failed:", error);
                 googleAiStatus = 'degraded';
             }
         } else {
-            // If bot API is down, we can't know the AI status
             googleAiStatus = 'outage'; 
         }
 
-        const newStatuses = {
-            "Panel Web": 'operational' as ServiceStatus,
-            "API & Bot Discord": botApiStatus,
-            "Services Google AI": googleAiStatus,
-        };
-
-        setServices([
+        const newServices: StatusItem[] = [
             { name: "Panel Web", status: 'operational', description: "L'interface de configuration est accessible." },
             { name: "API & Bot Discord", status: botApiStatus, description: "Le cœur du bot qui interagit avec Discord." },
             { name: "Services Google AI", status: googleAiStatus, description: "Les fonctionnalités d'intelligence artificielle." },
-        ]);
+        ];
+        
+        // Compare with previous state to log changes
+        newServices.forEach(newService => {
+            const oldService = prevServicesRef.current.find(s => s.name === newService.name);
+            if (oldService && oldService.status !== newService.status) {
+                logEvent(`Le service "${newService.name}" est passé à l'état : ${getStatusText(newService.status)}.`);
+            }
+        });
+        prevServicesRef.current = newServices;
+        
+        setServices(newServices);
         
         setStatusHistory(prev => {
+            const newStatuses = newServices.reduce((acc, service) => {
+                acc[service.name] = service.status;
+                return acc;
+            }, {} as Record<string, ServiceStatus>);
             const newEntry = { time: new Date(), statuses: newStatuses };
             return [newEntry, ...prev].slice(0, 24);
         });
@@ -153,6 +167,7 @@ export default function StatusPage() {
     }, []);
 
     useEffect(() => {
+        logEvent("Initialisation de la page de statut.");
         checkStatuses();
         const interval = setInterval(checkStatuses, 3600000); // Re-check every hour
         return () => clearInterval(interval);
@@ -191,13 +206,13 @@ export default function StatusPage() {
                     "flex items-center justify-center gap-2 font-semibold",
                     overallStatus === 'operational' && "text-green-400",
                     overallStatus === 'outage' && "text-destructive",
-                    overallStatus === 'degraded' && "text-yellow-400",
+                    (overallStatus === 'degraded' || overallStatus === 'disabled') && "text-yellow-400",
                 )}>
                    {overallStatus === 'operational' && <CheckCircle/>}
                    {overallStatus === 'outage' && <ServerCrash/>}
                    {overallStatus === 'degraded' && <AlertTriangle/>}
                    {overallStatus === 'loading' && <Loader2 className="animate-spin" />}
-                   {getStatusText(overallStatus === 'degraded' ? 'degraded' : overallStatus)}
+                   {getStatusText(overallStatus)}
                 </div>
                  {lastChecked && <p className="text-xs text-muted-foreground">Dernière vérification : {lastChecked.toLocaleString('fr-FR')}</p>}
             </CardDescription>
@@ -223,11 +238,24 @@ export default function StatusPage() {
                         </div>
                     </div>
                      <div className="pt-2">
-                        <Label className="text-xs text-muted-foreground pb-2">Historique des dernières heures</Label>
+                        <Label className="text-xs text-muted-foreground pb-2">Historique des dernières 24 heures</Label>
                         <StatusHistoryBar history={statusHistory} serviceName={service.name} />
                     </div>
                  </div>
             ))}
+            <Separator/>
+            <div className="p-4">
+                 <CardTitle className="mb-4">Journal d'Événements</CardTitle>
+                 <ScrollArea className="h-48 w-full rounded-md border p-4 bg-muted/30">
+                    <div className="flex flex-col-reverse justify-end">
+                    {eventLog.map((log, index) => (
+                        <p key={index} className="font-mono text-sm text-muted-foreground">
+                            {log}
+                        </p>
+                    ))}
+                    </div>
+                </ScrollArea>
+            </div>
           </CardContent>
         </Card>
       </main>
