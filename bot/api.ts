@@ -10,7 +10,7 @@ import { generateKeywords } from '@/ai/flows/keyword-generation-flow';
 import { knowledgeCreationFlow } from '@/ai/flows/knowledge-creation-flow';
 import { randomBytes } from 'crypto';
 
-const API_PORT = process.env.BOT_API_PORT || 3630; // toujour le port 3630 !!
+const API_PORT = process.env.BOT_API_PORT || 3001; // toujour le port 3630 !!
 
 // --- In-Memory Logger ---
 const botLogs: string[] = [];
@@ -342,6 +342,28 @@ export function startApi(client: Client) {
             }
         } catch (error) {
             res.status(500).json({ success: false, message: 'Erreur interne du serveur.' });
+        }
+    });
+
+    app.post('/api/report-problem', async (req, res) => {
+        const { message } = req.body;
+        if (!message) {
+            return res.status(400).json({ error: 'Le message du rapport est requis.' });
+        }
+
+        const ownerId = process.env.OWNER_ID;
+        if (!ownerId) {
+            console.error('[API] OWNER_ID non défini dans l\'environnement.');
+            return res.status(500).json({ error: 'Configuration interne du serveur incorrecte.' });
+        }
+
+        try {
+            const owner = await client.users.fetch(ownerId);
+            await owner.send(`🚨 **Nouveau rapport de problème depuis la page de statut :**\n\n>>> ${message}`);
+            res.status(200).json({ success: true, message: 'Rapport envoyé.' });
+        } catch (error) {
+            console.error('[API] Impossible d\'envoyer le rapport de problème au propriétaire:', error);
+            res.status(500).json({ error: "Impossible d'envoyer le rapport au propriétaire du bot." });
         }
     });
 

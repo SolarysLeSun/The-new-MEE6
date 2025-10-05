@@ -3,7 +3,7 @@
 
 import { AppHeader } from "@/components/app-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Circle, Loader2, ServerCrash, XCircle, AlertTriangle } from "lucide-react";
+import { CheckCircle, Circle, Loader2, ServerCrash, XCircle, AlertTriangle, MessageSquareWarning } from "lucide-react";
 import RippleGrid from "@/components/ripple-grid";
 import { PageTransitionWrapper } from "@/components/page-transition-wrapper";
 import { useEffect, useState, useCallback, useRef } from "react";
@@ -13,8 +13,12 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/comp
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PanelAlert } from "@/components/panel-alert";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
-const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3630/api';
+const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 const HIGH_PING_THRESHOLD = 500; // ms
 
 type ServiceStatus = 'operational' | 'degraded' | 'outage' | 'loading' | 'disabled';
@@ -101,6 +105,71 @@ const StatusHistoryBar = ({ history, serviceName }: { history: StatusHistoryEntr
     );
 };
 
+function ReportProblemDialog() {
+    const { toast } = useToast();
+    const [report, setReport] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleSubmit = async () => {
+        if (!report.trim()) {
+            toast({ title: "Le rapport ne peut pas être vide.", variant: "destructive" });
+            return;
+        }
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_URL}/report-problem`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: report }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Échec de l'envoi du rapport.");
+            }
+
+            toast({ title: "Rapport envoyé !", description: "Merci, le propriétaire du bot a été notifié." });
+            setIsOpen(false);
+            setReport("");
+        } catch (error) {
+            toast({ title: "Erreur", description: (error as Error).message, variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                    <MessageSquareWarning className="mr-2 h-4 w-4"/>
+                    Signaler un problème
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Signaler un problème</DialogTitle>
+                    <DialogDescription>
+                        Décrivez brièvement le problème que vous rencontrez. Le propriétaire du bot sera notifié.
+                    </DialogDescription>
+                </DialogHeader>
+                <Textarea 
+                    placeholder="Ex: Le bot ne répond plus aux commandes sur mon serveur..."
+                    value={report}
+                    onChange={(e) => setReport(e.target.value)}
+                    rows={4}
+                />
+                <DialogFooter>
+                    <Button variant="ghost" onClick={() => setIsOpen(false)}>Annuler</Button>
+                    <Button onClick={handleSubmit} disabled={isLoading}>
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Envoyer"}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 
 export default function StatusPage() {
     const [services, setServices] = useState<StatusItem[]>([
@@ -111,16 +180,6 @@ export default function StatusPage() {
     const [statusHistory, setStatusHistory] = useState<StatusHistoryEntry[]>([]);
     const [eventLog, setEventLog] = useState<string[]>([]);
     const [lastChecked, setLastChecked] = useState<Date | null>(null);
-
-    const prevServicesRef = useRef<StatusItem[]>(services);
-
-    const logEvent = useCallback((message: string) => {
-        setEventLog(prev => {
-            const fullMessage = `${message}`;
-            if (prev.includes(fullMessage)) return prev;
-            return [fullMessage, ...prev].slice(0, 50);
-        });
-    }, []);
 
     const checkStatuses = useCallback(async () => {
         let botApiStatus: ServiceStatus = 'loading';
@@ -142,20 +201,16 @@ export default function StatusPage() {
             botApiStatus = 'outage';
         }
     
-        if (botApiStatus !== 'outage') {
-            try {
-                const aiStatusResponse = await fetch(`${API_URL}/global-ai-status`);
-                if (aiStatusResponse.ok) {
-                    const aiData = await aiStatusResponse.json();
-                    googleAiStatus = aiData.disabled ? 'disabled' : 'operational';
-                } else {
-                    googleAiStatus = 'degraded';
-                }
-            } catch (error) {
-                googleAiStatus = 'degraded';
+        try {
+            const aiStatusResponse = await fetch(`${API_URL}/global-ai-status`);
+            if (aiStatusResponse.ok) {
+                const aiData = await aiStatusResponse.json();
+                googleAiStatus = aiData.disabled ? 'disabled' : 'operational';
+            } else {
+                 googleAiStatus = botApiStatus === 'outage' ? 'outage' : 'degraded';
             }
-        } else {
-            googleAiStatus = 'outage'; 
+        } catch (error) {
+            googleAiStatus = botApiStatus === 'outage' ? 'outage' : 'degraded';
         }
 
         try {
@@ -225,12 +280,15 @@ export default function StatusPage() {
         <PanelAlert />
         <Card className="max-w-4xl mx-auto bg-card/60 backdrop-blur-sm border-white/10">
           <CardHeader>
-            <CardTitle className="text-4xl font-bold text-center">
-              Statut des Services
-            </CardTitle>
-             <CardDescription className="text-center text-lg pt-4 space-y-2">
+             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <CardTitle className="text-4xl font-bold text-center sm:text-left">
+                Statut des Services
+                </CardTitle>
+                <ReportProblemDialog/>
+            </div>
+             <CardDescription className="text-center sm:text-left text-lg pt-4 space-y-2">
                 <div className={cn(
-                    "flex items-center justify-center gap-2 font-semibold",
+                    "flex items-center justify-center sm:justify-start gap-2 font-semibold",
                     overallStatus === 'operational' && "text-green-400",
                     overallStatus === 'outage' && "text-destructive",
                     (overallStatus === 'degraded' || overallStatus === 'disabled') && "text-yellow-400",

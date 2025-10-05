@@ -1,5 +1,4 @@
 
-
 import { REST } from '@discordjs/rest';
 import { Routes } from 'discord-api-types/v10';
 import { Client } from 'discord.js';
@@ -51,7 +50,7 @@ export const loadCommands = (client: Client) => {
 export const updateGuildCommands = async (guildId: string, client: Client) => {
     const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
     const commandsToDeploy = [];
-    const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'adminannounce', 'delegate', 'restart', 'panelmessage', 'status', 'statusevent'];
+    const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'adminannounce', 'delegate', 'restart', 'panelmessage', 'status', 'statusevent', 'owner'];
 
     // On déploie toutes les commandes SAUF les commandes globales (owner-only)
     for (const command of client.commands.values()) {
@@ -87,7 +86,7 @@ export const deployGlobalCommands = async (client: Client) => {
      const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
      const globalCommands = [];
      
-     const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'adminannounce', 'delegate', 'restart', 'panelmessage', 'status', 'statusevent'];
+     const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'adminannounce', 'delegate', 'restart', 'panelmessage', 'status', 'statusevent', 'owner'];
      for(const cmdName of ownerCommands) {
         const command = client.commands.get(cmdName);
         if (command) {
