@@ -1,9 +1,10 @@
 
+
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, CustomField, CustomWheel } from '../types';
+import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, CustomField, CustomWheel, Affinity } from '../types';
 import { randomBytes } from 'crypto';
 import { addBotLog } from '../../bot/api';
 
@@ -157,6 +158,18 @@ const upgradeSchema = () => {
             );
         `);
         addBotLog('[Database] Table "role_persistence" is ready.');
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS user_affinities (
+                guild_id TEXT NOT NULL,
+                user1_id TEXT NOT NULL,
+                user2_id TEXT NOT NULL,
+                score INTEGER NOT NULL DEFAULT 0,
+                last_interaction DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (guild_id, user1_id, user2_id)
+            );
+        `);
+        addBotLog('[Database] Table "user_affinities" is ready.');
 
 
     } catch (error) {
@@ -527,6 +540,16 @@ const defaultConfigs: DefaultConfigs = {
         enabled: false,
         premium: true,
         required_role_id: null,
+    },
+    'affinites': {
+        enabled: true,
+        premium: false,
+        points_per_mention: 5,
+        points_per_message: 1,
+        points_per_minute_in_voice: 2,
+        command_permissions: {
+            affinites: null
+        }
     }
 };
 
@@ -1194,4 +1217,43 @@ export function getAndClearSavedRoles(guildId: string, userId: string): string[]
         addBotLog(`[Database Error] Failed to get/clear roles for user ${userId} in guild ${guildId}: ${error}`);
         return null;
     }
+}
+
+// --- Affinities ---
+
+export const updateAffinityScore = db.transaction((guildId: string, user1Id: string, user2Id: string, pointsToAdd: number) => {
+    if (user1Id === user2Id) return;
+
+    // Ensure consistent ordering of user IDs to prevent duplicate pairs
+    const [u1, u2] = [user1Id, user2Id].sort();
+
+    const stmt = db.prepare(`
+        INSERT INTO user_affinities (guild_id, user1_id, user2_id, score, last_interaction)
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(guild_id, user1_id, user2_id) DO UPDATE SET
+            score = score + ?,
+            last_interaction = CURRENT_TIMESTAMP;
+    `);
+    stmt.run(guildId, u1, u2, pointsToAdd, pointsToAdd);
+});
+
+
+export function getTopAffinitiesForGuild(guildId: string, limit: number = 10): Affinity[] {
+    const stmt = db.prepare(`
+        SELECT user1_id, user2_id, score FROM user_affinities
+        WHERE guild_id = ?
+        ORDER BY score DESC
+        LIMIT ?
+    `);
+    return stmt.all(guildId, limit) as Affinity[];
+}
+
+export function getTopAffinitiesForUser(guildId: string, userId: string, limit: number = 5): Affinity[] {
+     const stmt = db.prepare(`
+        SELECT user1_id, user2_id, score FROM user_affinities
+        WHERE guild_id = ? AND (user1_id = ? OR user2_id = ?)
+        ORDER BY score DESC
+        LIMIT ?
+    `);
+    return stmt.all(guildId, userId, userId, limit) as Affinity[];
 }

@@ -52,7 +52,8 @@ export type Module =
     | 'fun-commands'
     | 'admin'
     | 'role-persistence'
-    | 'utils';
+    | 'utils'
+    | 'affinites';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale
@@ -163,4 +164,10 @@ export interface CustomWheel {
     id: string;
     name: string;
     options: string[];
+}
+
+export interface Affinity {
+    user1_id: string;
+    user2_id: string;
+    score: number;
 }
