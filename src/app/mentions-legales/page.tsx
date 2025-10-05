@@ -8,6 +8,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { PageTransitionWrapper } from "@/components/page-transition-wrapper";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 export default function MentionsLegalesPage() {
   return (
@@ -28,7 +34,7 @@ export default function MentionsLegalesPage() {
         <Card className="max-w-4xl mx-auto bg-card/60 backdrop-blur-sm border-white/10">
           <CardHeader>
             <CardTitle className="text-4xl font-bold text-center">
-              Mentions Légales
+              Mentions Légales & Données
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6 text-muted-foreground">
@@ -51,14 +57,38 @@ export default function MentionsLegalesPage() {
                 Toute revente, appropriation, distribution à but lucratif, ou toute autre forme d'utilisation commerciale du code source du bot Marcus ou de son panel est strictement interdite sans une autorisation écrite et explicite du créateur. L'utilisation du bot est réservée à la gestion de serveurs Discord et ne doit en aucun cas générer de bénéfice direct ou indirect pour des tiers non autorisés.
               </p>
             </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-semibold text-white">
-                3. Responsabilité
-              </h2>
-              <p>
-                Le créateur de Marcus et Forgenet ne sauraient être tenus responsables des éventuels dommages, pertes de données, ou conflits survenant sur les serveurs Discord qui utilisent le bot. L'administration et la modération du serveur restent sous l'entière responsabilité de ses propriétaires et de leur équipe de modération.
-              </p>
-            </div>
+            
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="item-1">
+                <AccordionTrigger className="text-2xl font-semibold text-white hover:no-underline">
+                  3. Gestion des Données et Confidentialité
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-2">
+                  <div className="space-y-2">
+                      <h3 className="font-semibold text-white">Traitement des Données</h3>
+                      <p>Pour fonctionner, Marcus doit analyser le contenu des messages en temps réel pour des fonctionnalités telles que l'auto-modération ou les commandes. Ce traitement est automatisé et temporaire. <strong>Aucun contenu de message utilisateur n'est stocké de manière persistante par Marcus.</strong></p>
+                  </div>
+                  <div className="space-y-2">
+                      <h3 className="font-semibold text-white">Stockage des Données</h3>
+                      <p>Les seules informations que nous stockons sont les configurations que vous définissez explicitement via le panel. Celles-ci se limitent principalement à des identifiants (IDs) fournis par Discord (ID de salon, de rôle, etc.) nécessaires au bon fonctionnement des modules. Aucune donnée personnelle sensible (e-mail, mot de passe, etc.) n'est collectée ou stockée.</p>
+                  </div>
+                   <div className="space-y-2">
+                      <h3 className="font-semibold text-white">Suppression des Données</h3>
+                      <p>Vous avez le contrôle total sur vos données de configuration. Vous pouvez modifier ou supprimer manuellement toutes les informations que vous avez fournies directement depuis le panel de configuration de votre serveur.</p>
+                  </div>
+                   <div className="space-y-2">
+                      <h3 className="font-semibold text-white">Services Tiers</h3>
+                      <p>Pour fonctionner, Marcus s'appuie sur les services tiers suivants :</p>
+                      <ul className="list-disc list-inside space-y-1 pl-4">
+                          <li><strong>Discord :</strong> Le bot est une application Discord et interagit avec son API.</li>
+                          <li><strong>Google Cloud :</strong> L'infrastructure du bot (hébergement) et la puissance de calcul pour les fonctionnalités IA sont fournies par Google.</li>
+                           <li><strong>PayPal :</strong> Pour la gestion des paiements de l'offre Premium. Marcus n'est pas responsable des pratiques de PayPal. Pour plus d'informations, veuillez consulter leurs propres conditions d'utilisation.</li>
+                      </ul>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+            
             <div className="space-y-2" id="contact">
               <h2 className="text-2xl font-semibold text-white">
                 4. Contact
