@@ -1047,5 +1047,3 @@ export function getUniqueReferralCount(referrerGuildId: string): number {
     const result = stmt.get(referrerGuildId) as { count: number };
     return result.count;
 }
-
-    

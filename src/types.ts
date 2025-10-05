@@ -147,6 +147,12 @@ export interface AiRoleMapping {
     keywords: string[];
 }
 
+export interface KnowledgeBaseItem {
+    id: string;
+    question: string;
+    answer: string;
+}
+
 export interface PanelMessage {
     type: 'info' | 'warning' | 'error' | 'urgent' | 'update' | 'announcement';
     content: string;

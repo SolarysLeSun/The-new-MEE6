@@ -53,7 +53,7 @@ Your instructions are:
 2.  Create a standard title, prefixed with the arrow emoji: "<:fleche:1421563500190371932> Notes de mise à jour".
 3.  Process the 'rawText' based on the 'correctionMode':
     -   If mode is 'simple': Perform only basic spelling and grammar correction. The sentence structure and original wording must be preserved as much as possible.
-    -   If mode is 'upgrade': You have full creative freedom. Rewrite and reformulate the text for maximum clarity, impact, and professionalism. You can change sentence structure, add bullet points (using the list item emoji), and use Discord markdown (like **bold**, *italics*, \`code\`, and > quotes) to improve readability. The core meaning must be retained. Use the other emojis from the charter to highlight additions, removals, or changes.
+    -   If mode is 'upgrade': You have full creative freedom. Rewrite and reformulate the text for maximum clarity, impact, and professionalism. You can change sentence structure, add bullet points (using the list item emoji), and use Discord markdown (like **bold**, *italics*, \`code\`, and > quotes) to improve readability. Use the other emojis from the charter to highlight additions, removals, or changes.
 4.  Return the final title, author, and processed content.
 
 Begin processing now.
@@ -72,4 +72,3 @@ export const patchNoteFlow = ai.defineFlow(
     return output!;
   }
 );
-
