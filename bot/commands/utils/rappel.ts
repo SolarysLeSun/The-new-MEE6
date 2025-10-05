@@ -49,11 +49,8 @@ const RappelCommand: Command = {
             const embed = new EmbedBuilder()
                 .setColor(0x3498DB)
                 .setTitle('⏰ C\'est l\'heure !')
-                .setDescription(`Il y a **${delayStr}**, vous m'avez demandé de vous rappeler ceci :`)
-                .addFields(
-                    { name: 'Votre message', value: message },
-                    { name: 'Heure du rappel', value: `<t:${reminderTime}:F>`}
-                )
+                .setDescription(`Il y a **${delayStr}** (<t:${Math.floor(Date.now()/1000 - delayMs/1000)}:R>), vous m'avez demandé de vous rappeler ceci :`)
+                .addFields({ name: 'Votre message', value: message })
                 .setTimestamp(reminderTime * 1000);
 
             const row = new ActionRowBuilder<ButtonBuilder>()
@@ -88,5 +85,3 @@ const RappelCommand: Command = {
 };
 
 export default RappelCommand;
-
-  

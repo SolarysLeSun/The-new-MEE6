@@ -230,11 +230,8 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
     } else {
          // --- Handle IA Content (Rule/Announcement) Modification ---
          if (!interaction.guild) {
-             // This case should ideally not happen if /adminannounce is used in DMs,
-             // as only server-based content creation should trigger this part.
-             // But as a safeguard:
-             await interaction.editReply({ content: 'Cette action ne peut pas être effectuée en messages privés.', ephemeral: true });
-             return;
+            await interaction.editReply({ content: 'Cette action ne peut être effectuée en messages privés.', ephemeral: true });
+            return;
          }
         const title = originalEmbed.title || '';
         const type = title.includes('Règle') ? 'rule' : 'announcement';
@@ -377,17 +374,18 @@ async function handleReminderButton(interaction: ButtonInteraction) {
     const delayMs = ms(delayStr);
     if (!delayMs) return;
 
-    await interaction.reply({ content: `<:Oui:1421563353888723084> D'accord ! Je vous rappellerai à nouveau ce message dans **${delayStr}**.`, ephemeral: true });
+    const reminderTime = Math.floor((Date.now() + delayMs) / 1000);
+
+    await interaction.reply({ content: `<:Oui:1421563353888723084> D'accord ! Je vous rappellerai à nouveau ce message <t:${reminderTime}:R>.`, ephemeral: true });
 
     const message = Buffer.from(base64Message, 'base64').toString('utf-8');
-    const reminderTime = Math.floor((Date.now() + delayMs) / 1000);
     
     // This creates a new, independent reminder. It does not use the expired interaction.
     setTimeout(async () => {
         const embed = new EmbedBuilder()
             .setColor(0x3498DB)
             .setTitle('⏰ C\'est l\'heure ! (Relance)')
-            .setDescription(`Il y a **${delayStr}**, vous m'avez demandé de vous rappeler ceci :`)
+            .setDescription(`Il y a **${delayStr}** (<t:${Math.floor(Date.now()/1000 - delayMs/1000)}:R>), vous m'avez demandé de vous rappeler ceci :`)
             .addFields({ name: 'Votre message', value: message })
             .setTimestamp(reminderTime * 1000);
         
@@ -719,5 +717,3 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
-
-  
