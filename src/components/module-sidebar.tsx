@@ -43,6 +43,7 @@ import {
   Star,
   Award,
   Plus,
+  Gamepad,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -111,6 +112,7 @@ export const navCategories = [
         name: 'Divertissement',
         items: [
             { href: 'commandes-fun', label: 'Commandes Fun', icon: Dice5, keywords: ['renameall', 'mutemass', 'reactbomb', 'randomnickname', 'fun'] },
+            { href: 'casino', label: 'Casino', icon: Gamepad, keywords: ['pileouface', 'slots', 'jeu', 'xp'] },
         ]
     },
     {
@@ -129,7 +131,7 @@ export const navCategories = [
             { href: 'createur-contenu-ia', label: 'Créateur de Contenu IA', icon: Palette, isPremium: true, keywords: ['iacontent', 'générer image', 'générer annonce', 'ia'] },
             { href: 'agent-conversationnel', label: 'Agent Conversationnel', icon: MessageCircleQuestion, isPremium: true, keywords: ['ia', 'chatbot', 'personnalité', 'conversation'] },
             { href: 'personnages-ia', label: 'Personnages IA', icon: Users, isPremium: true, isDisabled: true, keywords: ['ia', 'roleplay', 'personna'] },
-            { href: 'commandes-testeurs', label: 'Commandes Testeurs', icon: TestTubeDiagonal, isPremium: true, keywords: ['mp', 'webhook', 'tester', 'givepremium', 'genpremium'] },
+            { href: 'commandes-testeurs', label: 'Commandes Spéciales', icon: TestTubeDiagonal, isPremium: true, keywords: ['mp', 'webhook', 'tester', 'givepremium', 'genpremium', 'owner'] },
         ]
     },
     {

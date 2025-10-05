@@ -939,18 +939,17 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
     };
 }
 
-export const updateUserXP = db.transaction((userId: string, guildId: string, xpToAdd: number) => {
-    if (xpToAdd <= 0) return;
-
+export const updateUserXP = db.transaction((userId: string, guildId: string, xpToGive: number) => {
+    // xpToGive can be negative
     const stmt = db.prepare(`
         INSERT INTO user_levels (user_id, guild_id, xp, level)
         VALUES (?, ?, ?, 0)
         ON CONFLICT(user_id, guild_id) DO UPDATE SET
         xp = xp + excluded.xp;
     `);
-    stmt.run(userId, guildId, xpToAdd);
+    stmt.run(userId, guildId, xpToGive);
 
-    // Check for level up
+    // After an update, re-fetch the user's data to check for level-up/down
     const { xp, level } = getUserLevel(userId, guildId);
     let requiredXp = calculateRequiredXp(level);
     
