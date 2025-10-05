@@ -64,7 +64,7 @@ export const navCategories = [
     {
         name: 'Général',
         items: [
-            { href: 'commandes-generales', label: 'Commandes Générales', icon: Wrench, keywords: ['invite', 'ping', 'traduire', 'say', 'level', 'topxp'] },
+            { href: 'commandes-generales', label: 'Commandes Générales', icon: Wrench, keywords: ['invite', 'ping', 'traduire', 'say', 'level', 'topxp', 'help', 'marcus'] },
             { href: 'identite', label: 'Identité du Bot', icon: UserSquare, keywords: ['surnom', 'nom', 'avatar', 'profil'] },
             { href: 'annonces', label: 'Annonces', icon: Megaphone, keywords: ['announce', 'publication', 'message global'] },
             { href: 'assistant-communautaire', label: 'Assistant Communautaire', icon: MessageSquare, isPremium: true, keywords: ['faq', 'questions', 'réponses', 'aide', 'ia'] },
@@ -112,7 +112,7 @@ export const navCategories = [
      {
         name: 'Divertissement',
         items: [
-            { href: 'commandes-fun', label: 'Commandes Fun', icon: Dice5, keywords: ['renameall', 'mutemass', 'reactbomb', 'randomnickname', 'fun'] },
+            { href: 'commandes-fun', label: 'Commandes Fun', icon: Dice5, keywords: ['renameall', 'mutemass', 'reactbomb', 'randomnickname', 'fun', 'react'] },
             { href: 'casino', label: 'Casino', icon: Gamepad, keywords: ['pileouface', 'slots', 'jeu', 'xp'] },
             { href: 'roue-de-la-fortune', label: 'Roue de la Fortune', icon: History, keywords: ['roue', 'fortune', 'tirage', 'hasard'] },
         ]

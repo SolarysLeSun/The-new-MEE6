@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, CustomWheel } from '../types';
+import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, CustomField, CustomWheel } from '../types';
 import { randomBytes } from 'crypto';
 import { addBotLog } from '../../bot/api';
 
@@ -194,6 +194,9 @@ const defaultConfigs: DefaultConfigs = {
             help: null,
             marcus: null,
             traduire: null,
+            say: null,
+            level: null,
+            translate_message: null
         },
         command_enabled: {
             invite: true,
@@ -203,6 +206,7 @@ const defaultConfigs: DefaultConfigs = {
             traduire: true,
             say: true,
             level: true,
+            translate_message: true
         }
     },
     'community-assistant': {
@@ -481,7 +485,6 @@ const defaultConfigs: DefaultConfigs = {
     },
     'fun-commands': {
         enabled: true,
-        custom_wheels: [],
         command_permissions: {
             renameall: null,
             mutemass: null,
@@ -492,6 +495,7 @@ const defaultConfigs: DefaultConfigs = {
             slots: null,
             roll: null,
             truthordare: null,
+            roue: null,
         }
     },
     'admin': {
@@ -829,7 +833,7 @@ export function createPremiumKey(generatedBy: string, expiresAt: Date | null): s
     return key;
 }
 
-export function redeemPremiumKey(key: string, guildId: string): { success: boolean; message: string; expires_at?: Date | null; } {
+export function redeemPremiumKey(key: string, guildId: string, userId: string): { success: boolean; message: string; expires_at?: Date | null; } {
     const stmt = db.prepare('SELECT * FROM premium_keys WHERE key = ?');
     const row = stmt.get(key) as { is_used: number; used_by_guild: string; expires_at: string | null } | undefined;
 
@@ -845,13 +849,20 @@ export function redeemPremiumKey(key: string, guildId: string): { success: boole
     }
 
     const expiresAt = row.expires_at ? new Date(row.expires_at) : null;
+    if (expiresAt && expiresAt < new Date()) {
+        return { success: false, message: 'Cette clé a expiré.' };
+    }
 
     const updateStmt = db.prepare('UPDATE premium_keys SET is_used = TRUE, used_by_guild = ?, used_at = CURRENT_TIMESTAMP WHERE key = ?');
     updateStmt.run(guildId, key);
 
     setPremiumStatus(guildId, true);
-    // When a key is redeemed, the redeemer doesn't automatically become a "tester". This is a separate status.
-    // If you want to grant tester status on key redemption, you could call giveTesterStatus here.
+    
+    // Grant tester status if the key is for a tester
+    // This logic is simple, you might want to have a separate key type for this
+    if (userId) {
+        giveTesterStatus(userId, guildId, expiresAt);
+    }
 
     return { success: true, message: 'Clé premium activée avec succès !', expires_at: expiresAt };
 }
@@ -1098,23 +1109,33 @@ export function getAllModuleNames(): Module[] {
 
 // --- Custom Wheels ---
 
-export function getWheels(guildId: string): CustomWheel[] {
-    const stmt = db.prepare('SELECT * FROM custom_wheels WHERE guild_id = ?');
-    const rows = stmt.all(guildId) as { id: string, guild_id: string, name: string, options: string }[];
-    return rows.map(row => ({
-        ...row,
-        options: JSON.parse(row.options)
-    }));
+export function getWheelsForGuild(guildId: string): CustomWheel[] {
+    try {
+        const stmt = db.prepare('SELECT * FROM custom_wheels WHERE guild_id = ?');
+        const rows = stmt.all(guildId) as { id: string; guild_id: string; name: string; options: string }[];
+        return rows.map(row => ({
+            ...row,
+            options: JSON.parse(row.options)
+        }));
+    } catch (error) {
+        addBotLog(`[Database Error] Failed to get wheels for guild ${guildId}: ${error}`);
+        return [];
+    }
 }
 
 export function updateWheels(guildId: string, wheels: CustomWheel[]): void {
     const deleteStmt = db.prepare('DELETE FROM custom_wheels WHERE guild_id = ?');
-    const insertStmt = db.prepare('INSERT INTO custom_wheels (id, guild_id, name, options) VALUES (?, ?, ?, ?)');
+    const insertStmt = db.prepare('INSERT INTO custom_wheels (id, guild_id, name, options) VALUES (@id, @guild_id, @name, @options)');
 
     const transaction = db.transaction(() => {
         deleteStmt.run(guildId);
         for (const wheel of wheels) {
-            insertStmt.run(wheel.id, guildId, wheel.name, JSON.stringify(wheel.options));
+            insertStmt.run({
+                id: wheel.id,
+                guild_id: guildId,
+                name: wheel.name,
+                options: JSON.stringify(wheel.options)
+            });
         }
     });
 
@@ -1122,5 +1143,6 @@ export function updateWheels(guildId: string, wheels: CustomWheel[]): void {
         transaction();
     } catch (error) {
         addBotLog(`[Database Error] Failed to update wheels for guild ${guildId}: ${error}`);
+        throw error;
     }
 }
