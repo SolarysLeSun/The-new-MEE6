@@ -67,16 +67,11 @@ export default function PresentationPage() {
                             </Button>
                         </a>
                         <Link href="/dashboard">
-                             <Button size="lg" variant="secondary" className="w-full sm:w-auto text-lg py-7 px-8">
+                             <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg py-7 px-8">
                                 <LayoutDashboard className="mr-2"/>
                                 Accéder au Panel
                             </Button>
                         </Link>
-                        <a href={supportServerUrl} target="_blank" rel="noopener noreferrer">
-                            <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg py-7 px-8">
-                                Rejoindre le support
-                            </Button>
-                        </a>
                     </div>
 
                     <div className="mt-8 text-sm text-muted-foreground">
@@ -102,6 +97,7 @@ export default function PresentationPage() {
                 <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-muted-foreground">
                     <p>&copy; {new Date().getFullYear()} Marcus Bot, développé par Forgenet. Tous droits réservés.</p>
                     <div className="flex flex-wrap gap-4 mt-4 sm:mt-0 justify-center">
+                        <a href={supportServerUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Support</a>
                         <Link href="/mentions-legales#contact" className="hover:text-white transition-colors">Contact</Link>
                         <Link href="/mentions-legales" className="hover:text-white transition-colors">Mentions Légales</Link>
                         <Link href="/conditions-utilisation" className="hover:text-white transition-colors">Conditions d'Utilisation</Link>
