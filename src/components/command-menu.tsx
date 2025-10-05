@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -39,6 +40,17 @@ export function CommandMenu() {
 
   return (
     <>
+       <Button
+        variant="outline"
+        className="h-9 w-9 p-0 md:w-40 md:justify-start md:px-3"
+        onClick={() => setOpen(true)}
+      >
+        <Search className="h-4 w-4 md:mr-2" />
+        <span className="hidden md:inline-block">Recherche...</span>
+        <kbd className="pointer-events-none absolute right-1.5 top-2 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 md:flex">
+          <span className="text-xs">⌘</span>K
+        </kbd>
+      </Button>
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput placeholder="Rechercher un module..." />
         <CommandList>

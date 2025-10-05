@@ -10,6 +10,8 @@ import { Loader2, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PanelAlert } from '@/components/panel-alert';
 import { CommandMenu } from '@/components/command-menu';
+import { useServerInfo } from '@/hooks/use-server-info';
+import GradientText from '@/components/ui/gradient-text';
 
 const RippleGrid = dynamic(() => import('@/components/ripple-grid'), {
   ssr: false,
@@ -67,36 +69,45 @@ export default function DashboardLayout({
   params: { serverId: string };
 }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const { serverInfo } = useServerInfo();
 
   return (
     <div className="relative flex h-screen bg-background text-foreground overflow-hidden">
       <div className="absolute inset-0 z-0">
         <RippleGrid
-            enableRainbow={true}
-            gridColor="#2c3e50"
-            rippleIntensity={0.07}
-            gridSize={30}
-            gridThickness={15}
-            fadeDistance={1.5}
-            vignetteStrength={2}
-            glowIntensity={0.1}
-            opacity={1}
-            gridRotation={0}
-            mouseInteraction={true}
-            mouseInteractionRadius={0.5}
+            gridColor="#ffffff10"
+            rippleIntensity={0.03}
+            gridSize={25}
+            fadeDistance={1}
+            vignetteStrength={1.5}
         />
       </div>
       <div className="relative z-10 flex h-full w-full">
-        <ServerSidebar serverId={params.serverId} />
+        {/* Barre latérale des serveurs pour les grands écrans */}
+        <div className="hidden md:flex">
+          <ServerSidebar serverId={params.serverId} />
+        </div>
+        
+        {/* Barre latérale des modules (gérée différemment sur mobile/desktop) */}
         <ModuleSidebar serverId={params.serverId} isOpen={isSidebarOpen} setOpen={setSidebarOpen} />
+        
         <main className="flex-1 overflow-y-auto bg-transparent flex flex-col">
-           <div className="sticky top-0 z-20 flex items-center justify-between p-4 bg-background/80 backdrop-blur-sm border-b border-border">
-              <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
+           {/* Barre supérieure pour mobile */}
+           <div className="sticky top-0 z-20 flex items-center justify-between p-2 bg-card/80 backdrop-blur-sm border-b border-border md:hidden">
+              <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
                   <Menu className="h-6 w-6" />
               </Button>
-              <div className="flex-1"></div> {/* Spacer */}
+              <div className="text-lg font-semibold">
+                <GradientText>{serverInfo?.name || 'Dashboard'}</GradientText>
+              </div>
               <CommandMenu />
             </div>
+
+            {/* Barre supérieure pour grands écrans */}
+            <div className="sticky top-0 z-20 hidden md:flex items-center justify-end p-4">
+              <CommandMenu />
+            </div>
+
           <div className="flex-1 container mx-auto p-6 lg:p-8 pt-0 md:pt-8">
              <PanelAlert />
              <AuthGuard>{children}</AuthGuard>

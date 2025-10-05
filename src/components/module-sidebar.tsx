@@ -42,6 +42,7 @@ import {
   Shield,
   Star,
   Award,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ import { Skeleton } from './ui/skeleton';
 import { useServerInfo } from '@/hooks/use-server-info';
 import GradientText from './ui/gradient-text';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ServerSidebar } from './server-sidebar';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -160,8 +162,11 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
   
   useEffect(() => {
     // Close sidebar on route change on mobile
-    setOpen(false);
-  }, [pathname, setOpen]);
+    if (isOpen) {
+      setOpen(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
 
   return (
@@ -170,7 +175,7 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
     {isOpen && <div className="fixed inset-0 z-20 bg-black/60 md:hidden" onClick={() => setOpen(false)} />}
 
     <aside className={cn(
-        "fixed md:relative inset-y-0 left-0 z-30 flex h-full w-72 flex-col bg-card/80 backdrop-blur-xl p-4 border-r border-border/10 transition-transform duration-300 ease-in-out md:translate-x-0",
+        "fixed md:relative inset-y-0 left-0 z-30 flex h-full w-80 flex-col bg-card/80 backdrop-blur-xl p-4 border-r border-border/10 transition-transform duration-300 ease-in-out md:translate-x-0",
         isOpen ? "translate-x-0" : "-translate-x-full"
     )}>
       <div className="flex items-center justify-between mb-6">
@@ -199,6 +204,15 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
             <X className="h-6 w-6" />
         </Button>
       </div>
+      
+      {/* Server list for mobile */}
+      <div className="md:hidden mb-4">
+        <h3 className="px-3 py-2 text-xs font-bold uppercase text-muted-foreground">Changer de Serveur</h3>
+        <div className="flex flex-wrap gap-2 p-2 justify-center">
+          <ServerSidebar serverId={serverId} />
+        </div>
+      </div>
+
 
       <nav className="flex-1 space-y-2 overflow-y-auto pr-2 no-scrollbar">
       <TooltipProvider>
