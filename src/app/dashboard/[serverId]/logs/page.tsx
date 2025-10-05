@@ -13,6 +13,7 @@ import { MessageSquare, User, Hash, Tag, Hammer, Voicemail, Server } from 'lucid
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { Combobox } from '@/components/ui/combobox';
+import { ModulePageWrapper } from '@/components/module-page-wrapper';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -148,115 +149,117 @@ export default function LogsPage() {
     ];
 
   return (
-    <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Logs</h1>
-        <p className="text-muted-foreground mt-2">
-            Configurer les journaux d'événements du serveur.
-        </p>
-      </div>
-      
-      <Separator />
+    <ModulePageWrapper moduleName="logs">
+        <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight">Logs</h1>
+            <p className="text-muted-foreground mt-2">
+                Configurer les journaux d'événements du serveur.
+            </p>
+        </div>
+        
+        <Separator />
 
-      <Card>
-          <CardHeader>
-              <CardTitle>Configuration Générale des Logs</CardTitle>
-              <CardDescription>
-                  Activez les logs, choisissez un canal principal par défaut et définissez les exceptions.
-              </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <Label htmlFor="enable-module" className="font-bold">Activer le module de logs</Label>
-                    </div>
-                    <Switch id="enable-module" checked={config.enabled} onCheckedChange={(val) => handleValueChange('enabled', val)} />
-                </div>
-                <Separator />
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
-                    <div>
-                        <Label htmlFor="log-channel" className="font-bold text-sm uppercase text-muted-foreground">Salon de logs principal</Label>
-                        <p className="text-sm text-muted-foreground/80">
-                            Canal par défaut si aucun canal dédié n'est spécifié ci-dessous.
-                        </p>
-                    </div>
-                    <Combobox
-                        options={textChannelOptions}
-                        value={config.main_channel_id || 'none'}
-                        onChange={(value) => handleValueChange('main_channel_id', value === 'none' ? null : value)}
-                        placeholder="Sélectionner un salon"
-                        searchPlaceholder="Rechercher un salon..."
-                        emptyPlaceholder="Aucun salon trouvé."
-                        className="w-full md:w-[280px]"
-                    />
-                </div>
-                <Separator />
-
-                <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Exceptions Globales</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <Label>Salons à ignorer</Label>
-                            <MultiSelectCombobox
-                                options={channels.map(c => ({ value: c.id, label: `# ${c.name}` }))}
-                                selected={config.exempt_channels || []}
-                                onSelectedChange={(selected) => handleValueChange('exempt_channels', selected)}
-                                placeholder="Sélectionner des salons..."
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Rôles à ignorer</Label>
-                             <MultiSelectCombobox
-                                options={roles.map(r => ({ value: r.id, label: r.name }))}
-                                selected={config.exempt_roles || []}
-                                onSelectedChange={(selected) => handleValueChange('exempt_roles', selected)}
-                                placeholder="Sélectionner des rôles..."
-                            />
-                        </div>
-                    </div>
-                </div>
-            </CardContent>
-      </Card>
-      
-      <Separator />
-
-      <div>
-        <h2 className="text-2xl font-bold">Journaux d'Événements</h2>
-        <p className="text-muted-foreground mt-1">
-          Activez les types de logs que vous souhaitez et assignez-leur un canal dédié si nécessaire.
-        </p>
-      </div>
-      <div className="grid md:grid-cols-2 gap-4">
-        {logOptions.map(option => (
-            <Card key={option.id}>
-                <CardHeader>
+        <Card>
+            <CardHeader>
+                <CardTitle>Configuration Générale des Logs</CardTitle>
+                <CardDescription>
+                    Activez les logs, choisissez un canal principal par défaut et définissez les exceptions.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
                     <div className="flex items-center justify-between">
-                         <CardTitle className="flex items-center gap-2">
-                            <option.icon className="w-5 h-5 text-primary"/>
-                            {option.label}
-                        </CardTitle>
-                        <Switch 
-                            checked={config.log_settings[option.id as keyof typeof config.log_settings].enabled}
-                            onCheckedChange={(val) => handleLogSettingChange(option.id as keyof typeof config.log_settings, 'enabled', val)}
+                        <div>
+                            <Label htmlFor="enable-module" className="font-bold">Activer le module de logs</Label>
+                        </div>
+                        <Switch id="enable-module" checked={config.enabled} onCheckedChange={(val) => handleValueChange('enabled', val)} />
+                    </div>
+                    <Separator />
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
+                        <div>
+                            <Label htmlFor="log-channel" className="font-bold text-sm uppercase text-muted-foreground">Salon de logs principal</Label>
+                            <p className="text-sm text-muted-foreground/80">
+                                Canal par défaut si aucun canal dédié n'est spécifié ci-dessous.
+                            </p>
+                        </div>
+                        <Combobox
+                            options={textChannelOptions}
+                            value={config.main_channel_id || 'none'}
+                            onChange={(value) => handleValueChange('main_channel_id', value === 'none' ? null : value)}
+                            placeholder="Sélectionner un salon"
+                            searchPlaceholder="Rechercher un salon..."
+                            emptyPlaceholder="Aucun salon trouvé."
+                            className="w-full md:w-[280px]"
                         />
                     </div>
-                    <CardDescription>{option.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Label className="text-xs uppercase text-muted-foreground">Salon dédié</Label>
-                    <Combobox
-                        options={dedicatedChannelOptions}
-                        value={config.log_settings[option.id as keyof typeof config.log_settings].channel_id || 'main'}
-                        onChange={(val) => handleLogSettingChange(option.id as keyof typeof config.log_settings, 'channel_id', val === 'main' ? null : val)}
-                        placeholder="Sélectionner un salon..."
-                        searchPlaceholder="Rechercher un salon..."
-                        emptyPlaceholder="Aucun salon trouvé."
-                    />
+                    <Separator />
+
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">Exceptions Globales</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label>Salons à ignorer</Label>
+                                <MultiSelectCombobox
+                                    options={channels.map(c => ({ value: c.id, label: `# ${c.name}` }))}
+                                    selected={config.exempt_channels || []}
+                                    onSelectedChange={(selected) => handleValueChange('exempt_channels', selected)}
+                                    placeholder="Sélectionner des salons..."
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Rôles à ignorer</Label>
+                                <MultiSelectCombobox
+                                    options={roles.map(r => ({ value: r.id, label: r.name }))}
+                                    selected={config.exempt_roles || []}
+                                    onSelectedChange={(selected) => handleValueChange('exempt_roles', selected)}
+                                    placeholder="Sélectionner des rôles..."
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </CardContent>
-            </Card>
-        ))}
-      </div>
-    </PageTransitionWrapper>
+        </Card>
+        
+        <Separator />
+
+        <div>
+            <h2 className="text-2xl font-bold">Journaux d'Événements</h2>
+            <p className="text-muted-foreground mt-1">
+            Activez les types de logs que vous souhaitez et assignez-leur un canal dédié si nécessaire.
+            </p>
+        </div>
+        <div className="grid md:grid-cols-2 gap-4">
+            {logOptions.map(option => (
+                <Card key={option.id}>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2">
+                                <option.icon className="w-5 h-5 text-primary"/>
+                                {option.label}
+                            </CardTitle>
+                            <Switch 
+                                checked={config.log_settings[option.id as keyof typeof config.log_settings].enabled}
+                                onCheckedChange={(val) => handleLogSettingChange(option.id as keyof typeof config.log_settings, 'enabled', val)}
+                            />
+                        </div>
+                        <CardDescription>{option.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Label className="text-xs uppercase text-muted-foreground">Salon dédié</Label>
+                        <Combobox
+                            options={dedicatedChannelOptions}
+                            value={config.log_settings[option.id as keyof typeof config.log_settings].channel_id || 'main'}
+                            onChange={(val) => handleLogSettingChange(option.id as keyof typeof config.log_settings, 'channel_id', val === 'main' ? null : val)}
+                            placeholder="Sélectionner un salon..."
+                            searchPlaceholder="Rechercher un salon..."
+                            emptyPlaceholder="Aucun salon trouvé."
+                        />
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+        </PageTransitionWrapper>
+    </ModulePageWrapper>
   );
 }
 

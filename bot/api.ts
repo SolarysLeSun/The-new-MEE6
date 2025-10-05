@@ -2,7 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes } from 'discord.js';
-import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage } from '@/lib/db';
+import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getDisabledModules } from '@/lib/db';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { updateGuildCommands } from './handlers/commandHandler';
@@ -103,7 +103,7 @@ export function startApi(client: Client) {
 
     app.use((req, res, next) => {
         // Do not log frequent requests from the status page
-        if (req.path !== '/api/ping' && req.path !== '/api/get-bot-logs') {
+        if (req.path !== '/api/ping' && req.path !== '/api/get-bot-logs' && req.path !== '/api/disabled-modules') {
             addBotLog(`[API] Received: ${req.method} ${req.path}`);
         }
         next();
@@ -203,6 +203,15 @@ export function startApi(client: Client) {
             res.json(status);
         } catch (error) {
             res.status(500).json({ error: 'Failed to fetch global AI status.' });
+        }
+    });
+
+    app.get('/api/disabled-modules', (req, res) => {
+        try {
+            const status = getDisabledModules();
+            res.json(status);
+        } catch (error) {
+            res.status(500).json({ error: 'Failed to fetch disabled modules status.' });
         }
     });
 
