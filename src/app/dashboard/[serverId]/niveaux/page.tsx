@@ -318,11 +318,12 @@ export default function LevelingPage() {
                      <CardContent className="space-y-6">
                         <div className="space-y-2">
                             <Label>Salon des annonces de montée de niveau</Label>
-                            <Combobox options={textChannelOptions} value={config.level_up_channel_id || ''} onChange={(val) => handleValueChange('level_up_channel_id', val)} placeholder="Utiliser le salon actuel" />
+                             <p className="text-sm text-muted-foreground">Laissez vide pour désactiver les annonces.</p>
+                            <Combobox options={[{value: '', label: 'Désactivé'}, ...textChannelOptions]} value={config.level_up_channel_id || ''} onChange={(val) => handleValueChange('level_up_channel_id', val)} placeholder="Sélectionner un salon..." />
                         </div>
                         <div className="space-y-2">
                             <Label>Message de montée de niveau</Label>
-                            <p className="text-sm text-muted-foreground">Variables: {'{user}'} (mentionne l'utilisateur), {'{username}'} (nom de l'utilisateur sans mention)</p>
+                            <p className="text-sm text-muted-foreground">Variables: {'{user}'} (mentionne l'utilisateur), {'{username}'} (nom de l'utilisateur sans mention), {'{level}'} (le nouveau niveau).</p>
                             <Textarea defaultValue={config.level_up_message} onBlur={(e) => handleValueChange('level_up_message', e.target.value)} />
                         </div>
                          <div className="flex items-center justify-between">
