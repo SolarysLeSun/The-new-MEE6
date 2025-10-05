@@ -1,5 +1,4 @@
 
-
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -362,6 +361,7 @@ const defaultConfigs: DefaultConfigs = {
         enabled: false,
         welcome_channel_id: null,
         welcome_message: 'Bienvenue sur le serveur, {user} ! 🎉',
+        mention_user_on_levelup: true,
     },
     'tester-commands': {
         enabled: true,
@@ -479,6 +479,8 @@ const defaultConfigs: DefaultConfigs = {
             randomnickname: null,
             pileouface: null,
             slots: null,
+            roll: null,
+            truthordare: null,
         }
     },
     'admin': {
@@ -942,29 +944,33 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
 }
 
 export const updateUserXP = db.transaction((userId: string, guildId: string, xpToGive: number) => {
-    // xpToGive can be negative
+    const currentLevelInfo = getUserLevel(userId, guildId);
+    let newXp = currentLevelInfo.xp + xpToGive;
+    if (newXp < 0) {
+        newXp = 0;
+    }
+    
     const stmt = db.prepare(`
         INSERT INTO user_levels (user_id, guild_id, xp, level)
-        VALUES (?, ?, ?, 0)
-        ON CONFLICT(user_id, guild_id) DO UPDATE SET
-        xp = xp + excluded.xp;
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id, guild_id) DO UPDATE SET xp = ?;
     `);
-    stmt.run(userId, guildId, xpToGive);
+    stmt.run(userId, guildId, newXp, currentLevelInfo.level, newXp);
 
-    // After an update, re-fetch the user's data to check for level-up/down
-    const { xp, level } = getUserLevel(userId, guildId);
-    let requiredXp = calculateRequiredXp(level);
+    // After an update, re-fetch the user's data to check for level-up
+    const updatedLevelInfo = getUserLevel(userId, guildId);
+    let requiredXp = calculateRequiredXp(updatedLevelInfo.level);
     
-    if (xp >= requiredXp) {
-        let newLevel = level;
-        let currentXpForLeveling = xp;
+    if (updatedLevelInfo.xp >= requiredXp) {
+        let newLevel = updatedLevelInfo.level;
+        let currentXpForLeveling = updatedLevelInfo.xp;
         while (currentXpForLeveling >= requiredXp) {
             currentXpForLeveling -= requiredXp;
             newLevel++;
             requiredXp = calculateRequiredXp(newLevel);
         }
         
-        if (newLevel > level) {
+        if (newLevel > updatedLevelInfo.level) {
             const updateLevelStmt = db.prepare('UPDATE user_levels SET level = ? WHERE user_id = ? AND guild_id = ?');
             updateLevelStmt.run(newLevel, userId, guildId);
             

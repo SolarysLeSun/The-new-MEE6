@@ -31,6 +31,8 @@ const funCommands = [
     { name: '/reactbomb', key: 'reactbomb', description: 'Bombarde un message de réactions aléatoires.' },
     { name: '/react', key: 'react', description: 'Réagit à un message avec un emoji spécifique.' },
     { name: '/randomnickname', key: 'randomnickname', description: 'Donne un surnom aléatoire à un ou plusieurs utilisateurs.' },
+    { name: '/roll', key: 'roll', description: 'Lance un dé avec un nombre de faces spécifié.' },
+    { name: '/truthordare', key: 'truthordare', description: 'Joue à Action ou Vérité avec l\'IA.' },
 ];
 
 function PageSkeleton() {
