@@ -1,8 +1,9 @@
 
+
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes } from 'discord.js';
-import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getDisabledModules } from '@/lib/db';
+import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getDisabledModules, getWheelsForGuild, updateWheels } from '@/lib/db';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { updateGuildCommands } from './handlers/commandHandler';
@@ -337,13 +338,13 @@ export function startApi(client: Client) {
     });
 
     app.post('/api/redeem-key', async (req, res) => {
-        const { guildId, key } = req.body;
-        if (!guildId || !key) {
-            return res.status(400).json({ error: 'Guild ID and key are required.' });
+        const { guildId, key, userId } = req.body;
+        if (!guildId || !key || !userId) {
+            return res.status(400).json({ error: 'Guild ID, key and user ID are required.' });
         }
 
         try {
-            const result = redeemPremiumKey(key, guildId);
+            const result = redeemPremiumKey(key, guildId, userId);
             if (result.success) {
                 res.status(200).json(result);
             } else {
@@ -534,10 +535,51 @@ export function startApi(client: Client) {
         }
     });
 
+    // --- Custom Wheels API ---
+    app.get('/api/wheels/:guildId', async (req, res) => {
+        const { guildId } = req.params;
+        try {
+            const wheels = getWheelsForGuild(guildId);
+            res.status(200).json(wheels);
+        } catch (error) {
+            console.error(`[API] Error fetching wheels for guild ${guildId}:`, error);
+            res.status(500).json({ error: 'Failed to fetch wheels.' });
+        }
+    });
+
+    app.post('/api/wheels/:guildId', async (req, res) => {
+        const { guildId } = req.params;
+        const wheels = req.body;
+        if (!Array.isArray(wheels)) {
+            return res.status(400).json({ error: 'Wheels data must be an array.' });
+        }
+        try {
+            updateWheels(guildId, wheels);
+            res.status(200).json({ success: true, message: 'Wheels updated successfully.' });
+        } catch (error) {
+            console.error(`[API] Error updating wheels for guild ${guildId}:`, error);
+            res.status(500).json({ error: 'Failed to update wheels.' });
+        }
+    });
+
+    // --- Bot Restart API ---
+    app.post('/api/restart-bot', (req, res) => {
+        const { password } = req.body;
+        // The password "cresus" is hardcoded as requested. 
+        // In a real-world scenario, this should be an environment variable.
+        if (password === 'cresus') {
+            addBotLog('[System] Restart requested from web panel.');
+            res.status(200).json({ success: true, message: 'Restart command sent.' });
+            // The process manager (like PM2) will handle the actual restart.
+            setTimeout(() => process.exit(0), 1000); 
+        } else {
+            addBotLog('[System] Failed restart attempt from web panel (wrong password).');
+            res.status(401).json({ success: false, error: 'Invalid password.' });
+        }
+    });
+
 
     app.listen(API_PORT, () => {
         addBotLog(`[API] Internal API server listening on port ${API_PORT}`);
     });
 }
-
-  
