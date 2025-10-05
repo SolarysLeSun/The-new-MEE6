@@ -198,7 +198,7 @@ async function handleBotSuggestionModal(interaction: ModalSubmitInteraction) {
 }
 
 async function handleContentModificationModal(interaction: ModalSubmitInteraction) {
-    if (!interaction.guild || !interaction.message || !interaction.message.embeds[0]) return;
+    if (!interaction.message || !interaction.message.embeds[0]) return;
     
     await interaction.deferReply({ ephemeral: true });
 
@@ -210,7 +210,6 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
 
     if (footerText.includes('admin_announce') || footerText.includes('announce_channel')) {
         // --- Handle Announcement Modification ---
-        const config = await getServerConfig(interaction.guild.id, 'announcements');
         try {
             const result = await announcementFlow({
                 rawText: originalEmbed.description || '',
@@ -230,6 +229,10 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
 
     } else {
          // --- Handle IA Content (Rule/Announcement) Modification ---
+         if (!interaction.guild) {
+             await interaction.editReply({ content: 'Cette action ne peut pas être effectuée en messages privés.', ephemeral: true });
+             return;
+         }
         const title = originalEmbed.title || '';
         const type = title.includes('Règle') ? 'rule' : 'announcement';
         const topic = title.replace(/^(📝 Règle : |📢 Annonce : )/i, '').replace(/"/g, '');
