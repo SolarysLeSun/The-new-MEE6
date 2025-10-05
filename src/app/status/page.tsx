@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PanelAlert } from "@/components/panel-alert";
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3630/api';
 const HIGH_PING_THRESHOLD = 500; // ms
@@ -113,13 +114,13 @@ export default function StatusPage() {
 
     const prevServicesRef = useRef<StatusItem[]>(services);
 
-    const logEvent = (message: string) => {
+    const logEvent = useCallback((message: string) => {
         setEventLog(prev => {
             const fullMessage = `${message}`;
             if (prev.includes(fullMessage)) return prev;
             return [fullMessage, ...prev].slice(0, 50);
         });
-    };
+    }, []);
 
     const checkStatuses = useCallback(async () => {
         let botApiStatus: ServiceStatus = 'loading';
@@ -141,7 +142,7 @@ export default function StatusPage() {
             botApiStatus = 'outage';
         }
     
-        if (botApiStatus === 'operational' || botApiStatus === 'degraded') {
+        if (botApiStatus !== 'outage') {
             try {
                 const aiStatusResponse = await fetch(`${API_URL}/global-ai-status`);
                 if (aiStatusResponse.ok) {
@@ -165,7 +166,6 @@ export default function StatusPage() {
              }
         } catch (error) {
             // Don't change the main status if only logs fail
-            logEvent("Erreur: Impossible de récupérer les logs du bot.");
         }
 
         const newServices: StatusItem[] = [
@@ -173,14 +173,6 @@ export default function StatusPage() {
             { name: "API & Bot Discord", status: botApiStatus, description: "Le cœur du bot qui interagit avec Discord.", ping: botApiPing },
             { name: "Services Google AI", status: googleAiStatus, description: "Les fonctionnalités d'intelligence artificielle." },
         ];
-        
-        newServices.forEach(newService => {
-            const oldService = prevServicesRef.current.find(s => s.name === newService.name);
-            if (oldService && oldService.status !== newService.status) {
-                logEvent(`Le statut de "${newService.name}" est passé à : ${getStatusText(newService.status)}.`);
-            }
-        });
-        prevServicesRef.current = newServices;
         
         setServices(newServices);
         
@@ -190,9 +182,10 @@ export default function StatusPage() {
                 return acc;
             }, {} as Record<string, ServiceStatus>);
             const newEntry = { time: new Date(), statuses: newStatuses };
-            // Add entry only if it's different from the last one or if it's the first one
-            if(prev.length === 0 || JSON.stringify(prev[0].statuses) !== JSON.stringify(newStatuses)) {
-                 return [newEntry, ...prev].slice(0, 24);
+            
+            const lastEntry = prev[0];
+            if (!lastEntry || JSON.stringify(lastEntry.statuses) !== JSON.stringify(newStatuses)) {
+                return [newEntry, ...prev].slice(0, 24);
             }
             return prev;
         });
@@ -201,7 +194,6 @@ export default function StatusPage() {
     }, []);
 
     useEffect(() => {
-        logEvent("Initialisation de la page de statut.");
         checkStatuses();
         const interval = setInterval(checkStatuses, 60 * 1000); // Re-check every minute
         return () => clearInterval(interval);
@@ -230,6 +222,7 @@ export default function StatusPage() {
       <AppHeader />
 
       <main className="relative z-10 container mx-auto px-4 py-24 sm:py-32">
+        <PanelAlert />
         <Card className="max-w-4xl mx-auto bg-card/60 backdrop-blur-sm border-white/10">
           <CardHeader>
             <CardTitle className="text-4xl font-bold text-center">
