@@ -52,7 +52,7 @@ export function CommandMenu() {
         </kbd>
       </Button>
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Rechercher un module..." />
+        <CommandInput placeholder="Rechercher une fonctionnalité ou un module..." />
         <CommandList>
           <CommandEmpty>Aucun résultat trouvé.</CommandEmpty>
           {serverId && navCategories.map((category) => (
@@ -60,7 +60,7 @@ export function CommandMenu() {
               {category.items.map((item) => (
                 <CommandItem
                   key={item.href}
-                  value={item.label}
+                  value={`${item.label} ${item.keywords?.join(' ') || ''}`}
                   onSelect={() => {
                     runCommand(() => router.push(`/dashboard/${serverId}/${item.href}`));
                   }}

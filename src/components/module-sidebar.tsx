@@ -62,80 +62,80 @@ export const navCategories = [
     {
         name: 'Général',
         items: [
-            { href: 'commandes-generales', label: 'Commandes Générales', icon: Wrench },
-            { href: 'identite', label: 'Identité du Bot', icon: UserSquare },
-            { href: 'annonces', label: 'Annonces', icon: Megaphone },
-            { href: 'assistant-communautaire', label: 'Assistant Communautaire', icon: MessageSquare, isPremium: true },
-            { href: 'suggestions', label: 'Suggestions', icon: Lightbulb },
-            { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages },
-            { href: 'niveaux', label: 'Niveaux & XP', icon: Award },
+            { href: 'commandes-generales', label: 'Commandes Générales', icon: Wrench, keywords: ['invite', 'ping', 'traduire', 'say', 'level', 'topxp'] },
+            { href: 'identite', label: 'Identité du Bot', icon: UserSquare, keywords: ['surnom', 'nom', 'avatar', 'profil'] },
+            { href: 'annonces', label: 'Annonces', icon: Megaphone, keywords: ['announce', 'publication', 'message global'] },
+            { href: 'assistant-communautaire', label: 'Assistant Communautaire', icon: MessageSquare, isPremium: true, keywords: ['faq', 'questions', 'réponses', 'aide', 'ia'] },
+            { href: 'suggestions', label: 'Suggestions', icon: Lightbulb, keywords: ['idée', 'boîte à idées', 'suggérer'] },
+            { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages, keywords: ['translate', 'langue', 'international'] },
+            { href: 'niveaux', label: 'Niveaux & XP', icon: Award, keywords: ['level', 'xp', 'expérience', 'classement', 'topxp', 'rewards', 'récompenses'] },
         ]
     },
     {
         name: 'Modération',
         items: [
-            { href: 'moderation', label: 'Bans & Kicks', icon: Hammer },
-            { href: 'auto-moderation', label: 'Auto-Modération', icon: Bot },
-            { href: 'lock', label: 'Lock/Unlock', icon: Lock },
-            { href: 'logs', label: 'Logs', icon: FileClock },
+            { href: 'moderation', label: 'Bans & Kicks', icon: Hammer, keywords: ['ban', 'kick', 'unban', 'mute', 'warn', 'sanction', 'expulser', 'bannir'] },
+            { href: 'auto-moderation', label: 'Auto-Modération', icon: Bot, keywords: ['filtre', 'mots-clés', 'automod', 'censure'] },
+            { href: 'lock', label: 'Lock/Unlock', icon: Lock, keywords: ['verrouiller', 'déverrouiller', 'salon'] },
+            { href: 'logs', label: 'Logs', icon: FileClock, keywords: ['journal', 'événements', 'audit'] },
         ]
     },
     {
         name: 'Administration',
         items: [
-            { href: 'administration', label: 'Outils Admin', icon: Shield }
+            { href: 'administration', label: 'Outils Admin', icon: Shield, keywords: ['purge', 'ghostping', 'clone', 'maintenance'] }
         ]
     },
     {
         name: 'Sécurité',
         items: [
-            { href: 'anti-bot', label: 'Anti-Bot', icon: ShieldCheck },
-            { href: 'anti-raid', label: 'Anti-Raid', icon: ShieldAlert },
-            { href: 'scanner-liens-ia', label: 'Scanner de Liens IA', icon: ScanSearch, isPremium: true },
-            { href: 'filtre-image-ia', label: 'Filtre d\'Image IA', icon: Camera, isPremium: true },
-            { href: 'captcha', label: 'Captcha', icon: Fingerprint, isPremium: true },
-            { href: 'backup', label: 'Backup', icon: DatabaseBackup },
-            { href: 'securite-avancee', label: 'Sécurité Avancée', icon: ShieldAlert },
+            { href: 'anti-bot', label: 'Anti-Bot', icon: ShieldCheck, keywords: ['protection', 'sécurité', 'robot'] },
+            { href: 'anti-raid', label: 'Anti-Raid', icon: ShieldAlert, keywords: ['protection', 'arrivée massive', 'sécurité'] },
+            { href: 'scanner-liens-ia', label: 'Scanner de Liens IA', icon: ScanSearch, isPremium: true, keywords: ['sécurité', 'url', 'phishing', 'scam', 'ia'] },
+            { href: 'filtre-image-ia', label: 'Filtre d\'Image IA', icon: Camera, isPremium: true, keywords: ['sécurité', 'nsfw', 'ia', 'image'] },
+            { href: 'captcha', label: 'Captcha', icon: Fingerprint, isPremium: true, keywords: ['vérification', 'sécurité', 'nouveau membre'] },
+            { href: 'backup', label: 'Backup', icon: DatabaseBackup, keywords: ['sauvegarde', 'restauration', 'export', 'import'] },
+            { href: 'securite-avancee', label: 'Sécurité Avancée', icon: ShieldAlert, keywords: ['alerte', 'compte suspect', 'nom similaire'] },
         ]
     },
     {
         name: 'Automatisation',
         items: [
-            { href: 'commandes-personnalisees', label: 'Commandes Personnalisées', icon: Code, isPremium: true, isDisabled: true },
-            { href: 'salons-prives', label: 'Salons Privés', icon: Ticket },
-            { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, isPremium: true },
-            { href: 'accueil-integration', label: 'Accueil & Intégration', icon: UserPlus },
+            { href: 'commandes-personnalisees', label: 'Commandes Personnalisées', icon: Code, isPremium: true, isDisabled: true, keywords: ['custom command', 'créer commande'] },
+            { href: 'salons-prives', label: 'Salons Privés', icon: Ticket, keywords: ['ticket', 'support', 'salon privé'] },
+            { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, isPremium: true, keywords: ['event', 'planning', 'organisation'] },
+            { href: 'accueil-integration', label: 'Accueil & Intégration', icon: UserPlus, keywords: ['welcome', 'bienvenue', 'autorole', 'questionnaire'] },
         ]
     },
      {
         name: 'Divertissement',
         items: [
-            { href: 'commandes-fun', label: 'Commandes Fun', icon: Dice5 },
+            { href: 'commandes-fun', label: 'Commandes Fun', icon: Dice5, keywords: ['renameall', 'mutemass', 'reactbomb', 'randomnickname', 'fun'] },
         ]
     },
     {
         name: 'Vocaux',
         items: [
-             { href: 'controle-manuel', label: 'Contrôle manuel', icon: Voicemail },
-             { href: 'vocaux-ia', label: 'IA Vocaux', icon: Mic, isPremium: true },
-             { href: 'webcam-control', label: 'Contrôle Vidéo', icon: Camera },
+             { href: 'controle-manuel', label: 'Contrôle manuel', icon: Voicemail, keywords: ['join', 'leave', 'parle', 'vocal', 'tts'] },
+             { href: 'vocaux-ia', label: 'IA Vocaux', icon: Mic, isPremium: true, keywords: ['smart voice', 'nom dynamique', 'vocal ia'] },
+             { href: 'webcam-control', label: 'Contrôle Vidéo', icon: Camera, keywords: ['webcam', 'stream', 'partage écran'] },
         ]
     },
      {
         name: 'Outils IA',
         items: [
-            { href: 'constructeur-serveur-ia', label: 'Server Builder IA', icon: ToyBrick, isPremium: true },
-            { href: 'assistant-moderation-ia', label: 'Assistant Modération IA', icon: Sparkles, isPremium: true },
-            { href: 'createur-contenu-ia', label: 'Créateur de Contenu IA', icon: Palette, isPremium: true },
-            { href: 'agent-conversationnel', label: 'Agent Conversationnel', icon: MessageCircleQuestion, isPremium: true },
-            { href: 'personnages-ia', label: 'Personnages IA', icon: Users, isPremium: true, isDisabled: true },
-            { href: 'commandes-testeurs', label: 'Commandes Testeurs', icon: TestTubeDiagonal, isPremium: true },
+            { href: 'constructeur-serveur-ia', label: 'Server Builder IA', icon: ToyBrick, isPremium: true, keywords: ['iacreateserv', 'créer serveur', 'template', 'modèle'] },
+            { href: 'assistant-moderation-ia', label: 'Assistant Modération IA', icon: Sparkles, isPremium: true, keywords: ['ia', 'toxicité', 'modération auto'] },
+            { href: 'createur-contenu-ia', label: 'Créateur de Contenu IA', icon: Palette, isPremium: true, keywords: ['iacontent', 'générer image', 'générer annonce', 'ia'] },
+            { href: 'agent-conversationnel', label: 'Agent Conversationnel', icon: MessageCircleQuestion, isPremium: true, keywords: ['ia', 'chatbot', 'personnalité', 'conversation'] },
+            { href: 'personnages-ia', label: 'Personnages IA', icon: Users, isPremium: true, isDisabled: true, keywords: ['ia', 'roleplay', 'personna'] },
+            { href: 'commandes-testeurs', label: 'Commandes Testeurs', icon: TestTubeDiagonal, isPremium: true, keywords: ['mp', 'webhook', 'tester', 'givepremium', 'genpremium'] },
         ]
     },
     {
         name: 'Outils',
         items: [
-            { href: 'transcript-viewer', label: 'Lecteur de Transcriptions', icon: FileText },
+            { href: 'transcript-viewer', label: 'Lecteur de Transcriptions', icon: FileText, keywords: ['save', 'log', 'historique', 'html'] },
         ]
     }
 ];
