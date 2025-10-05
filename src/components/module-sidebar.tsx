@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -45,6 +44,7 @@ import {
   Gamepad,
   History,
   ShieldPlus,
+  Heart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -71,6 +71,7 @@ export const navCategories = [
             { href: 'suggestions', label: 'Suggestions', icon: Lightbulb, keywords: ['idée', 'boîte à idées', 'suggérer'] },
             { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages, keywords: ['translate', 'langue', 'international'] },
             { href: 'niveaux', label: 'Niveaux & XP', icon: Award, keywords: ['level', 'xp', 'expérience', 'classement', 'topxp', 'rewards', 'récompenses'] },
+            { href: 'affinites', label: 'Affinités', icon: Heart, keywords: ['relations', 'amitié', 'duo', 'amis', 'points'] },
         ]
     },
     {
