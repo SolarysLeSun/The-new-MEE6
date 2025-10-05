@@ -117,6 +117,27 @@ const upgradeSchema = () => {
         `);
         addBotLog('[Database] Table "delegated_permissions" is ready.');
 
+        // Tables for referral system
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS referrals (
+                guild_id TEXT PRIMARY KEY,
+                referral_code TEXT UNIQUE NOT NULL
+            );
+        `);
+        addBotLog('[Database] Table "referrals" is ready.');
+
+        db.exec(`
+             CREATE TABLE IF NOT EXISTS referral_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                referrer_guild_id TEXT NOT NULL,
+                referred_guild_id TEXT NOT NULL,
+                referred_owner_id TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(referrer_guild_id, referred_guild_id)
+            );
+        `);
+        addBotLog('[Database] Table "referral_history" is ready.');
+
 
     } catch (error) {
         addBotLog(`[Database Error] Failed to update schema: ${error}`);
@@ -469,6 +490,7 @@ const defaultConfigs: DefaultConfigs = {
         command_permissions: {
             save: null,
             patchnote: null,
+            referral: null,
         }
     },
 };
@@ -982,6 +1004,48 @@ export function getGuildLeaderboard(guildId: string, limit: number = 10): (UserL
         ...row,
         requiredXp: calculateRequiredXp(row.level)
     }));
+}
+
+
+// --- Referral System ---
+
+export const getOrCreateReferralCode = db.transaction((guildId: string): string => {
+    let stmt = db.prepare('SELECT referral_code FROM referrals WHERE guild_id = ?');
+    let row = stmt.get(guildId) as { referral_code: string } | undefined;
+
+    if (row) {
+        return row.referral_code;
+    } else {
+        const newCode = `MARCUS-${randomBytes(4).toString('hex').toUpperCase()}`;
+        const insertStmt = db.prepare('INSERT INTO referrals (guild_id, referral_code) VALUES (?, ?)');
+        insertStmt.run(guildId, newCode);
+        return newCode;
+    }
+});
+
+export function getGuildIdByReferralCode(code: string): string | null {
+    const stmt = db.prepare('SELECT guild_id FROM referrals WHERE referral_code = ?');
+    const row = stmt.get(code) as { guild_id: string } | undefined;
+    return row?.guild_id || null;
+}
+
+export function hasBeenReferred(guildId: string): boolean {
+    const stmt = db.prepare('SELECT 1 FROM referral_history WHERE referred_guild_id = ?');
+    return !!stmt.get(guildId);
+}
+
+export function recordReferral(referrerGuildId: string, referredGuildId: string, referredOwnerId: string): void {
+    const stmt = db.prepare(`
+        INSERT INTO referral_history (referrer_guild_id, referred_guild_id, referred_owner_id)
+        VALUES (?, ?, ?)
+    `);
+    stmt.run(referrerGuildId, referredGuildId, referredOwnerId);
+}
+
+export function getUniqueReferralCount(referrerGuildId: string): number {
+    const stmt = db.prepare('SELECT COUNT(DISTINCT referred_owner_id) as count FROM referral_history WHERE referrer_guild_id = ?');
+    const result = stmt.get(referrerGuildId) as { count: number };
+    return result.count;
 }
 
     
