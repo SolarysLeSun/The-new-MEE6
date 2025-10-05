@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3630/api';
+const HIGH_PING_THRESHOLD = 500; // ms
 
 type ServiceStatus = 'operational' | 'degraded' | 'outage' | 'loading' | 'disabled';
 
@@ -21,6 +22,7 @@ interface StatusItem {
     name: string;
     status: ServiceStatus;
     description: string;
+    ping?: number | null;
 }
 
 interface StatusHistoryEntry {
@@ -58,28 +60,37 @@ const getStatusText = (status: ServiceStatus) => {
 };
 
 const StatusHistoryBar = ({ history, serviceName }: { history: StatusHistoryEntry[], serviceName: string }) => {
+    const bars = Array.from({ length: 24 }).map((_, i) => {
+        const entry = history[i];
+        const status = entry ? (entry.statuses[serviceName] || 'loading') : 'loading';
+        return { status, time: entry ? entry.time : null };
+    }).reverse();
+
     return (
         <TooltipProvider>
             <div className="flex w-full h-8 rounded-lg bg-muted overflow-hidden">
-                {history.map((entry, index) => {
-                    const status = entry.statuses[serviceName] || 'loading';
+                {bars.map((bar, index) => {
                     const statusColor = {
                         operational: 'bg-green-500',
                         degraded: 'bg-yellow-500',
                         disabled: 'bg-yellow-500',
                         outage: 'bg-destructive',
                         loading: 'bg-muted-foreground',
-                    }[status];
+                    }[bar.status];
                     return (
                          <Tooltip key={index}>
                             <TooltipTrigger asChild>
                                 <div
                                     className={cn("flex-1 h-full transition-colors duration-300", statusColor)}
-                                    style={{ flexBasis: `${100 / history.length}%`}}
+                                    style={{ flexBasis: `${100 / 24}%`}}
                                 />
                             </TooltipTrigger>
                              <TooltipContent>
-                                <p>{entry.time.toLocaleTimeString('fr-FR')}: {getStatusText(status)}</p>
+                                {bar.time ? (
+                                    <p>{bar.time.toLocaleTimeString('fr-FR')}: {getStatusText(bar.status)}</p>
+                                ) : (
+                                    <p>Pas de données</p>
+                                )}
                             </TooltipContent>
                         </Tooltip>
                     );
@@ -88,6 +99,7 @@ const StatusHistoryBar = ({ history, serviceName }: { history: StatusHistoryEntr
         </TooltipProvider>
     );
 };
+
 
 export default function StatusPage() {
     const [services, setServices] = useState<StatusItem[]>([
@@ -102,18 +114,26 @@ export default function StatusPage() {
     const prevServicesRef = useRef<StatusItem[]>(services);
 
     const logEvent = (message: string) => {
-        const time = new Date().toLocaleTimeString('fr-FR');
-        setEventLog(prev => [`[${time}] ${message}`, ...prev].slice(0, 15));
+        setEventLog(prev => {
+            const fullMessage = `${message}`;
+            if (prev.includes(fullMessage)) return prev;
+            return [fullMessage, ...prev].slice(0, 50);
+        });
     };
 
     const checkStatuses = useCallback(async () => {
         let botApiStatus: ServiceStatus = 'loading';
         let googleAiStatus: ServiceStatus = 'loading';
+        let botApiPing: number | null = null;
     
         try {
+            const startTime = Date.now();
             const botApiResponse = await fetch(`${API_URL}/ping`);
+            const endTime = Date.now();
+            botApiPing = endTime - startTime;
+
             if (botApiResponse.ok && (await botApiResponse.json()).status === 'ok') {
-                botApiStatus = 'operational';
+                botApiStatus = botApiPing > HIGH_PING_THRESHOLD ? 'degraded' : 'operational';
             } else {
                 throw new Error('API response not OK');
             }
@@ -121,7 +141,7 @@ export default function StatusPage() {
             botApiStatus = 'outage';
         }
     
-        if (botApiStatus === 'operational') {
+        if (botApiStatus === 'operational' || botApiStatus === 'degraded') {
             try {
                 const aiStatusResponse = await fetch(`${API_URL}/global-ai-status`);
                 if (aiStatusResponse.ok) {
@@ -137,17 +157,27 @@ export default function StatusPage() {
             googleAiStatus = 'outage'; 
         }
 
+        try {
+             const logsResponse = await fetch(`${API_URL}/get-bot-logs`);
+             if (logsResponse.ok) {
+                 const { logs } = await logsResponse.json();
+                 setEventLog(logs);
+             }
+        } catch (error) {
+            // Don't change the main status if only logs fail
+            logEvent("Erreur: Impossible de récupérer les logs du bot.");
+        }
+
         const newServices: StatusItem[] = [
             { name: "Panel Web", status: 'operational', description: "L'interface de configuration est accessible." },
-            { name: "API & Bot Discord", status: botApiStatus, description: "Le cœur du bot qui interagit avec Discord." },
+            { name: "API & Bot Discord", status: botApiStatus, description: "Le cœur du bot qui interagit avec Discord.", ping: botApiPing },
             { name: "Services Google AI", status: googleAiStatus, description: "Les fonctionnalités d'intelligence artificielle." },
         ];
         
-        // Compare with previous state to log changes
         newServices.forEach(newService => {
             const oldService = prevServicesRef.current.find(s => s.name === newService.name);
             if (oldService && oldService.status !== newService.status) {
-                logEvent(`Le service "${newService.name}" est passé à l'état : ${getStatusText(newService.status)}.`);
+                logEvent(`Le statut de "${newService.name}" est passé à : ${getStatusText(newService.status)}.`);
             }
         });
         prevServicesRef.current = newServices;
@@ -160,7 +190,11 @@ export default function StatusPage() {
                 return acc;
             }, {} as Record<string, ServiceStatus>);
             const newEntry = { time: new Date(), statuses: newStatuses };
-            return [newEntry, ...prev].slice(0, 24);
+            // Add entry only if it's different from the last one or if it's the first one
+            if(prev.length === 0 || JSON.stringify(prev[0].statuses) !== JSON.stringify(newStatuses)) {
+                 return [newEntry, ...prev].slice(0, 24);
+            }
+            return prev;
         });
 
         setLastChecked(new Date());
@@ -169,7 +203,7 @@ export default function StatusPage() {
     useEffect(() => {
         logEvent("Initialisation de la page de statut.");
         checkStatuses();
-        const interval = setInterval(checkStatuses, 3600000); // Re-check every hour
+        const interval = setInterval(checkStatuses, 60 * 1000); // Re-check every minute
         return () => clearInterval(interval);
     }, [checkStatuses]);
 
@@ -210,7 +244,7 @@ export default function StatusPage() {
                 )}>
                    {overallStatus === 'operational' && <CheckCircle/>}
                    {overallStatus === 'outage' && <ServerCrash/>}
-                   {overallStatus === 'degraded' && <AlertTriangle/>}
+                   {(overallStatus === 'degraded' || overallStatus === 'disabled') && <AlertTriangle/>}
                    {overallStatus === 'loading' && <Loader2 className="animate-spin" />}
                    {getStatusText(overallStatus)}
                 </div>
@@ -235,10 +269,11 @@ export default function StatusPage() {
                          )}>
                             <StatusIndicator status={service.status} />
                            {getStatusText(service.status)}
+                           {service.ping !== undefined && service.ping !== null && <span className="font-mono">({service.ping}ms)</span>}
                         </div>
                     </div>
                      <div className="pt-2">
-                        <Label className="text-xs text-muted-foreground pb-2">Historique des dernières 24 heures</Label>
+                        <Label className="text-xs text-muted-foreground pb-2">Historique des dernières 24 heures (par heure)</Label>
                         <StatusHistoryBar history={statusHistory} serviceName={service.name} />
                     </div>
                  </div>

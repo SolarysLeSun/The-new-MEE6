@@ -12,6 +12,20 @@ import { randomBytes } from 'crypto';
 
 const API_PORT = process.env.BOT_API_PORT || 3630; // toujour le port 3630 !!
 
+// --- In-Memory Logger ---
+const botLogs: string[] = [];
+const MAX_LOGS = 50;
+
+export function addBotLog(message: string) {
+    const timestamp = new Date().toLocaleTimeString('fr-FR');
+    const logMessage = `[${timestamp}] ${message}`;
+    botLogs.unshift(logMessage); // Add to the beginning
+    if (botLogs.length > MAX_LOGS) {
+        botLogs.pop(); // Remove the oldest
+    }
+}
+
+
 // --- Panel User Authentication ---
 
 interface AuthToken {
@@ -34,7 +48,7 @@ export function generateAuthToken(userId: string, guildId: string): string {
         guildId,
         expires: Date.now() + TOKEN_EXPIRATION_MS,
     });
-    console.log(`[Auth] Generated token for user ${userId} on guild ${guildId}`);
+    addBotLog(`[Auth] Generated token for user ${userId} on guild ${guildId}`);
     return token;
 }
 
@@ -46,7 +60,7 @@ function verifyAndConsumeAuthToken(token: string): { guildId: string; userId: st
     const tokenData = activeTokens.get(token);
 
     if (!tokenData) {
-        console.warn(`[Auth] Verification failed: Token not found.`);
+        addBotLog(`[Auth] Verification failed: Token not found.`);
         return null;
     }
 
@@ -54,11 +68,11 @@ function verifyAndConsumeAuthToken(token: string): { guildId: string; userId: st
     activeTokens.delete(token);
 
     if (Date.now() > tokenData.expires) {
-        console.warn(`[Auth] Verification failed: Token expired for user ${tokenData.userId}.`);
+        addBotLog(`[Auth] Verification failed: Token expired for user ${tokenData.userId}.`);
         return null;
     }
     
-    console.log(`[Auth] Successfully verified token for user ${tokenData.userId} on guild ${tokenData.guildId}.`);
+    addBotLog(`[Auth] Successfully verified token for user ${tokenData.userId} on guild ${tokenData.guildId}.`);
     return { guildId: tokenData.guildId, userId: tokenData.userId };
 }
 
@@ -68,7 +82,7 @@ setInterval(() => {
     for (const [token, tokenData] of activeTokens.entries()) {
         if (now > tokenData.expires) {
             activeTokens.delete(token);
-            console.log(`[Auth] Cleaned up expired token for user ${tokenData.userId}.`);
+            addBotLog(`[Auth] Cleaned up expired token for user ${tokenData.userId}.`);
         }
     }
 }, 60 * 1000); // Run every minute
@@ -88,7 +102,10 @@ export function startApi(client: Client) {
     app.use(express.json({ limit: '50mb' }));
 
     app.use((req, res, next) => {
-        console.log(`[Bot API] Requête reçue : ${req.method} ${req.path}`);
+        // Do not log frequent requests from the status page
+        if (req.path !== '/api/ping' && req.path !== '/api/get-bot-logs') {
+            addBotLog(`[API] Received: ${req.method} ${req.path}`);
+        }
         next();
     });
     
@@ -105,6 +122,10 @@ export function startApi(client: Client) {
 
     app.get('/api/ping', (req, res) => {
         res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+    });
+
+    app.get('/api/get-bot-logs', (req, res) => {
+        res.status(200).json({ logs: botLogs });
     });
 
     app.get('/api/get-panel-message', (req, res) => {
@@ -141,7 +162,7 @@ export function startApi(client: Client) {
         }
 
         try {
-            console.log(`[Bot API] Mise à jour de la config pour le serveur ${guildId}, module ${module}`);
+            addBotLog(`[Config] Updating config for guild ${guildId}, module ${module}`);
             await updateServerConfig(guildId, module as any, configData);
 
             updateGuildCommands(guildId, client).catch(error => {
@@ -484,7 +505,7 @@ export function startApi(client: Client) {
 
 
     app.listen(API_PORT, () => {
-        console.log(`[Bot API] Le serveur API interne écoute sur le port ${API_PORT}`);
+        addBotLog(`[API] Internal API server listening on port ${API_PORT}`);
     });
 }
 

@@ -7,7 +7,7 @@ import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
 import type { Command, CustomField } from '@/types';
 import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers } from '@/lib/db';
-import { startApi } from './api';
+import { startApi, addBotLog } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
 import { startScheduledSuggestions } from './events/system/scheduledSuggestions';
@@ -27,7 +27,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 initializeDatabase();
 // ---------------------------------
 
-console.log('Bot is starting...');
+addBotLog('Bot is starting...');
 
 const client = new Client({
     intents: [
@@ -84,10 +84,10 @@ const loadEvents = (client: Client) => {
                         } else {
                             client.on(event.name, (...args) => event.execute(...args, client));
                         }
-                        console.log(`[+] Loaded event: ${event.name} from ${path.relative(eventsPath, fullPath)}`);
+                        addBotLog(`[Event] Loaded: ${event.name} from ${path.relative(eventsPath, fullPath)}`);
                      }
                  } catch(e) {
-                    console.error(`[E] Failed to require event at ${fullPath}`, e);
+                    addBotLog(`[Error] Failed to load event at ${fullPath}: ${e}`);
                  }
             }
         }
@@ -99,7 +99,7 @@ loadEvents(client);
 
 
 client.once(Events.ClientReady, async (readyClient) => {
-    console.log(`Ready! Logged in as ${readyClient.user.tag}`);
+    addBotLog(`Ready! Logged in as ${readyClient.user.tag}`);
     
     // Set the bot's presence
     readyClient.user.setPresence({
@@ -456,7 +456,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     }
 
     if (interaction.isButton()) {
-        console.log(`[Interaction] Button clicked: ${interaction.customId}`);
+        addBotLog(`[Interaction] Button clicked: ${interaction.customId} by ${interaction.user.tag}`);
         const { customId } = interaction;
 
         // --- Reminder Button Handler ---
@@ -675,14 +675,14 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     const command = client.commands.get(interaction.commandName);
 
     if (!command) {
-        console.error(`No command matching ${interaction.commandName} was found.`);
+        addBotLog(`[Error] No command matching ${interaction.commandName} was found.`);
         return;
     }
 
     try {
         await command.execute(interaction as ChatInputCommandInteraction);
     } catch (error) {
-        console.error(error);
+        addBotLog(`[Error] Executing command ${interaction.commandName}: ${error}`);
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
         } else {
@@ -705,11 +705,11 @@ if (!process.env.DISCORD_CLIENT_SECRET) {
 
 async function startBot() {
     try {
-        console.log('[Auth] Attempting to log in with bot token...');
+        addBotLog('[Auth] Attempting to log in with bot token...');
         await client.login(token);
-        console.log('[Auth] Bot successfully logged in.');
+        addBotLog('[Auth] Bot successfully logged in.');
     } catch (error) {
-        console.error('Bot failed to start:', error);
+        addBotLog(`[Error] Bot failed to start: ${error}`);
         process.exit(1);
     }
 }
@@ -717,3 +717,4 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
+

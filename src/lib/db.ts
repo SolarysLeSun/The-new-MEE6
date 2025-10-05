@@ -6,6 +6,8 @@ import fs from 'fs';
 import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable } from 'discord.js';
 import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage } from '../types';
 import { randomBytes } from 'crypto';
+import { addBotLog } from '../../bot/api';
+
 
 // Assurez-vous que le répertoire de la base de données existe
 const dbDir = path.resolve(process.cwd(), 'database');
@@ -15,7 +17,7 @@ if (!fs.existsSync(dbDir)) {
 
 const dbPath = path.resolve(dbDir, 'bot.db');
 const db = new Database(dbPath);
-console.log(`[Database] Connecté à la base de données SQLite sur ${dbPath}`);
+addBotLog(`[Database] Connected to SQLite database at ${dbPath}`);
 
 
 // --- Schéma et Migration de la Base de Données ---
@@ -32,7 +34,7 @@ const upgradeSchema = () => {
         `);
         db.exec(`INSERT OR IGNORE INTO global_settings (key, value) VALUES ('ai_disabled', '0');`);
         db.exec(`INSERT OR IGNORE INTO global_settings (key, value) VALUES ('panel_message', NULL);`);
-        console.log('[Database] La table "global_settings" est prête.');
+        addBotLog('[Database] Table "global_settings" is ready.');
 
         db.exec(`
             CREATE TABLE IF NOT EXISTS locked_channels (
@@ -40,7 +42,7 @@ const upgradeSchema = () => {
                 original_permissions TEXT NOT NULL
             );
         `);
-        console.log('[Database] La table "locked_channels" est prête.');
+        addBotLog('[Database] Table "locked_channels" is ready.');
 
 
         db.exec(`
@@ -55,11 +57,11 @@ const upgradeSchema = () => {
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log('[Database] La table "sanction_history" est prête.');
+        addBotLog('[Database] Table "sanction_history" is ready.');
         
         const configColumns = db.pragma('table_info(server_configs)') as any[];
         if (!configColumns.some(col => col.name === 'premium')) {
-            console.log('[Database] Mise à jour du schéma : Ajout de la colonne "premium" à server_configs.');
+            addBotLog('[Database] Schema update: Adding "premium" column to server_configs.');
             db.exec('ALTER TABLE server_configs ADD COLUMN premium BOOLEAN DEFAULT FALSE');
         }
         
@@ -71,7 +73,7 @@ const upgradeSchema = () => {
                 PRIMARY KEY (user_id, guild_id)
             );
         `);
-        console.log('[Database] La table "testers" est prête.');
+        addBotLog('[Database] Table "testers" is ready.');
 
         db.exec(`
             CREATE TABLE IF NOT EXISTS premium_keys (
@@ -87,10 +89,10 @@ const upgradeSchema = () => {
          // Check if expires_at column exists
         const keyColumns = db.pragma('table_info(premium_keys)') as any[];
         if (!keyColumns.some(col => col.name === 'expires_at')) {
-            console.log('[Database] Mise à jour du schéma : Ajout de la colonne "expires_at" à premium_keys.');
+            addBotLog('[Database] Schema update: Adding "expires_at" column to premium_keys.');
             db.exec('ALTER TABLE premium_keys ADD COLUMN expires_at DATETIME');
         }
-        console.log('[Database] La table "premium_keys" est prête.');
+        addBotLog('[Database] Table "premium_keys" is ready.');
 
         db.exec(`
             CREATE TABLE IF NOT EXISTS user_levels (
@@ -102,7 +104,7 @@ const upgradeSchema = () => {
                 PRIMARY KEY (user_id, guild_id)
             );
         `);
-        console.log('[Database] La table "user_levels" est prête.');
+        addBotLog('[Database] Table "user_levels" is ready.');
 
         db.exec(`
             CREATE TABLE IF NOT EXISTS delegated_permissions (
@@ -113,11 +115,11 @@ const upgradeSchema = () => {
                 PRIMARY KEY (user_id, permission_key)
             );
         `);
-        console.log('[Database] La table "delegated_permissions" est prête.');
+        addBotLog('[Database] Table "delegated_permissions" is ready.');
 
 
     } catch (error) {
-        console.error('[Database] Erreur lors de la mise à jour du schéma:', error);
+        addBotLog(`[Database Error] Failed to update schema: ${error}`);
     }
 };
 
@@ -132,7 +134,7 @@ const createConfigTable = () => {
             PRIMARY KEY (guild_id, module)
         );
     `);
-    console.log('[Database] La table "server_configs" est prête.');
+    addBotLog('[Database] Table "server_configs" is ready.');
     upgradeSchema();
 };
 
@@ -473,7 +475,7 @@ const defaultConfigs: DefaultConfigs = {
 
 export function initializeDatabase() {
     createConfigTable();
-    console.log('[Database] Initialisation de la base de données terminée.');
+    addBotLog('[Database] Database initialization complete.');
 }
 
 // --- Global Settings ---
@@ -487,7 +489,7 @@ export function getGlobalAiStatus(): { disabled: boolean; reason: string | null 
             reason: row?.reason || null
         };
     } catch (error) {
-        console.error('[Database] Failed to get global AI status:', error);
+        addBotLog(`[Database Error] Failed to get global AI status: ${error}`);
         return { disabled: false, reason: null };
     }
 }
@@ -496,9 +498,9 @@ export function setGlobalAiStatus(disabled: boolean, reason: string | null) {
     try {
         const stmt = db.prepare("UPDATE global_settings SET value = ?, reason = ? WHERE key = 'ai_disabled'");
         stmt.run(disabled ? '1' : '0', reason);
-        console.log(`[Database] Global AI status set to: ${disabled ? 'DISABLED' : 'ENABLED'}. Reason: ${reason || 'N/A'}`);
+        addBotLog(`[Database] Global AI status set to: ${disabled ? 'DISABLED' : 'ENABLED'}. Reason: ${reason || 'N/A'}`);
     } catch (error) {
-        console.error('[Database] Failed to set global AI status:', error);
+        addBotLog(`[Database Error] Failed to set global AI status: ${error}`);
     }
 }
 
@@ -511,7 +513,7 @@ export function getPanelMessage(): PanelMessage | null {
         }
         return null;
     } catch (error) {
-        console.error('[Database] Failed to get panel message:', error);
+        addBotLog(`[Database Error] Failed to get panel message: ${error}`);
         return null;
     }
 }
@@ -521,9 +523,9 @@ export function setPanelMessage(message: PanelMessage | null) {
         const value = message ? JSON.stringify(message) : null;
         const stmt = db.prepare("UPDATE global_settings SET value = ? WHERE key = 'panel_message'");
         stmt.run(value);
-        console.log(`[Database] Panel message has been ${message ? 'set' : 'cleared'}.`);
+        addBotLog(`[Database] Panel message has been ${message ? 'set' : 'cleared'}.`);
     } catch (error) {
-        console.error('[Database] Failed to set panel message:', error);
+        addBotLog(`[Database Error] Failed to set panel message: ${error}`);
     }
 }
 
@@ -532,7 +534,7 @@ export function setPanelMessage(message: PanelMessage | null) {
 export function getServerConfig(guildId: string, module: Module): ModuleConfig | null {
     // **CORRECTIF AJOUTÉ ICI**
     if (!guildId) {
-        console.error(`[Database] Tentative de récupération de configuration avec un guildId non défini pour le module : ${module}.`);
+        addBotLog(`[Database Error] Attempted to get config with an undefined guildId for module: ${module}.`);
         return defaultConfigs[module] || null;
     }
     try {
@@ -566,7 +568,7 @@ export function getServerConfig(guildId: string, module: Module): ModuleConfig |
             return finalConfig;
         } else {
              // If no config exists for this module, create the default one and return it.
-            console.log(`[Database] Aucune config trouvée pour ${guildId} et le module ${module}. Création de la config par défaut.`);
+            addBotLog(`[Database] No config found for ${guildId} and module ${module}. Creating default.`);
             updateServerConfig(guildId, module, defaultConfig);
             const premiumStatusStmt = db.prepare('SELECT premium FROM server_configs WHERE guild_id = ? LIMIT 1');
             const premiumResult = premiumStatusStmt.get(guildId) as { premium: number } | undefined;
@@ -574,7 +576,7 @@ export function getServerConfig(guildId: string, module: Module): ModuleConfig |
             return defaultConfig;
         }
     } catch (error) {
-        console.error(`[Database] Erreur lors de la récupération de la config pour ${guildId} (module: ${module}):`, error);
+        addBotLog(`[Database Error] Failed to get config for ${guildId} (module: ${module}): ${error}`);
         return defaultConfigs[module] || null;
     }
 }
@@ -582,7 +584,7 @@ export function getServerConfig(guildId: string, module: Module): ModuleConfig |
 export function updateServerConfig(guildId: string, module: Module, configData: ModuleConfig) {
      // **CORRECTIF AJOUTÉ ICI**
     if (!guildId) {
-        console.error(`[Database] Tentative de mise à jour de configuration avec un guildId non défini pour le module : ${module}.`);
+        addBotLog(`[Database Error] Attempted to update config with an undefined guildId for module: ${module}.`);
         return;
     }
     try {
@@ -596,7 +598,7 @@ export function updateServerConfig(guildId: string, module: Module, configData: 
         `);
         stmt.run(guildId, module, configString);
     } catch (error) {
-        console.error(`[Database] Erreur lors de la mise à jour de la config pour ${guildId} (module: ${module}):`, error);
+        addBotLog(`[Database Error] Failed to update config for ${guildId} (module: ${module}): ${error}`);
     }
 }
 
@@ -609,9 +611,9 @@ export function addKnowledgeBaseItem(guildId: string, newItem: KnowledgeBaseItem
         const newConfig = { ...currentConfig, knowledge_base: newKnowledgeBase };
 
         updateServerConfig(guildId, 'conversational-agent', newConfig);
-        console.log(`[Database] Added new knowledge item for guild ${guildId}`);
+        addBotLog(`[Database] Added new knowledge item for guild ${guildId}`);
     } catch (error) {
-        console.error(`[Database] Error adding knowledge item for guild ${guildId}:`, error);
+        addBotLog(`[Database Error] Error adding knowledge item for guild ${guildId}: ${error}`);
     }
 }
 
@@ -622,20 +624,20 @@ export function setupDefaultConfigs(guildId: string) {
     for (const moduleName of Object.keys(defaultConfigs) as Module[]) {
         const existing = stmt.get(guildId, moduleName);
         if (!existing) {
-            console.log(`[Database] Adding default config for module '${moduleName}' for guild ${guildId}`);
+            addBotLog(`[Database] Adding default config for module '${moduleName}' for guild ${guildId}`);
             updateServerConfig(guildId, moduleName, defaultConfigs[moduleName]!);
         }
     }
 }
 
 export async function syncGuilds(client: Client) {
-    console.log('[Database] Synchronisation des serveurs...');
+    addBotLog('[Database] Syncing guilds...');
     const guilds = await client.guilds.fetch();
 
     for (const oauthGuild of guilds.values()) {
         setupDefaultConfigs(oauthGuild.id);
     }
-    console.log('[Database] Synchronisation des serveurs terminée.');
+    addBotLog('[Database] Guild sync complete.');
 }
 
 export function getAllBotServers(): { id: string; name: string; icon: string | null }[] {
@@ -644,7 +646,7 @@ export function getAllBotServers(): { id: string; name: string; icon: string | n
         const rows = stmt.all() as { guild_id: string }[];
         return rows.map(row => ({ id: row.guild_id, name: 'Unknown Server', icon: null }));
     } catch (error) {
-        console.error('[Database] Erreur lors de la récupération de tous les serveurs:', error);
+        addBotLog(`[Database Error] Failed to get all servers: ${error}`);
         return [];
     }
 }
@@ -653,9 +655,9 @@ export function setPremiumStatus(guildId: string, isPremium: boolean) {
     try {
         const stmt = db.prepare(`UPDATE server_configs SET premium = ? WHERE guild_id = ?`);
         stmt.run(isPremium ? 1 : 0, guildId);
-        console.log(`[Database] Statut premium mis à jour à '${isPremium}' pour le serveur ${guildId}.`);
+        addBotLog(`[Database] Premium status updated to '${isPremium}' for guild ${guildId}.`);
     } catch (error) {
-        console.error(`[Database] Erreur lors de la mise à jour du statut premium pour ${guildId}:`, error);
+        addBotLog(`[Database Error] Failed to update premium status for ${guildId}: ${error}`);
     }
 }
 
@@ -668,7 +670,7 @@ export function giveTesterStatus(userId: string, guildId: string, expiresAt: Dat
         `);
         stmt.run(userId, guildId, expiresAt ? expiresAt.toISOString() : null);
     } catch (error) {
-        console.error(`[Database] Erreur lors de l'attribution du statut de testeur à ${userId}:`, error);
+        addBotLog(`[Database Error] Failed to grant tester status to ${userId}: ${error}`);
     }
 }
 
@@ -677,7 +679,7 @@ export function revokeTesterStatus(userId: string, guildId: string) {
         const stmt = db.prepare('DELETE FROM testers WHERE user_id = ? AND guild_id = ?');
         stmt.run(userId, guildId);
     } catch (error) {
-        console.error(`[Database] Erreur lors de la révocation du statut de testeur pour ${userId}:`, error);
+        addBotLog(`[Database Error] Failed to revoke tester status for ${userId}: ${error}`);
     }
 }
 
@@ -702,7 +704,7 @@ export function checkTesterStatus(userId: string, guildId: string): { isTester: 
             return { isTester: false, expires_at: null };
         }
     } catch (error) {
-        console.error(`[Database] Erreur lors de la vérification du statut de testeur pour ${userId}:`, error);
+        addBotLog(`[Database Error] Failed to check tester status for ${userId}: ${error}`);
         return { isTester: false, expires_at: null };
     }
 }
@@ -943,7 +945,7 @@ export const updateUserXP = db.transaction((userId: string, guildId: string, xpT
             const updateLevelStmt = db.prepare('UPDATE user_levels SET level = ? WHERE user_id = ? AND guild_id = ?');
             updateLevelStmt.run(newLevel, userId, guildId);
             
-            console.log(`[Leveling] ${userId} has leveled up to level ${newLevel} in guild ${guildId}!`);
+            addBotLog(`[Leveling] ${userId} has leveled up to level ${newLevel} in guild ${guildId}!`);
             
             if (clientInstance) {
                 clientInstance.users.fetch(userId).then(user => {
