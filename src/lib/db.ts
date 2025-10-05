@@ -133,7 +133,7 @@ const upgradeSchema = () => {
                 referred_guild_id TEXT NOT NULL,
                 referred_owner_id TEXT NOT NULL,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(referrer_guild_id, referred_guild_id)
+                UNIQUE(referrer_guild_id, referred_owner_id)
             );
         `);
         addBotLog('[Database] Table "referral_history" is ready.');
@@ -209,7 +209,7 @@ const defaultConfigs: DefaultConfigs = {
         suggestion_frequency: 'daily',
         suggestion_channel_id: null,
         suggestion_tags: 'film de science-fiction, jeu de stratégie',
-        suggestion_prompt: 'Sois enthousiaste et donne envie de découvrir ta suggestion !',
+        suggestion_prompt: 'Sois toujours très enthousiaste et utilise des emojis.',
     },
     'auto-moderation': {
         enabled: false,
@@ -477,6 +477,8 @@ const defaultConfigs: DefaultConfigs = {
             reactbomb: null,
             react: null,
             randomnickname: null,
+            pileouface: null,
+            slots: null,
         }
     },
     'admin': {
@@ -1045,4 +1047,34 @@ export function getUniqueReferralCount(referrerGuildId: string): number {
     const stmt = db.prepare('SELECT COUNT(DISTINCT referred_owner_id) as count FROM referral_history WHERE referrer_guild_id = ?');
     const result = stmt.get(referrerGuildId) as { count: number };
     return result.count;
+}
+
+export function setModuleDisabled(moduleName: Module, isDisabled: boolean, reason: string | null) {
+    try {
+        const currentData = getDisabledModules();
+        if (isDisabled) {
+            currentData[moduleName] = { disabled: true, reason };
+        } else {
+            delete currentData[moduleName];
+        }
+        const stmt = db.prepare("INSERT OR REPLACE INTO global_settings (key, value) VALUES ('disabled_modules', ?)");
+        stmt.run(JSON.stringify(currentData));
+    } catch (error) {
+        addBotLog(`[Database Error] Failed to set module disabled state: ${error}`);
+    }
+}
+
+export function getDisabledModules(): { [key: string]: { disabled: boolean; reason: string | null } } {
+    try {
+        const stmt = db.prepare("SELECT value FROM global_settings WHERE key = 'disabled_modules'");
+        const row = stmt.get() as { value: string } | undefined;
+        return row && row.value ? JSON.parse(row.value) : {};
+    } catch (error) {
+        addBotLog(`[Database Error] Failed to get disabled modules: ${error}`);
+        return {};
+    }
+}
+
+export function getAllModuleNames(): Module[] {
+    return Object.keys(defaultConfigs) as Module[];
 }

@@ -104,7 +104,7 @@ export const navCategories = [
         items: [
             { href: 'commandes-personnalisees', label: 'Commandes Personnalisées', icon: Code, isPremium: true, isDisabled: true, keywords: ['custom command', 'créer commande'] },
             { href: 'salons-prives', label: 'Salons Privés', icon: Ticket, keywords: ['ticket', 'support', 'salon privé'] },
-            { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, isPremium: true, keywords: ['event', 'planning', 'organisation'] },
+            { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, keywords: ['event', 'planning', 'organisation', 'tournoi', 'concours'] },
             { href: 'accueil-integration', label: 'Accueil & Intégration', icon: UserPlus, keywords: ['welcome', 'bienvenue', 'autorole', 'questionnaire'] },
         ]
     },

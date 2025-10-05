@@ -33,14 +33,14 @@ const EventCreateCommand: Command = {
 
     async execute(interaction: ChatInputCommandInteraction) {
         if (!interaction.guild) {
-            await interaction.reply({ content: 'Cette commande ne peut être utilisée que dans un serveur.', flags: MessageFlags.Ephemeral });
+            await interaction.reply({ content: 'Cette commande ne peut être utilisée que dans un serveur.', ephemeral: true });
             return;
         }
 
         const smartEventsConfig = await getServerConfig(interaction.guild.id, 'smart-events');
 
         if (!smartEventsConfig?.enabled) {
-            await interaction.reply({ content: "Le module d'événements intelligents est désactivé sur ce serveur.", flags: MessageFlags.Ephemeral });
+            await interaction.reply({ content: "Le module d'événements intelligents est désactivé sur ce serveur.", ephemeral: true });
             return;
         }
         
