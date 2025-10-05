@@ -147,6 +147,17 @@ const upgradeSchema = () => {
         `);
         addBotLog('[Database] Table "custom_wheels" is ready.');
 
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS role_persistence (
+                guild_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                roles TEXT NOT NULL,
+                saved_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (guild_id, user_id)
+            );
+        `);
+        addBotLog('[Database] Table "role_persistence" is ready.');
+
 
     } catch (error) {
         addBotLog(`[Database Error] Failed to update schema: ${error}`);
@@ -512,6 +523,11 @@ const defaultConfigs: DefaultConfigs = {
             referral: null,
         }
     },
+     'role-persistence': {
+        enabled: false,
+        premium: true,
+        required_role_id: null,
+    }
 };
 
 export function initializeDatabase() {
@@ -1144,5 +1160,38 @@ export function updateWheels(guildId: string, wheels: CustomWheel[]): void {
     } catch (error) {
         addBotLog(`[Database Error] Failed to update wheels for guild ${guildId}: ${error}`);
         throw error;
+    }
+}
+
+// --- Role Persistence ---
+
+export function saveUserRoles(guildId: string, userId: string, roles: string[]): void {
+    try {
+        const rolesJson = JSON.stringify(roles);
+        const stmt = db.prepare(`
+            INSERT INTO role_persistence (guild_id, user_id, roles)
+            VALUES (?, ?, ?)
+            ON CONFLICT(guild_id, user_id) DO UPDATE SET roles = excluded.roles, saved_at = CURRENT_TIMESTAMP;
+        `);
+        stmt.run(guildId, userId, rolesJson);
+    } catch (error) {
+        addBotLog(`[Database Error] Failed to save roles for user ${userId} in guild ${guildId}: ${error}`);
+    }
+}
+
+export function getAndClearSavedRoles(guildId: string, userId: string): string[] | null {
+    try {
+        const selectStmt = db.prepare('SELECT roles FROM role_persistence WHERE guild_id = ? AND user_id = ?');
+        const row = selectStmt.get(guildId, userId) as { roles: string } | undefined;
+
+        if (row) {
+            const deleteStmt = db.prepare('DELETE FROM role_persistence WHERE guild_id = ? AND user_id = ?');
+            deleteStmt.run(guildId, userId);
+            return JSON.parse(row.roles);
+        }
+        return null;
+    } catch (error) {
+        addBotLog(`[Database Error] Failed to get/clear roles for user ${userId} in guild ${guildId}: ${error}`);
+        return null;
     }
 }

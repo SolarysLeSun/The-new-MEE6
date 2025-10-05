@@ -1,5 +1,4 @@
 
-
 import type {
   SlashCommandBuilder,
   CommandInteraction,
@@ -52,6 +51,7 @@ export type Module =
     | 'leveling'
     | 'fun-commands'
     | 'admin'
+    | 'role-persistence'
     | 'utils';
 
 export interface ModuleConfig {

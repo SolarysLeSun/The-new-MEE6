@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -45,6 +44,7 @@ import {
   Plus,
   Gamepad,
   History,
+  ShieldPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -97,7 +97,13 @@ export const navCategories = [
             { href: 'filtre-image-ia', label: 'Filtre d\'Image IA', icon: Camera, isPremium: true, keywords: ['sécurité', 'nsfw', 'ia', 'image'] },
             { href: 'captcha', label: 'Captcha', icon: Fingerprint, isPremium: true, keywords: ['vérification', 'sécurité', 'nouveau membre'] },
             { href: 'backup', label: 'Backup', icon: DatabaseBackup, keywords: ['sauvegarde', 'restauration', 'export', 'import'] },
-            { href: 'securite-avancee', label: 'Sécurité Avancée', icon: ShieldAlert, keywords: ['alerte', 'compte suspect', 'nom similaire'] },
+            { href: 'securite-avancee', label: 'Sécurité Avancée', icon: ShieldAlert, keywords: ['alerte', 'compte suspect', 'nom similaire', 'role-persistence'] },
+        ]
+    },
+     {
+        name: 'Sécurité Avancée',
+        items: [
+            { href: 'role-persistence', label: 'Persistance des Rôles', icon: ShieldPlus, isPremium: true, keywords: ['sauvegarde roles', 'quitter', 'rejoindre', 'restaurer'] },
         ]
     },
     {
