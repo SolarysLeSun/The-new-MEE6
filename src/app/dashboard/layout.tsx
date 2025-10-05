@@ -1,4 +1,5 @@
 
+
 'use client';
 import type { ReactNode } from 'react';
 import { ModuleSidebar } from '@/components/module-sidebar';
@@ -62,7 +63,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
   
   if (!serverId) {
        return (
-        <div className="flex flex-col h-full w-full items-center justify-center text-center">
+        <div className="flex flex-col h-full w-full items-center justify-center text-center p-4">
             <Server className="w-16 h-16 text-muted-foreground mb-4"/>
             <h2 className="text-2xl font-bold">Aucun serveur sélectionné</h2>
             <p className="text-muted-foreground mt-2">Veuillez sélectionner un serveur dans la barre latérale pour commencer.</p>
@@ -123,7 +124,7 @@ export default function DashboardLayout({
               <CommandMenu />
             </div>
 
-          <div className="flex-1 container mx-auto p-6 lg:p-8 pt-0 md:pt-8">
+          <div className="flex-1 container mx-auto p-4 md:p-6 lg:p-8 pt-2 md:pt-8">
              <PanelAlert />
              <AuthGuard>{children}</AuthGuard>
           </div>

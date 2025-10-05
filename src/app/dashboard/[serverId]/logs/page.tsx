@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -238,7 +239,7 @@ export default function LogsPage() {
                                 {option.label}
                             </CardTitle>
                             <Switch 
-                                checked={config.log_settings[option.id as keyof typeof config.log_settings].enabled}
+                                checked={config.log_settings[option.id as keyof typeof config.log_settings]?.enabled ?? true}
                                 onCheckedChange={(val) => handleLogSettingChange(option.id as keyof typeof config.log_settings, 'enabled', val)}
                             />
                         </div>
@@ -248,7 +249,7 @@ export default function LogsPage() {
                         <Label className="text-xs uppercase text-muted-foreground">Salon dédié</Label>
                         <Combobox
                             options={dedicatedChannelOptions}
-                            value={config.log_settings[option.id as keyof typeof config.log_settings].channel_id || 'main'}
+                            value={config.log_settings[option.id as keyof typeof config.log_settings]?.channel_id || 'main'}
                             onChange={(val) => handleLogSettingChange(option.id as keyof typeof config.log_settings, 'channel_id', val === 'main' ? null : val)}
                             placeholder="Sélectionner un salon..."
                             searchPlaceholder="Rechercher un salon..."

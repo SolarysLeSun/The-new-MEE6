@@ -192,7 +192,7 @@ export default function LevelingPage() {
         </Card>
 
         <Tabs defaultValue="gains">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
                 <TabsTrigger value="gains">Gains d'XP</TabsTrigger>
                 <TabsTrigger value="recompenses">Récompenses</TabsTrigger>
                 <TabsTrigger value="personnalisation">Personnalisation</TabsTrigger>
@@ -244,8 +244,8 @@ export default function LevelingPage() {
                         </CardHeader>
                         <CardContent className="space-y-4 flex-grow">
                             {config.role_rewards.map((reward, index) => (
-                                <div key={index} className="flex items-end gap-2">
-                                    <div className="w-24">
+                                <div key={index} className="flex flex-col sm:flex-row sm:items-end gap-2">
+                                    <div className="w-full sm:w-24">
                                         <Label className="text-xs">Niveau</Label>
                                         <Input type="number" placeholder="Niv." defaultValue={reward.level} onChange={e => handleListChange('role_rewards', index, 'level', parseInt(e.target.value))} />
                                     </div>
@@ -268,12 +268,12 @@ export default function LevelingPage() {
                         </CardHeader>
                         <CardContent className="space-y-4 flex-grow">
                              {config.xp_boost_roles.map((boost, index) => (
-                                <div key={index} className="flex items-end gap-2">
+                                <div key={index} className="flex flex-col sm:flex-row sm:items-end gap-2">
                                     <div className="flex-1">
                                          <Label className="text-xs">Rôle</Label>
                                          <Combobox options={roleOptions} value={boost.role_id} onChange={val => handleListChange('xp_boost_roles', index, 'role_id', val)} placeholder="Sélectionner un rôle..." />
                                     </div>
-                                    <div className="w-28">
+                                    <div className="w-full sm:w-28">
                                         <Label className="text-xs">Multiplicateur</Label>
                                         <Input type="number" step="0.1" placeholder="Ex: 1.5" defaultValue={boost.multiplier} onChange={e => handleListChange('xp_boost_roles', index, 'multiplier', parseFloat(e.target.value))} />
                                     </div>
@@ -281,12 +281,12 @@ export default function LevelingPage() {
                                 </div>
                             ))}
                              {config.xp_boost_channels.map((boost, index) => (
-                                <div key={index} className="flex items-end gap-2">
+                                <div key={index} className="flex flex-col sm:flex-row sm:items-end gap-2">
                                      <div className="flex-1">
                                          <Label className="text-xs">Salon</Label>
                                         <Combobox options={voiceChannelOptions} value={boost.channel_id} onChange={val => handleListChange('xp_boost_channels', index, 'channel_id', val)} placeholder="Sélectionner un salon..." />
                                     </div>
-                                     <div className="w-28">
+                                     <div className="w-full sm:w-28">
                                         <Label className="text-xs">Multiplicateur</Label>
                                         <Input type="number" step="0.1" placeholder="Ex: 1.5" defaultValue={boost.multiplier} onChange={e => handleListChange('xp_boost_channels', index, 'multiplier', parseFloat(e.target.value))} />
                                     </div>
@@ -364,12 +364,12 @@ export default function LevelingPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {levelingCommands.map(command => (
-                            <div key={command.key} className="flex items-center justify-between p-4 border rounded-lg">
+                            <div key={command.key} className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg gap-4">
                                 <div>
                                     <h3 className="font-semibold">{command.name}</h3>
                                     <p className="text-sm text-muted-foreground">{command.description}</p>
                                 </div>
-                                <div className="w-56">
+                                <div className="w-full md:w-56">
                                     <Combobox
                                         options={[ { value: 'none', label: '@everyone' }, ...roleOptions]}
                                         value={config.command_permissions?.[command.key] || 'none'}

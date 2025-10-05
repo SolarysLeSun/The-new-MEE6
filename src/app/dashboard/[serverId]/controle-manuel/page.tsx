@@ -120,16 +120,21 @@ export default function ManualControlPage() {
         }
     };
     
-     const saveAutorolesConfig = async (newConfig: AutorolesConfig) => {
-        setAutorolesConfig(newConfig); // Optimistic update
+     const saveAutorolesConfig = async (newConfig: Partial<AutorolesConfig>) => {
+        const fullConfig = { ...(autorolesConfig || { on_voice_join_roles: [] }), ...newConfig };
+        setAutorolesConfig(fullConfig); // Optimistic update
         try {
+            // We fetch the full autoroles config to avoid overwriting other settings
+            const currentAutorolesRes = await fetch(`${API_URL}/get-config/${serverId}/autoroles`);
+            const currentAutorolesData = await currentAutorolesRes.json();
+            
             await fetch(`${API_URL}/update-config/${serverId}/autoroles`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newConfig),
+                body: JSON.stringify({ ...currentAutorolesData, ...newConfig }),
             });
         } catch (error) {
-            toast({ title: "Erreur de sauvegarde", variant: "destructive" });
+            toast({ title: "Erreur de sauvegarde (autoroles)", variant: "destructive" });
         }
     };
 
@@ -146,7 +151,7 @@ export default function ManualControlPage() {
 
     const handleVoiceRolesChange = (selectedRoles: string[]) => {
         if (!autorolesConfig) return;
-        saveAutorolesConfig({ ...autorolesConfig, on_voice_join_roles: selectedRoles });
+        saveAutorolesConfig({ on_voice_join_roles: selectedRoles });
     };
 
     if (loading || !manualConfig || !autorolesConfig) {

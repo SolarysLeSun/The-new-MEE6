@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -181,7 +182,7 @@ export default function ModerationPage() {
                     <Switch id="enable-module" checked={config.enabled} onCheckedChange={(val) => handleValueChange('enabled', val)} />
                 </div>
                <Separator />
-               <div className="flex items-center justify-between">
+               <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                 <div>
                   <Label className="font-bold">Salon de logs</Label>
                   <p className="text-sm text-muted-foreground/80">
@@ -195,7 +196,7 @@ export default function ModerationPage() {
                     placeholder="Sélectionner un salon"
                     searchPlaceholder="Rechercher un salon..."
                     emptyPlaceholder="Aucun salon trouvé."
-                    className="w-[240px]"
+                    className="w-full md:w-[240px]"
                  />
               </div>
               <Separator/>

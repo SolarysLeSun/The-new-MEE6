@@ -181,7 +181,7 @@ export default function AdvancedSecurityPage() {
                             type="number" 
                             value={config.account_age_threshold_days}
                             onChange={(e) => handleValueChange('account_age_threshold_days', parseInt(e.target.value))}
-                            className="w-24"
+                            className="w-full md:w-24"
                         />
                     </div>
                 </CardContent>
