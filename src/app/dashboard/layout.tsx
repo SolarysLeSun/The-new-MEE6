@@ -6,7 +6,7 @@ import { ServerSidebar } from '@/components/server-sidebar';
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, Menu } from 'lucide-react';
+import { Loader2, Menu, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PanelAlert } from '@/components/panel-alert';
 import { CommandMenu } from '@/components/command-menu';
@@ -25,8 +25,11 @@ function AuthGuard({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Si aucun serverId n'est dans l'URL, il n'y a rien à vérifier, on arrête le chargement.
+    // La page elle-même affichera le message pour sélectionner un serveur.
     if (!serverId) {
-      router.push('/dashboard');
+      setLoading(false);
+      setIsVerified(true); // On considère que c'est "vérifié" pour afficher le contenu de la page d'accueil du dashboard
       return;
     }
 
@@ -56,6 +59,16 @@ function AuthGuard({ children }: { children: ReactNode }) {
         </div>
       );
   }
+  
+  if (!serverId) {
+       return (
+        <div className="flex flex-col h-full w-full items-center justify-center text-center">
+            <Server className="w-16 h-16 text-muted-foreground mb-4"/>
+            <h2 className="text-2xl font-bold">Aucun serveur sélectionné</h2>
+            <p className="text-muted-foreground mt-2">Veuillez sélectionner un serveur dans la barre latérale pour commencer.</p>
+        </div>
+       )
+  }
 
   return <>{children}</>;
 }
@@ -70,6 +83,8 @@ export default function DashboardLayout({
 }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const { serverInfo } = useServerInfo();
+  const currentParams = useParams();
+  const serverId = currentParams.serverId as string;
 
   return (
     <div className="relative flex h-screen bg-background text-foreground overflow-hidden">
@@ -85,11 +100,11 @@ export default function DashboardLayout({
       <div className="relative z-10 flex h-full w-full">
         {/* Barre latérale des serveurs pour les grands écrans */}
         <div className="hidden md:flex">
-          <ServerSidebar serverId={params.serverId} />
+          <ServerSidebar serverId={serverId} />
         </div>
         
         {/* Barre latérale des modules (gérée différemment sur mobile/desktop) */}
-        <ModuleSidebar serverId={params.serverId} isOpen={isSidebarOpen} setOpen={setSidebarOpen} />
+        <ModuleSidebar serverId={serverId} isOpen={isSidebarOpen} setOpen={setSidebarOpen} />
         
         <main className="flex-1 overflow-y-auto bg-transparent flex flex-col">
            {/* Barre supérieure pour mobile */}
