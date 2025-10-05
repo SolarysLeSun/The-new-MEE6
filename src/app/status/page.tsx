@@ -9,6 +9,7 @@ import { PageTransitionWrapper } from "@/components/page-transition-wrapper";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -18,6 +19,11 @@ interface StatusItem {
     name: string;
     status: ServiceStatus;
     description: string;
+}
+
+interface StatusHistoryEntry {
+    time: Date;
+    statuses: Record<string, ServiceStatus>;
 }
 
 const StatusIndicator = ({ status }: { status: ServiceStatus }) => {
@@ -44,45 +50,87 @@ const getStatusText = (status: ServiceStatus) => {
         case 'loading':
             return "Vérification...";
     }
-}
+};
+
+const StatusHistoryBar = ({ history, serviceName }: { history: StatusHistoryEntry[], serviceName: string }) => {
+    return (
+        <TooltipProvider>
+            <div className="flex w-full h-8 rounded-lg bg-muted overflow-hidden">
+                {history.map((entry, index) => {
+                    const status = entry.statuses[serviceName];
+                    const statusColor = {
+                        operational: 'bg-green-500',
+                        degraded: 'bg-yellow-500',
+                        outage: 'bg-destructive',
+                        loading: 'bg-muted-foreground',
+                    }[status];
+                    return (
+                         <Tooltip key={index}>
+                            <TooltipTrigger asChild>
+                                <div
+                                    className={cn("flex-1 h-full transition-colors duration-300", statusColor)}
+                                    style={{ flexBasis: `${100 / history.length}%`}}
+                                />
+                            </TooltipTrigger>
+                             <TooltipContent>
+                                <p>{entry.time.toLocaleTimeString('fr-FR')}: {getStatusText(status)}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    );
+                })}
+            </div>
+        </TooltipProvider>
+    );
+};
 
 export default function StatusPage() {
     const [services, setServices] = useState<StatusItem[]>([
         { name: "Panel Web", status: 'operational', description: "L'interface de configuration est accessible." },
         { name: "API & Bot Discord", status: 'loading', description: "Le cœur du bot qui interagit avec Discord." },
-        { name: "Services Google AI (Genkit/Gemini)", status: 'loading', description: "Les fonctionnalités d'intelligence artificielle." },
+        { name: "Services Google AI", status: 'loading', description: "Les fonctionnalités d'intelligence artificielle." },
     ]);
+    const [statusHistory, setStatusHistory] = useState<StatusHistoryEntry[]>([]);
     const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
-    const checkStatuses = async () => {
-        // Check Bot API status
-        let botApiStatus: ServiceStatus = 'operational';
-        try {
-            const response = await fetch(`${API_URL}/ping`);
-            if (!response.ok) throw new Error('API response not OK');
-            const data = await response.json();
-            if (data.status !== 'ok') throw new Error('Invalid status from API');
-            botApiStatus = 'operational';
-        } catch (error) {
-            console.error("Bot status check failed:", error);
-            botApiStatus = 'outage';
-        }
-        
-        // For now, Google AI services status is tied to the bot API status
-        const googleAiStatus = botApiStatus;
-
-        setServices([
-            { name: "Panel Web", status: 'operational', description: "L'interface de configuration est accessible." },
-            { name: "API & Bot Discord", status: botApiStatus, description: "Le cœur du bot qui interagit avec Discord." },
-            { name: "Services Google AI (Genkit/Gemini)", status: googleAiStatus, description: "Les fonctionnalités d'intelligence artificielle." },
-        ]);
-
-        setLastChecked(new Date());
-    };
-
     useEffect(() => {
+        const checkStatuses = async () => {
+            let botApiStatus: ServiceStatus = 'operational';
+            try {
+                const response = await fetch(`${API_URL}/ping`);
+                if (!response.ok) throw new Error('API response not OK');
+                const data = await response.json();
+                if (data.status !== 'ok') throw new Error('Invalid status from API');
+            } catch (error) {
+                console.error("Bot status check failed:", error);
+                botApiStatus = 'outage';
+            }
+            
+            // For now, Google AI services status is tied to the bot API status
+            const googleAiStatus = botApiStatus;
+
+            const newStatuses = {
+                "Panel Web": 'operational',
+                "API & Bot Discord": botApiStatus,
+                "Services Google AI": googleAiStatus,
+            };
+
+            setServices([
+                { name: "Panel Web", status: 'operational', description: "L'interface de configuration est accessible." },
+                { name: "API & Bot Discord", status: botApiStatus, description: "Le cœur du bot qui interagit avec Discord." },
+                { name: "Services Google AI", status: googleAiStatus, description: "Les fonctionnalités d'intelligence artificielle." },
+            ]);
+            
+            setStatusHistory(prev => {
+                const newEntry = { time: new Date(), statuses: newStatuses };
+                // Keep only the last 24 entries
+                return [newEntry, ...prev].slice(0, 24);
+            });
+
+            setLastChecked(new Date());
+        };
+
         checkStatuses();
-        const interval = setInterval(checkStatuses, 60000); // Re-check every minute
+        const interval = setInterval(checkStatuses, 3600000); // Re-check every hour
         return () => clearInterval(interval);
     }, []);
 
@@ -126,26 +174,32 @@ export default function StatusPage() {
                    {overallStatus === 'loading' && <Loader2 className="animate-spin" />}
                    {getStatusText(overallStatus)}
                 </div>
-                 {lastChecked && <p className="text-xs text-muted-foreground">Dernière vérification : {lastChecked.toLocaleTimeString('fr-FR')}</p>}
+                 {lastChecked && <p className="text-xs text-muted-foreground">Dernière vérification : {lastChecked.toLocaleString('fr-FR')}</p>}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Separator />
             {services.map((service) => (
-                 <div key={service.name} className="flex items-center justify-between p-4">
-                    <div>
-                        <p className="font-semibold text-lg text-white">{service.name}</p>
-                        <p className="text-sm text-muted-foreground">{service.description}</p>
+                 <div key={service.name} className="flex flex-col gap-4 p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-semibold text-lg text-white">{service.name}</p>
+                            <p className="text-sm text-muted-foreground">{service.description}</p>
+                        </div>
+                         <div className={cn(
+                             "flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1",
+                             service.status === 'operational' && 'bg-green-500/10 text-green-400',
+                             service.status === 'degraded' && 'bg-yellow-500/10 text-yellow-400',
+                             service.status === 'outage' && 'bg-destructive/10 text-destructive',
+                             service.status === 'loading' && 'text-muted-foreground',
+                         )}>
+                            <StatusIndicator status={service.status} />
+                           {getStatusText(service.status)}
+                        </div>
                     </div>
-                     <div className={cn(
-                         "flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1",
-                         service.status === 'operational' && 'bg-green-500/10 text-green-400',
-                         service.status === 'degraded' && 'bg-yellow-500/10 text-yellow-400',
-                         service.status === 'outage' && 'bg-destructive/10 text-destructive',
-                         service.status === 'loading' && 'text-muted-foreground',
-                     )}>
-                        <StatusIndicator status={service.status} />
-                       {getStatusText(service.status)}
+                     <div className="pt-2">
+                        <Label className="text-xs text-muted-foreground pb-2">Historique des 24 dernières heures</Label>
+                        <StatusHistoryBar history={statusHistory} serviceName={service.name} />
                     </div>
                  </div>
             ))}
@@ -155,3 +209,5 @@ export default function StatusPage() {
     </PageTransitionWrapper>
   );
 }
+
+    
