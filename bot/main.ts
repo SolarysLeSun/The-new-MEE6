@@ -230,6 +230,9 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
     } else {
          // --- Handle IA Content (Rule/Announcement) Modification ---
          if (!interaction.guild) {
+             // This case should ideally not happen if /adminannounce is used in DMs,
+             // as only server-based content creation should trigger this part.
+             // But as a safeguard:
              await interaction.editReply({ content: 'Cette action ne peut pas être effectuée en messages privés.', ephemeral: true });
              return;
          }
@@ -371,32 +374,35 @@ async function handleReminderButton(interaction: ButtonInteraction) {
 
     if (!delayStr || !destination || !base64Message) return;
 
+    const delayMs = ms(delayStr);
+    if (!delayMs) return;
+
     await interaction.reply({ content: `<:Oui:1421563353888723084> D'accord ! Je vous rappellerai à nouveau ce message dans **${delayStr}**.`, ephemeral: true });
 
     const message = Buffer.from(base64Message, 'base64').toString('utf-8');
-    const delayMs = ms(delayStr);
+    const reminderTime = Math.floor((Date.now() + delayMs) / 1000);
     
+    // This creates a new, independent reminder. It does not use the expired interaction.
     setTimeout(async () => {
         const embed = new EmbedBuilder()
             .setColor(0x3498DB)
-            .setTitle('⏰ C\'est l\'heure !')
+            .setTitle('⏰ C\'est l\'heure ! (Relance)')
             .setDescription(`Il y a **${delayStr}**, vous m'avez demandé de vous rappeler ceci :`)
-            .addFields({ name: 'Votre message', value: message });
-
-        const row = new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId(interaction.customId) // Reuse the same customId
-                    .setLabel('Relancer le rappel')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🔄')
-            );
+            .addFields({ name: 'Votre message', value: message })
+            .setTimestamp(reminderTime * 1000);
+        
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+                .setCustomId(interaction.customId) // Reuse the same customId for further rescheduling
+                .setLabel('Relancer le rappel')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('🔄')
+        );
 
         try {
             if (destination === 'mp') {
                 await interaction.user.send({ content: `${interaction.user}`, embeds: [embed], components: [row] });
             } else if (interaction.channel) {
-                // To avoid sending to a deleted channel, we fetch it first
                  const originalChannel = await client.channels.fetch(interaction.channelId).catch(() => null);
                  if (originalChannel && originalChannel.isTextBased()) {
                      await originalChannel.send({ content: `${interaction.user}`, embeds: [embed], components: [row] });
@@ -713,3 +719,5 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
+
+  

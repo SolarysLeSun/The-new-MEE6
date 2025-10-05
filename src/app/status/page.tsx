@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
 
-const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3630/api';
 
 type ServiceStatus = 'operational' | 'degraded' | 'outage' | 'loading';
 
@@ -210,3 +210,5 @@ export default function StatusPage() {
     </PageTransitionWrapper>
   );
 }
+
+  
