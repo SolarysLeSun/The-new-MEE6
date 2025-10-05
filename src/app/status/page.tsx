@@ -1,12 +1,14 @@
+
 'use client';
 
 import { AppHeader } from "@/components/app-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Circle, Loader2, ServerCrash, XCircle } from "lucide-react";
+import { CheckCircle, Circle, Loader2, ServerCrash, XCircle, AlertTriangle } from "lucide-react";
 import RippleGrid from "@/components/ripple-grid";
 import { PageTransitionWrapper } from "@/components/page-transition-wrapper";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -23,7 +25,7 @@ const StatusIndicator = ({ status }: { status: ServiceStatus }) => {
         case 'operational':
             return <CheckCircle className="h-5 w-5 text-green-500" />;
         case 'degraded':
-            return <Circle className="h-5 w-5 text-yellow-500" />;
+            return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
         case 'outage':
             return <XCircle className="h-5 w-5 text-destructive" />;
         case 'loading':
@@ -45,40 +47,50 @@ const getStatusText = (status: ServiceStatus) => {
 }
 
 export default function StatusPage() {
-    const [statuses, setStatuses] = useState<StatusItem[]>([
+    const [services, setServices] = useState<StatusItem[]>([
         { name: "Panel Web", status: 'operational', description: "L'interface de configuration est accessible." },
         { name: "API & Bot Discord", status: 'loading', description: "Le cœur du bot qui interagit avec Discord." },
+        { name: "Services Google AI (Genkit/Gemini)", status: 'loading', description: "Les fonctionnalités d'intelligence artificielle." },
     ]);
+    const [lastChecked, setLastChecked] = useState<Date | null>(null);
+
+    const checkStatuses = async () => {
+        // Check Bot API status
+        let botApiStatus: ServiceStatus = 'operational';
+        try {
+            const response = await fetch(`${API_URL}/ping`);
+            if (!response.ok) throw new Error('API response not OK');
+            const data = await response.json();
+            if (data.status !== 'ok') throw new Error('Invalid status from API');
+            botApiStatus = 'operational';
+        } catch (error) {
+            console.error("Bot status check failed:", error);
+            botApiStatus = 'outage';
+        }
+        
+        // For now, Google AI services status is tied to the bot API status
+        const googleAiStatus = botApiStatus;
+
+        setServices([
+            { name: "Panel Web", status: 'operational', description: "L'interface de configuration est accessible." },
+            { name: "API & Bot Discord", status: botApiStatus, description: "Le cœur du bot qui interagit avec Discord." },
+            { name: "Services Google AI (Genkit/Gemini)", status: googleAiStatus, description: "Les fonctionnalités d'intelligence artificielle." },
+        ]);
+
+        setLastChecked(new Date());
+    };
 
     useEffect(() => {
-        const checkBotStatus = async () => {
-            try {
-                const response = await fetch(`${API_URL}/ping`);
-                if (!response.ok) {
-                    throw new Error('API response not OK');
-                }
-                const data = await response.json();
-                if (data.status !== 'ok') {
-                     throw new Error('Invalid status from API');
-                }
-                setStatuses(prev => prev.map(s => s.name === "API & Bot Discord" ? { ...s, status: 'operational' } : s));
-            } catch (error) {
-                 console.error("Bot status check failed:", error);
-                 setStatuses(prev => prev.map(s => s.name === "API & Bot Discord" ? { ...s, status: 'outage' } : s));
-            }
-        };
-
-        checkBotStatus();
-        const interval = setInterval(checkBotStatus, 60000); // Re-check every minute
-
+        checkStatuses();
+        const interval = setInterval(checkStatuses, 60000); // Re-check every minute
         return () => clearInterval(interval);
     }, []);
 
-    const overallStatus = statuses.some(s => s.status === 'outage') 
+    const overallStatus = services.some(s => s.status === 'outage') 
         ? 'outage' 
-        : statuses.some(s => s.status === 'degraded') 
+        : services.some(s => s.status === 'degraded') 
         ? 'degraded' 
-        : statuses.some(s => s.status === 'loading')
+        : services.some(s => s.status === 'loading')
         ? 'loading'
         : 'operational';
 
@@ -102,7 +114,7 @@ export default function StatusPage() {
             <CardTitle className="text-4xl font-bold text-center">
               Statut des Services
             </CardTitle>
-             <CardDescription className="text-center text-lg pt-2">
+             <CardDescription className="text-center text-lg pt-4 space-y-2">
                 <div className={cn(
                     "flex items-center justify-center gap-2 font-semibold",
                     overallStatus === 'operational' && "text-green-400",
@@ -111,22 +123,25 @@ export default function StatusPage() {
                 )}>
                    {overallStatus === 'operational' && <CheckCircle/>}
                    {overallStatus === 'outage' && <ServerCrash/>}
+                   {overallStatus === 'loading' && <Loader2 className="animate-spin" />}
                    {getStatusText(overallStatus)}
                 </div>
+                 {lastChecked && <p className="text-xs text-muted-foreground">Dernière vérification : {lastChecked.toLocaleTimeString('fr-FR')}</p>}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {statuses.map((service) => (
-                 <div key={service.name} className="flex items-center justify-between p-4 border rounded-lg bg-card/50">
+            <Separator />
+            {services.map((service) => (
+                 <div key={service.name} className="flex items-center justify-between p-4">
                     <div>
                         <p className="font-semibold text-lg text-white">{service.name}</p>
                         <p className="text-sm text-muted-foreground">{service.description}</p>
                     </div>
                      <div className={cn(
-                         "flex items-center gap-2 text-sm font-medium",
-                         service.status === 'operational' && 'text-green-500',
-                         service.status === 'degraded' && 'text-yellow-500',
-                         service.status === 'outage' && 'text-destructive',
+                         "flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1",
+                         service.status === 'operational' && 'bg-green-500/10 text-green-400',
+                         service.status === 'degraded' && 'bg-yellow-500/10 text-yellow-400',
+                         service.status === 'outage' && 'bg-destructive/10 text-destructive',
                          service.status === 'loading' && 'text-muted-foreground',
                      )}>
                         <StatusIndicator status={service.status} />
