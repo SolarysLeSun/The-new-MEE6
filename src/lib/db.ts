@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage } from '../types';
+import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, CustomWheel } from '../types';
 import { randomBytes } from 'crypto';
 import { addBotLog } from '../../bot/api';
 
@@ -136,6 +136,16 @@ const upgradeSchema = () => {
             );
         `);
         addBotLog('[Database] Table "referral_history" is ready.');
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS custom_wheels (
+                id TEXT PRIMARY KEY,
+                guild_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                options TEXT NOT NULL
+            );
+        `);
+        addBotLog('[Database] Table "custom_wheels" is ready.');
 
 
     } catch (error) {
@@ -471,6 +481,7 @@ const defaultConfigs: DefaultConfigs = {
     },
     'fun-commands': {
         enabled: true,
+        custom_wheels: [],
         command_permissions: {
             renameall: null,
             mutemass: null,
@@ -1083,4 +1094,33 @@ export function getDisabledModules(): { [key: string]: { disabled: boolean; reas
 
 export function getAllModuleNames(): Module[] {
     return Object.keys(defaultConfigs) as Module[];
+}
+
+// --- Custom Wheels ---
+
+export function getWheels(guildId: string): CustomWheel[] {
+    const stmt = db.prepare('SELECT * FROM custom_wheels WHERE guild_id = ?');
+    const rows = stmt.all(guildId) as { id: string, guild_id: string, name: string, options: string }[];
+    return rows.map(row => ({
+        ...row,
+        options: JSON.parse(row.options)
+    }));
+}
+
+export function updateWheels(guildId: string, wheels: CustomWheel[]): void {
+    const deleteStmt = db.prepare('DELETE FROM custom_wheels WHERE guild_id = ?');
+    const insertStmt = db.prepare('INSERT INTO custom_wheels (id, guild_id, name, options) VALUES (?, ?, ?, ?)');
+
+    const transaction = db.transaction(() => {
+        deleteStmt.run(guildId);
+        for (const wheel of wheels) {
+            insertStmt.run(wheel.id, guildId, wheel.name, JSON.stringify(wheel.options));
+        }
+    });
+
+    try {
+        transaction();
+    } catch (error) {
+        addBotLog(`[Database Error] Failed to update wheels for guild ${guildId}: ${error}`);
+    }
 }

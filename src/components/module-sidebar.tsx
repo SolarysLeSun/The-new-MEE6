@@ -44,6 +44,7 @@ import {
   Award,
   Plus,
   Gamepad,
+  History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -113,6 +114,7 @@ export const navCategories = [
         items: [
             { href: 'commandes-fun', label: 'Commandes Fun', icon: Dice5, keywords: ['renameall', 'mutemass', 'reactbomb', 'randomnickname', 'fun'] },
             { href: 'casino', label: 'Casino', icon: Gamepad, keywords: ['pileouface', 'slots', 'jeu', 'xp'] },
+            { href: 'roue-de-la-fortune', label: 'Roue de la Fortune', icon: History, keywords: ['roue', 'fortune', 'tirage', 'hasard'] },
         ]
     },
     {

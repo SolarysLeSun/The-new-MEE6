@@ -158,3 +158,9 @@ export interface PanelMessage {
     content: string;
     active: boolean;
 }
+
+export interface CustomWheel {
+    id: string;
+    name: string;
+    options: string[];
+}
