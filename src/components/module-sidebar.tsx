@@ -175,7 +175,7 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
     {isOpen && <div className="fixed inset-0 z-20 bg-black/60 md:hidden" onClick={() => setOpen(false)} />}
 
     <aside className={cn(
-        "fixed md:relative inset-y-0 left-0 z-30 flex h-full w-80 flex-col bg-card/80 backdrop-blur-xl p-4 border-r border-border/10 transition-transform duration-300 ease-in-out md:translate-x-0",
+        "fixed md:relative inset-y-0 left-0 z-30 flex h-full w-full md:w-80 flex-col bg-card/80 backdrop-blur-xl p-4 border-r border-border/10 transition-transform duration-300 ease-in-out md:translate-x-0",
         isOpen ? "translate-x-0" : "-translate-x-full"
     )}>
       <div className="flex items-center justify-between mb-6">
