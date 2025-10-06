@@ -41,7 +41,7 @@ function AuthProcessor() {
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ error: 'Réponse invalide de l'API.' }));
+                    const errorData = await response.json().catch(() => ({ error: 'Réponse invalide de l\'API.' }));
                     throw new Error(errorData.error || 'Le token est invalide ou a expiré.');
                 }
 
