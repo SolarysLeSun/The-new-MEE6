@@ -76,7 +76,7 @@ const RappelCommand: Command = {
                             content: `${interaction.user}, impossible de vous envoyer votre rappel en MP. Vos messages privés sont probablement fermés.`,
                         });
                     } catch (channelError) {
-                         console.error('[Rappel] Erreur lors de l'envoi du message de secours dans le salon :', channelError);
+                         console.error('[Rappel] Erreur lors de l\'envoi du message de secours dans le salon :', channelError);
                     }
                 }
             }
