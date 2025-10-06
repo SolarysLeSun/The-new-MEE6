@@ -1,7 +1,7 @@
 
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from 'discord.js';
 import type { Command } from '@/types';
-import { addBotLog } from '@/api';
+import { addBotLog } from '../../api';
 
 const OWNER_ID = '556529963877138442';
 
