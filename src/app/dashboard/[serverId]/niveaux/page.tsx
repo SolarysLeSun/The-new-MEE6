@@ -57,7 +57,8 @@ interface DiscordRole {
 const levelingCommands = [
     { name: '/level', key: 'level', description: 'Affiche le niveau et l\'XP d\'un utilisateur.' },
     { name: '/topxp', key: 'topxp', description: 'Affiche le classement du serveur.' },
-]
+    { name: '/webleaderboard', key: 'webleaderboard', description: 'Donne le lien du classement en ligne.' },
+];
 
 function PageSkeleton() {
     return <Skeleton className="h-screen w-full" />;

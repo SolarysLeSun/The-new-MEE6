@@ -471,6 +471,7 @@ const defaultConfigs: DefaultConfigs = {
         command_permissions: {
             level: null,
             topxp: null,
+            webleaderboard: null,
         },
     },
     'fun-commands': {
