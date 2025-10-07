@@ -23,17 +23,16 @@ export type EmbedJsonFixerOutput = z.infer<typeof EmbedJsonFixerOutputSchema>;
 
 const jsonFixerPrompt = ai.definePrompt({
     name: 'embedJsonFixerPrompt',
-    input: { schema: EmbedJsonFixerInputSchema },
     output: { schema: EmbedJsonFixerOutputSchema },
     model: 'googleai/gemini-2.0-flash',
     prompt: `You are an expert in Discord embed JSON. Your task is to take a user's JSON string and a modification request, and return a valid, corrected, and well-formatted JSON string.
 
 User's JSON:
 \`\`\`json
-{{{json}}}
+{{json}}
 \`\`\`
 
-User's Request: "{{{request}}}"
+User's Request: "{{request}}"
 
 1.  Analyze the user's JSON. If it's invalid, identify the errors.
 2.  Understand the user's request.
@@ -53,7 +52,10 @@ export const fixEmbedJson = ai.defineFlow(
     outputSchema: EmbedJsonFixerOutputSchema,
   },
   async (input) => {
-    const { output } = await jsonFixerPrompt(input);
+    const { output } = await jsonFixerPrompt({
+      json: input.json,
+      request: input.request,
+    });
     return output!;
   }
 );
