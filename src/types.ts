@@ -55,7 +55,8 @@ export type Module =
     | 'admin'
     | 'utils'
     | 'referral'
-    | 'fortune-wheel';
+    | 'fortune-wheel'
+    | 'role-memory';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale

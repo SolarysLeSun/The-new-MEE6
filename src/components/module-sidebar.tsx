@@ -45,6 +45,7 @@ import {
   BrainCircuit,
   Gift,
   Dices,
+  Save,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -98,6 +99,7 @@ export const navCategories = [
             { href: 'captcha', label: 'Captcha', icon: Fingerprint, isPremium: true, keywords: ['sécurité', 'vérification', 'humain'] },
             { href: 'backup', label: 'Backup', icon: DatabaseBackup, keywords: ['sauvegarde', 'restauration', 'export'] },
             { href: 'securite-avancee', label: 'Sécurité Avancée', icon: ShieldAlert, keywords: ['faux comptes', 'nom similaire', 'âge compte'] },
+            { href: 'role-memory', label: 'Persistance des Rôles', icon: Save, isPremium: true, keywords: ['sauvegarder', 'mémoire', 'quitter', 'rejoindre'] },
         ]
     },
     {

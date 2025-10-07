@@ -134,6 +134,17 @@ const upgradeSchema = () => {
         `);
         console.log('[Database] La table "dev_guilds" est prête.');
 
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS role_memory (
+                guild_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                role_ids TEXT NOT NULL,
+                saved_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (guild_id, user_id)
+            );
+        `);
+        console.log('[Database] La table "role_memory" est prête.');
+
 
     } catch (error) {
         console.error('[Database] Erreur lors de la mise à jour du schéma:', error);
@@ -482,6 +493,10 @@ const defaultConfigs: DefaultConfigs = {
             reactbomb: null,
             react: null,
             randomnickname: null,
+            'action-verite': null,
+            de: null,
+            pileouface: null,
+            slots: null,
         }
     },
     'admin': {
@@ -511,6 +526,11 @@ const defaultConfigs: DefaultConfigs = {
         enabled: true,
         wheels: [],
     },
+    'role-memory': {
+        enabled: true,
+        premium: true,
+        trigger_roles: [],
+    }
 };
 
 export function initializeDatabase() {
@@ -1042,6 +1062,29 @@ export function unlockChannel(channelId: string): string | null {
     }
     return null;
 }
+
+// --- Role Memory System ---
+export function saveUserRoles(guildId: string, userId: string, roleIds: string[]): void {
+    const stmt = db.prepare(`
+        INSERT INTO role_memory (guild_id, user_id, role_ids) 
+        VALUES (?, ?, ?)
+        ON CONFLICT(guild_id, user_id) DO UPDATE SET role_ids = excluded.role_ids, saved_at = CURRENT_TIMESTAMP
+    `);
+    stmt.run(guildId, userId, JSON.stringify(roleIds));
+}
+
+export function getAndClearUserRoles(guildId: string, userId: string): string[] | null {
+    const getStmt = db.prepare('SELECT role_ids FROM role_memory WHERE guild_id = ? AND user_id = ?');
+    const row = getStmt.get(guildId, userId) as { role_ids: string } | undefined;
+    
+    if (row) {
+        const deleteStmt = db.prepare('DELETE FROM role_memory WHERE guild_id = ? AND user_id = ?');
+        deleteStmt.run(guildId, userId);
+        return JSON.parse(row.role_ids);
+    }
+    return null;
+}
+
 
 // --- Leveling System ---
 let clientInstance: Client | null = null;
