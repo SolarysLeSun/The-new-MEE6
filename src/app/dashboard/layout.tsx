@@ -130,11 +130,12 @@ export default function DashboardLayout({
 
         <main className="flex-1 overflow-y-auto bg-transparent flex flex-col">
            <div className="sticky top-0 z-20 flex items-center justify-between p-4 bg-background/80 backdrop-blur-sm border-b border-border">
-              <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileSidebarOpen(true)}>
-                  <Menu className="h-6 w-6" />
-              </Button>
-              <div className="flex-1"></div> {/* Spacer */}
-              <CommandMenu />
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileSidebarOpen(true)}>
+                    <Menu className="h-6 w-6" />
+                </Button>
+                <CommandMenu />
+              </div>
             </div>
           <div className="flex-1 container mx-auto p-6 lg:p-8 pt-0 md:pt-8">
              <PanelAlert />
