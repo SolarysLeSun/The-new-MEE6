@@ -44,6 +44,7 @@ import {
   Award,
   BrainCircuit,
   Gift,
+  Dices,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -112,6 +113,7 @@ export const navCategories = [
         name: 'Divertissement',
         items: [
             { href: 'commandes-fun', label: 'Commandes Fun', icon: Dice5, keywords: ['renameall', 'mutemass', 'reactbomb', 'react', 'randomnickname'] },
+            { href: 'roue-de-la-fortune', label: 'Roue de la Fortune', icon: Dices, keywords: ['tirage', 'giveaway', 'roue', 'fortune', 'aléatoire'] },
         ]
     },
     {

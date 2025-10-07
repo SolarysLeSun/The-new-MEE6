@@ -507,6 +507,10 @@ const defaultConfigs: DefaultConfigs = {
             parrainage: null,
         }
     },
+    'fortune-wheel': {
+        enabled: true,
+        wheels: [],
+    },
 };
 
 export function initializeDatabase() {

@@ -54,7 +54,8 @@ export type Module =
     | 'fun-commands'
     | 'admin'
     | 'utils'
-    | 'referral';
+    | 'referral'
+    | 'fortune-wheel';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale
