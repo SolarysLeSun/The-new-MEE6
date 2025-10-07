@@ -1,5 +1,4 @@
 
-
 import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -521,10 +520,10 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
         // --- Handler for Suggestion Button ---
         if (customId === 'create_suggestion') {
-            await interaction.deferReply({ ephemeral: true });
-            const config = await getServerConfig(interaction.guild!.id, 'suggestions');
+            if (!interaction.guild) return;
+            const config = await getServerConfig(interaction.guild.id, 'suggestions');
             if (!config?.enabled) {
-                await interaction.editReply({ content: "Le module de suggestions est désactivé sur ce serveur." });
+                await interaction.reply({ content: "Le module de suggestions est désactivé sur ce serveur.", ephemeral: true });
                 return;
             }
 
