@@ -115,15 +115,17 @@ const upgradeSchema = () => {
         `);
         console.log('[Database] La table "delegated_permissions" est prête.');
 
-        db.exec(`
-            CREATE TABLE IF NOT EXISTS referrals (
-                referring_guild_id TEXT NOT NULL,
-                referred_guild_id TEXT PRIMARY KEY NOT NULL,
-                referred_owner_id TEXT NOT NULL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-        db.exec('CREATE INDEX IF NOT EXISTS idx_referring_guild_id ON referrals (referring_guild_id);');
+        db.transaction(() => {
+            db.exec(`
+                CREATE TABLE IF NOT EXISTS referrals (
+                    referring_guild_id TEXT NOT NULL,
+                    referred_guild_id TEXT PRIMARY KEY NOT NULL,
+                    referred_owner_id TEXT NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+            `);
+            db.exec('CREATE INDEX IF NOT EXISTS idx_referring_guild_id ON referrals (referring_guild_id);');
+        })();
         console.log('[Database] La table "referrals" est prête.');
 
         db.exec(`
