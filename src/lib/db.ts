@@ -124,7 +124,7 @@ const upgradeSchema = () => {
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
-         db.exec('CREATE INDEX IF NOT EXISTS idx_referring_guild_id ON referrals (referring_guild_id);');
+        db.exec('CREATE INDEX IF NOT EXISTS idx_referring_guild_id ON referrals (referring_guild_id);');
         console.log('[Database] La table "referrals" est prête.');
 
         db.exec(`
