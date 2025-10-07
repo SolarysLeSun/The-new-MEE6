@@ -27,13 +27,6 @@ const jsonFixerPrompt = ai.definePrompt({
     model: 'googleai/gemini-2.0-flash',
     prompt: `You are an expert in Discord embed JSON. Your task is to take a user's JSON string and a modification request, and return a valid, corrected, and well-formatted JSON string.
 
-User's JSON:
-\`\`\`json
-{{json}}
-\`\`\`
-
-User's Request: "{{request}}"
-
 1.  Analyze the user's JSON. If it's invalid, identify the errors.
 2.  Understand the user's request.
 3.  Generate a new, valid JSON string that incorporates the requested changes and fixes any syntax errors.
@@ -41,6 +34,13 @@ User's Request: "{{request}}"
 5.  If the user just asks to "fix" the JSON, simply correct any errors without adding new content.
 
 Return only the corrected JSON string in the 'fixedJson' field.
+
+User's JSON:
+\`\`\`json
+{{json}}
+\`\`\`
+
+User's Request: "{{request}}"
 `,
 });
 
