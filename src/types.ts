@@ -57,6 +57,7 @@ export type Module =
     | 'referral'
     | 'fortune-wheel'
     | 'role-memory'
+    | 'embed-builder'
     | 'faq-navigation';
 
 export interface ModuleConfig {

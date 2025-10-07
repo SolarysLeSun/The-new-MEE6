@@ -10,9 +10,11 @@ import { generateKeywords } from '@/ai/flows/keyword-generation-flow';
 import { knowledgeCreationFlow } from '@/ai/flows/knowledge-creation-flow';
 import { randomBytes } from 'crypto';
 import { exec } from 'child_process';
+import { fixEmbedJson } from '@/ai/flows/embed-json-fixer';
 
 const API_PORT = process.env.BOT_API_PORT || 3630; // toujour le port 3630 !!
 const OWNER_ID = '556529963877138442';
+const WEBHOOK_NAME = "Marcus";
 
 // --- Panel User Authentication ---
 
@@ -253,14 +255,14 @@ export function startApi(client: Client) {
         if (!guild) {
             return res.status(404).json({ error: 'Serveur non trouvé.' });
         }
-
+    
         try {
             const backup = {
                 name: guild.name,
                 id: guild.id,
                 exportedAt: new Date().toISOString(),
                 roles: guild.roles.cache
-                    .filter(role => !role.managed) 
+                    .filter(role => !role.managed)
                     .map(role => ({
                         name: role.name,
                         color: role.hexColor,
@@ -271,31 +273,34 @@ export function startApi(client: Client) {
                 channels: guild.channels.cache
                     .filter(c => c.type !== ChannelType.GuildVoice)
                     .map(channel => {
+                        const permissionOverwrites = channel.permissionOverwrites?.cache?.map(ow => ({
+                            id: ow.id,
+                            type: ow.type,
+                            allow: ow.allow.bitfield.toString(),
+                            deny: ow.deny.bitfield.toString(),
+                        })) || [];
+    
                         const baseChannelData = {
                             type: channel.type,
                             name: channel.name,
-                            permissionOverwrites: channel.permissionOverwrites.cache.map(ow => ({
-                                id: ow.id,
-                                type: ow.type,
-                                allow: ow.allow.bitfield.toString(),
-                                deny: ow.deny.bitfield.toString(),
-                            })),
+                            permissionOverwrites: permissionOverwrites,
                         };
+    
                         if (channel instanceof CategoryChannel) {
                             return {
                                 ...baseChannelData,
-                                children: channel.children.cache.map(child => ({
+                                children: channel.children?.cache?.map(child => ({
                                     type: child.type,
                                     name: child.name,
                                     topic: 'topic' in child ? child.topic : null,
                                     nsfw: 'nsfw' in child ? child.nsfw : false,
-                                    permissionOverwrites: child.permissionOverwrites.cache.map(ow => ({
+                                    permissionOverwrites: child.permissionOverwrites?.cache?.map(ow => ({
                                         id: ow.id,
                                         type: ow.type,
                                         allow: ow.allow.bitfield.toString(),
                                         deny: ow.deny.bitfield.toString(),
-                                    }))
-                                }))
+                                    })) || [],
+                                })) || [],
                             };
                         }
                         if (!channel.parentId) {
@@ -308,9 +313,9 @@ export function startApi(client: Client) {
                         return null;
                     }).filter(c => c !== null)
             };
-
+    
             res.json(backup);
-
+    
         } catch (error) {
             console.error(`[Backup API] Erreur lors de l'exportation pour ${guildId}:`, error);
             res.status(500).json({ error: 'Erreur interne du serveur lors de l\'exportation.' });
@@ -457,6 +462,57 @@ export function startApi(client: Client) {
         } catch (error) {
             console.error('[API] Error creating knowledge item:', error);
             res.status(500).json({ error: 'Failed to create knowledge item.' });
+        }
+    });
+
+    app.post('/api/fix-embed-json', checkGlobalAiStatus, async (req, res) => {
+        const { json, request } = req.body;
+        try {
+            const result = await fixEmbedJson({ json, request });
+            res.json(result);
+        } catch (error) {
+            console.error('[API] Error fixing embed JSON:', error);
+            res.status(500).json({ error: 'Failed to fix embed JSON.' });
+        }
+    });
+
+    app.post('/api/send-webhook-embed', async (req, res) => {
+        const { channelId, embedData } = req.body;
+        if (!channelId || !embedData) {
+            return res.status(400).json({ error: 'channelId and embedData are required.' });
+        }
+
+        try {
+            const channel = await client.channels.fetch(channelId);
+            if (!channel || !channel.isTextBased()) {
+                return res.status(404).json({ error: 'Channel not found or is not a text channel.' });
+            }
+
+            const guild = (channel as any).guild;
+            const identityConfig = await getServerConfig(guild.id, 'server-identity');
+
+            const webhooks = await channel.fetchWebhooks();
+            let webhook = webhooks.find(wh => wh.name === WEBHOOK_NAME && wh.token !== null);
+
+            if (!webhook) {
+                webhook = await channel.createWebhook({
+                    name: WEBHOOK_NAME,
+                    avatar: client.user?.displayAvatarURL(),
+                    reason: 'Webhook pour le constructeur d\'embeds'
+                });
+            }
+
+            await webhook.send({
+                content: embedData.content,
+                username: identityConfig?.enabled ? identityConfig.nickname : client.user?.username,
+                avatarURL: identityConfig?.enabled ? identityConfig.avatar_url : client.user?.displayAvatarURL(),
+                embeds: embedData.embeds
+            });
+
+            res.status(200).json({ success: true });
+        } catch (error: any) {
+            console.error('[API] Error sending webhook embed:', error);
+            res.status(500).json({ error: `Failed to send embed: ${error.message}` });
         }
     });
     

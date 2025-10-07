@@ -531,6 +531,9 @@ const defaultConfigs: DefaultConfigs = {
         enabled: true,
         premium: true,
         trigger_roles: [],
+    },
+    'embed-builder': {
+        enabled: true,
     }
 };
 

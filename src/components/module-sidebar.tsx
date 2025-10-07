@@ -143,7 +143,7 @@ export const navCategories = [
         name: 'Outils',
         items: [
             { href: 'transcript-viewer', label: 'Lecteur de Transcriptions', icon: FileText, keywords: ['html', 'log', 'conversation', 'sauvegarde', 'save'] },
-            { href: 'embed-builder', label: "Constructeur d'Embeds", icon: PencilRuler, isPremium: true, isDisabled: true, keywords: ['embed', 'message personnalisé', 'créer embed'] },
+            { href: 'embed-builder', label: "Constructeur d'Embeds", icon: PencilRuler, keywords: ['embed', 'message personnalisé', 'créer embed'] },
             { href: 'utils', label: 'Commandes Utilitaires', icon: Wrench, keywords: ['save', 'patchnote', 'rappel'] },
         ]
     }

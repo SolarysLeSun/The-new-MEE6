@@ -29,6 +29,7 @@ import '@/ai/flows/assistant-flow.ts';
 import '@/ai/flows/story-flow.ts';
 import '@/ai/flows/faq-navigation-flow.ts';
 import '@/ai/flows/truth-or-dare-flow.ts';
+import '@/ai/flows/embed-json-fixer.ts';
 
 
 import '@/ai/tools/discord-structure-tool.ts';
