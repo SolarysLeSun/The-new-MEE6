@@ -2,7 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder } from 'discord.js';
-import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage } from '@/lib/db';
+import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard } from '@/lib/db';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { updateGuildCommands } from './handlers/commandHandler';
@@ -536,6 +536,59 @@ export function startApi(client: Client) {
         } catch (error) {
             console.error('[API] Erreur lors de l\'envoi du rapport de problème :', error);
             res.status(500).json({ error: 'Impossible d\'envoyer le rapport au propriétaire du bot.' });
+        }
+    });
+
+    // --- Public Leaderboard API ---
+    app.get('/api/leaderboard/:guildId', async (req, res) => {
+        const { guildId } = req.params;
+        const { limit = '10' } = req.query;
+
+        if (!guildId) {
+            return res.status(400).json({ error: 'Guild ID is required.' });
+        }
+
+        try {
+            const leaderboardData = getGuildLeaderboard(guildId, parseInt(limit as string, 10));
+
+            const enrichedLeaderboard = await Promise.all(
+                leaderboardData.map(async (entry, index) => {
+                    try {
+                        const user = await client.users.fetch(entry.user_id);
+                        return {
+                            rank: index + 1,
+                            user: {
+                                id: user.id,
+                                username: user.username,
+                                tag: user.tag,
+                                avatar: user.displayAvatarURL({ size: 128 }),
+                            },
+                            level: entry.level,
+                            xp: entry.xp,
+                            requiredXp: entry.requiredXp,
+                        };
+                    } catch (error) {
+                        return {
+                            rank: index + 1,
+                            user: {
+                                id: entry.user_id,
+                                username: 'Utilisateur Inconnu',
+                                tag: '????',
+                                avatar: null,
+                            },
+                            level: entry.level,
+                            xp: entry.xp,
+                            requiredXp: entry.requiredXp,
+                        };
+                    }
+                })
+            );
+            
+            res.json(enrichedLeaderboard);
+
+        } catch (error) {
+            console.error(`[Leaderboard API] Error fetching leaderboard for ${guildId}:`, error);
+            res.status(500).json({ error: 'Erreur interne du serveur.' });
         }
     });
 
