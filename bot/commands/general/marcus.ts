@@ -10,26 +10,11 @@ const OWNER_ID = '556529963877138442';
 // Helper function to capitalize first letter
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-const getCommandCategory = (command: Command, commandsPath: string): string => {
-    const commandName = command.data.name.split(' ')[0];
-    
-    const findInCategory = (dir: string): string | null => {
-        const files = fs.readdirSync(dir);
-        for (const file of files) {
-            const fullPath = path.join(dir, file);
-            const stat = fs.statSync(fullPath);
-            if (stat.isDirectory()) {
-                const found = findInCategory(fullPath);
-                if (found) return path.basename(dir);
-            } else if (path.basename(file, '.ts') === commandName || path.basename(file, '.js') === commandName) {
-                 return path.basename(dir);
-            }
-        }
-        return null;
-    }
-    
-    return findInCategory(commandsPath) || 'uncategorized';
-}
+const getCommandCategory = (filePath: string, commandsPath: string): string => {
+    const relativePath = path.relative(commandsPath, filePath);
+    const category = path.dirname(relativePath).split(path.sep)[0];
+    return category || 'uncategorized';
+};
 
 
 const MarcusCommand: Command = {
@@ -86,7 +71,9 @@ const MarcusCommand: Command = {
                 }
             }
             
-            const category = getCommandCategory(command, commandsPath);
+            const commandFilePath = require.resolve(`../${command.data.name.split(' ')[0]}`);
+            const category = getCommandCategory(commandFilePath, commandsPath);
+
             if (!commandCategories.has(category)) {
                 commandCategories.set(category, []);
             }
@@ -98,7 +85,7 @@ const MarcusCommand: Command = {
             .setTitle('📜 Liste des Commandes de Marcus')
             .setDescription('Voici les commandes que vous pouvez utiliser.')
             .setTimestamp()
-            .setFooter({ text: `Demandé par ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() });
+            .setFooter({ text: `Demandé par ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() || undefined });
 
         const sortedCategories = new Collection(Array.from(commandCategories.entries()).sort());
 

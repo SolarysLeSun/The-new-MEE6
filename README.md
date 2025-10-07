@@ -25,6 +25,19 @@ Marcus est une solution complète pour la gestion de serveurs Discord, combinant
 
 ---
 
+## Charte Graphique (Emojis Personnalisés)
+
+Le bot utilise des emojis personnalisés pour une meilleure expérience visuelle, notamment dans les annonces et les messages formatés. Voici les emojis utilisés et leur identifiant :
+
+- <:fleche:1421563500190371932> - Préfixe de titre
+- <:point_h:1421563605630845009> - Puce de liste
+- <:warn:1421563647909560462> - Avertissement important
+- <:Oui:1421563353888723084> - Confirmation / Oui
+- <:Non:1421563259537850471> - Annulation / Non
+- <:Option:1421563335094042796> - Modification / Option
+
+---
+
 ## Lancement du Projet
 
 ### 1. Prérequis

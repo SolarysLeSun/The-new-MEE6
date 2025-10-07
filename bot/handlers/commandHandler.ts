@@ -50,7 +50,7 @@ export const loadCommands = (client: Client) => {
 export const updateGuildCommands = async (guildId: string, client: Client) => {
     const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
     const commandsToDeploy = [];
-    const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'delegate'];
+    const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'adminannounce', 'delegate', 'restart', 'panelmessage', 'status'];
 
     // On déploie toutes les commandes SAUF les commandes globales (owner-only)
     for (const command of client.commands.values()) {
@@ -86,11 +86,11 @@ export const deployGlobalCommands = async (client: Client) => {
      const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
      const globalCommands = [];
      
-     const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'adminannounce', 'delegate'];
+     const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'adminannounce', 'delegate', 'restart', 'panelmessage', 'status'];
      for(const cmdName of ownerCommands) {
         const command = client.commands.get(cmdName);
         if (command) {
-             command.data.setDefaultMemberPermissions(undefined); // No permissions required by default, handled in code
+             command.data.setDefaultMemberPermissions(0 as any); // Correct way to set no default permissions
              globalCommands.push(command.data.toJSON());
         }
      }
