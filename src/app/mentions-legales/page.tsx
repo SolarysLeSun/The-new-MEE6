@@ -8,6 +8,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { PageTransitionWrapper } from "@/components/page-transition-wrapper";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+
 
 export default function MentionsLegalesPage() {
   return (
@@ -83,6 +85,33 @@ export default function MentionsLegalesPage() {
                   </li>
               </ul>
             </div>
+             <div className="space-y-4">
+                <h2 className="text-2xl font-semibold text-white">5. Gestion des Données et Services Tiers</h2>
+                 <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="item-1">
+                        <AccordionTrigger>Cliquez ici pour voir notre politique de données</AccordionTrigger>
+                        <AccordionContent className="space-y-3">
+                           <p>
+                                <strong>Traitement des données :</strong> Pour fonctionner, Marcus doit analyser le contenu de certains messages (par exemple, pour l'auto-modération ou les commandes). Ce traitement est effectué en temps réel et **aucune de ces données de conversation n'est stockée** dans notre base de données.
+                            </p>
+                            <p>
+                                <strong>Données stockées :</strong> Les seules informations que nous conservons sont celles que vous configurez explicitement via le panel de gestion. Il s'agit principalement d'identifiants (IDs de salons, de rôles, de membres) fournis par l'API Discord, qui sont essentiels pour le fonctionnement des modules que vous activez. Aucune donnée personnelle en dehors de ces identifiants fonctionnels n'est stockée.
+                            </p>
+                            <p>
+                                <strong>Suppression des données :</strong> Vous avez le contrôle total. Vous pouvez à tout moment modifier ou supprimer les configurations depuis le panel. En supprimant une configuration (par exemple, en désactivant un module ou en retirant un rôle d'une liste), vous supprimez de fait les données associées de notre base de données.
+                            </p>
+                            <p>
+                                <strong>Services tiers :</strong> Marcus repose sur des services externes pour fonctionner.
+                                <ul className="list-disc list-inside pl-4 mt-2 space-y-1">
+                                    <li><strong>Discord :</strong> Notre service est un bot Discord, il est donc intrinsèquement lié à l'API de Discord.</li>
+                                    <li><strong>Google Cloud :</strong> L'ensemble de notre infrastructure (hébergement du bot, panel web) et nos fonctionnalités IA sont propulsés par les services de Google.</li>
+                                    <li><strong>PayPal :</strong> Pour la vente de nos offres Premium, nous utilisons des services de paiement comme PayPal. Nous ne sommes pas responsables de la gestion des données de ces plateformes. Pour plus d'informations, veuillez consulter leurs propres conditions d'utilisation et politiques de confidentialité.</li>
+                                </ul>
+                            </p>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+             </div>
              <div className="text-center pt-8">
                 <Link href="/">
                     <Button variant="outline">
