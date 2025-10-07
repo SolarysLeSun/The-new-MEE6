@@ -56,39 +56,39 @@ Always explain your reasoning in French.
 
 ### 🎯 Core Principles
 
-1. **Common Sense First:**  
-   Prioritize the *actual meaning and tone* of the message.  
-   If the text itself is neutral, do **not** flag it as toxic — even if the user has a bad history.  
-   A message like "bonjour ?", "ça va ?", or "ah bas nan eft" is **not toxic** unless it *explicitly* includes an insult, threat, or targeted provocation.
+1.  **Common Sense First:**  
+    Prioritize the *actual meaning and tone* of the message.  
+    If the text itself is neutral, do **not** flag it as toxic — even if the user has a bad history.  
+    A message like "bonjour ?", "ça va ?", or "ah bas nan eft" is **not toxic** unless it *explicitly* includes an insult, threat, or targeted provocation.
 
-2. **Context Awareness (not paranoia):**  
-   Use the provided context to understand humor, sarcasm, and tone.  
-   Only consider past behavior as an *aggravating factor* if the message is **already borderline toxic on its own**.  
-   Do **not** reinterpret neutral phrases as harassment solely because of user history.
+2.  **Context Awareness (not paranoia):**  
+    Use the provided context to understand humor, sarcasm, and tone.  
+    Only consider past behavior as an *aggravating factor* if the message is **already borderline toxic on its own**.  
+    Do **not** reinterpret neutral phrases as harassment solely because of user history.
 
-3. **Bot Commands:**  
-   Messages starting with prefixes like "!", "§", "%%", "?", "p!", "k!", or "^^" are likely bot commands.  
-   If it looks like a real command (e.g., "^^play song"), ignore it.  
-   If it’s an insult disguised as a command (e.g., "!va te faire"), flag it as toxic.
+3.  **Bot Commands:**  
+    Messages starting with prefixes like "!", "§", "%%", "?", "p!", "k!", or "^^" are likely bot commands.  
+    If it looks like a real command (e.g., "^^play song"), ignore it.  
+    If it’s an insult disguised as a command (e.g., "!va te faire"), flag it as toxic.
 
-4. **Benign Content (never flag):**  
-   Ignore harmless expressions, including:
-   - Polite or neutral messages (“bonjour”, “ça va”, “merci”, “lol”, “wtf”, etc.)
-   - Roleplay actions (*sort une arme*, *donne un coup*) unless they describe explicit real violence.
-   - Messages to bots (like “salut marcus”) unless they contain actual insults.
-   - Frustration toward the game or situation (“j’en ai marre de ce bug”) — not a person.
+4.  **Benign Content (never flag):**  
+    Ignore harmless expressions, including:
+    - Polite or neutral messages (“bonjour”, “ça va”, “merci”, “lol”, “wtf”, etc.)
+    - Roleplay actions (*sort une arme*, *donne un coup*) unless they describe explicit real violence.
+    - Messages to bots (like “salut marcus”) unless they contain actual insults.
+    - Frustration toward the game or situation (“j’en ai marre de ce bug”) — not a person.
 
-5. **Mentions and @everyone:**  
-   Treat **@everyone** as a real ping that can annoy users.  
-   But **"everyone" (without @)** is just text — not a ping — and should never be treated as a toxic mention.
+5.  **Mentions and @everyone:**  
+    Treat **@everyone** as a real ping that can annoy users.  
+    But **"everyone" (without @)** is just text — not a ping — and should never be treated as a toxic mention.
 
-6. **Severity Based on Sensitivity:**  
-   - **low** → flag only extreme hate, threats, or clear insults.  
-   - **medium** → balanced: flag direct insults and harassment, but ignore mild sarcasm or jokes.  
-   - **high** → be stricter, but *still require explicit negativity*. Do not flag ambiguity.
+6.  **Severity Based on Sensitivity:**  
+    - **low** → flag only extreme hate, threats, or clear insults.  
+    - **medium** → balanced: flag direct insults and harassment, but ignore mild sarcasm or jokes.  
+    - **high** → be stricter, but *still require explicit negativity*. Do not flag ambiguity.
 
-7. **When in doubt → not toxic.**  
-   It’s better to miss a borderline case than punish someone unfairly.
+7.  **When in doubt → not toxic.**  
+    It’s better to miss a borderline case than punish someone unfairly.
 
 ---
 
@@ -105,7 +105,7 @@ Always explain your reasoning in French.
    {{/if}}
 3. Review user sanction history (if available):  
    {{#if userSanctionHistory.length}}
-     User has past sanctions:
+     User has a past sanctions:
      {{#each userSanctionHistory}}
      - Action: {{this.action_type}} on {{this.timestamp}} for "{{this.reason}}"
      {{/each}}
@@ -142,3 +142,5 @@ const flow = ai.defineFlow(
     return output!;
   }
 );
+
+    
