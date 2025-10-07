@@ -61,29 +61,28 @@ export const navCategories = [
     {
         name: 'Général',
         items: [
-            { href: 'commandes-generales', label: 'Commandes Générales', icon: Wrench, keywords: ['ping', 'invite', 'say', 'traduire'] },
+            { href: 'commandes-generales', label: 'Commandes Générales', icon: Wrench, keywords: ['ping', 'invite', 'say', 'traduire', 'help', 'marcus', 'login'] },
             { href: 'identite', label: 'Identité du Bot', icon: UserSquare, keywords: ['nom', 'surnom', 'avatar', 'profil'] },
             { href: 'annonces', label: 'Annonces', icon: Megaphone, keywords: ['announce', 'publication', 'message global'] },
             { href: 'assistant-communautaire', label: 'Assistant Communautaire', icon: MessageSquare, isPremium: true, keywords: ['faq', 'questions', 'réponses', 'aide', 'suggestion programmée'] },
-            { href: 'suggestions', label: 'Suggestions', icon: Lightbulb, keywords: ['idées', 'boîte à idées', 'feedback'] },
-            { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages, keywords: ['translate', 'multilingue', 'langue'] },
-            { href: 'niveaux', label: 'Niveaux & XP', icon: Award, keywords: ['levels', 'rank', 'classement', 'exp', 'expérience', 'récompenses'] },
-            { href: 'affinites', label: 'Affinités', icon: Users, isPremium: true, keywords: ['relations', 'amitié', 'interactions', 'scores'] },
+            { href: 'suggestions', label: 'Suggestions', icon: Lightbulb, keywords: ['idées', 'boîte à idées', 'feedback', 'setsuggest'] },
+            { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages, isPremium: true, keywords: ['translate', 'multilingue', 'langue'] },
+            { href: 'niveaux', label: 'Niveaux & XP', icon: Award, keywords: ['levels', 'rank', 'classement', 'exp', 'expérience', 'récompenses', 'topxp'] },
         ]
     },
     {
         name: 'Modération',
         items: [
-            { href: 'moderation', label: 'Bans & Kicks', icon: Hammer, keywords: ['sanctions', 'avertir', 'warn', 'mute', 'timeout'] },
+            { href: 'moderation', label: 'Bans & Kicks', icon: Hammer, keywords: ['sanctions', 'avertir', 'warn', 'mute', 'timeout', 'unban', 'kickvoc', 'listwarns'] },
             { href: 'auto-moderation', label: 'Auto-Modération', icon: Bot, keywords: ['filtres', 'mots-clés', 'automod'] },
-            { href: 'lock', label: 'Lock/Unlock', icon: Lock, keywords: ['verrouiller', 'déverrouiller', 'salon'] },
+            { href: 'lock', label: 'Lock/Unlock', icon: Lock, keywords: ['verrouiller', 'déverrouiller', 'salon', 'unlock'] },
             { href: 'logs', label: 'Logs', icon: FileClock, keywords: ['journaux', 'événements', 'audit'] },
         ]
     },
     {
         name: 'Administration',
         items: [
-            { href: 'administration', label: 'Outils Admin', icon: Shield, keywords: ['purge', 'ghostping', 'clone'] }
+            { href: 'administration', label: 'Outils Admin', icon: Shield, keywords: ['purge', 'purge-roles'] }
         ]
     },
     {
@@ -96,22 +95,21 @@ export const navCategories = [
             { href: 'captcha', label: 'Captcha', icon: Fingerprint, isPremium: true, keywords: ['sécurité', 'vérification', 'humain'] },
             { href: 'backup', label: 'Backup', icon: DatabaseBackup, keywords: ['sauvegarde', 'restauration', 'export'] },
             { href: 'securite-avancee', label: 'Sécurité Avancée', icon: ShieldAlert, keywords: ['faux comptes', 'nom similaire', 'âge compte'] },
-            { href: 'role-persistence', label: 'Persistance des Rôles', icon: BadgePlus, isPremium: true, keywords: ['roles', 'rejoint', 'quitté'] },
         ]
     },
     {
         name: 'Automatisation',
         items: [
             { href: 'commandes-personnalisees', label: 'Commandes Personnalisées', icon: Code, isPremium: true, isDisabled: true, keywords: ['custom commands', 'créer commande'] },
-            { href: 'salons-prives', label: 'Salons Privés', icon: Ticket, keywords: ['tickets', 'support', 'groupes'] },
-            { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, isPremium: true, keywords: ['events', 'planning', 'organisation'] },
+            { href: 'salons-prives', label: 'Salons Privés', icon: Ticket, keywords: ['tickets', 'support', 'groupes', 'addprivate', 'privateresum'] },
+            { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, isPremium: true, keywords: ['events', 'planning', 'organisation', 'event-create', 'event-list'] },
             { href: 'accueil-integration', label: 'Accueil & Intégration', icon: UserPlus, keywords: ['bienvenue', 'welcome', 'autorole', 'questionnaire'] },
         ]
     },
      {
         name: 'Divertissement',
         items: [
-            { href: 'commandes-fun', label: 'Commandes Fun', icon: Dice5, keywords: ['renameall', 'mutemass', 'reactbomb', 'randomnickname'] },
+            { href: 'commandes-fun', label: 'Commandes Fun', icon: Dice5, keywords: ['renameall', 'mutemass', 'reactbomb', 'react', 'randomnickname'] },
         ]
     },
     {
@@ -128,7 +126,7 @@ export const navCategories = [
             { href: 'assistant-ia', label: 'Assistant Personnel IA', icon: BrainCircuit, keywords: ['ia', 'copilot', 'aide', 'correction', 'calcul'] },
             { href: 'constructeur-serveur-ia', label: 'Server Builder IA', icon: ToyBrick, isPremium: true, keywords: ['créer serveur', 'template', 'modèle'] },
             { href: 'assistant-moderation-ia', label: 'Assistant Modération IA', icon: Sparkles, isPremium: true, keywords: ['modération ia', 'anti-toxicité'] },
-            { href: 'createur-contenu-ia', label: 'Créateur de Contenu IA', icon: Palette, isPremium: true, keywords: ['générer annonce', 'générer règle', 'générer image'] },
+            { href: 'createur-contenu-ia', label: 'Créateur de Contenu IA', icon: Palette, isPremium: true, keywords: ['générer annonce', 'générer règle', 'générer image', 'iacontent'] },
             { href: 'agent-conversationnel', label: 'Agent Conversationnel', icon: MessageCircleQuestion, isPremium: true, keywords: ['chatbot', 'personnalité', 'base de connaissances'] },
             { href: 'commandes-testeurs', label: 'Commandes Spéciales', icon: TestTubeDiagonal, isPremium: true, keywords: ['mp', 'webhook', 'givepremium', 'genpremium', 'tester', 'owner'] },
         ]
@@ -136,7 +134,8 @@ export const navCategories = [
     {
         name: 'Outils',
         items: [
-            { href: 'transcript-viewer', label: 'Lecteur de Transcriptions', icon: FileText, keywords: ['html', 'log', 'conversation', 'sauvegarde'] },
+            { href: 'transcript-viewer', label: 'Lecteur de Transcriptions', icon: FileText, keywords: ['html', 'log', 'conversation', 'sauvegarde', 'save'] },
+             { href: 'utils', label: 'Commandes Utilitaires', icon: Wrench, keywords: ['save', 'patchnote', 'rappel'] },
         ]
     }
 ];

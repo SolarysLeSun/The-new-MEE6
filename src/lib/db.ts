@@ -473,6 +473,7 @@ const defaultConfigs: DefaultConfigs = {
         command_permissions: {
             save: null,
             patchnote: null,
+            rappel: null,
         }
     },
 };
