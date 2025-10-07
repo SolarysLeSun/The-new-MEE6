@@ -59,7 +59,7 @@ const upgradeSchema = () => {
         console.log('[Database] La table "sanction_history" est prête.');
         
         const configColumns = db.pragma('table_info(server_configs)') as any[];
-        if (!configColumns.some(col => col.name === 'premium')) {
+        if (configColumns.length > 0 && !configColumns.some(col => col.name === 'premium')) {
             console.log('[Database] Mise à jour du schéma : Ajout de la colonne "premium" à server_configs.');
             db.exec('ALTER TABLE server_configs ADD COLUMN premium BOOLEAN DEFAULT FALSE');
         }
@@ -87,7 +87,7 @@ const upgradeSchema = () => {
         `);
          // Check if expires_at column exists
         const keyColumns = db.pragma('table_info(premium_keys)') as any[];
-        if (!keyColumns.some(col => col.name === 'expires_at')) {
+        if (keyColumns.length > 0 && !keyColumns.some(col => col.name === 'expires_at')) {
             console.log('[Database] Mise à jour du schéma : Ajout de la colonne "expires_at" à premium_keys.');
             db.exec('ALTER TABLE premium_keys ADD COLUMN expires_at DATETIME');
         }
@@ -163,7 +163,6 @@ const createConfigTable = () => {
         );
     `);
     console.log('[Database] La table "server_configs" est prête.');
-    upgradeSchema();
 };
 
 // --- Configurations par défaut pour les nouveaux serveurs ---
@@ -537,6 +536,7 @@ const defaultConfigs: DefaultConfigs = {
 
 export function initializeDatabase() {
     createConfigTable();
+    upgradeSchema(); // Ensure all tables are created/updated
     console.log('[Database] Initialisation de la base de données terminée.');
 }
 
