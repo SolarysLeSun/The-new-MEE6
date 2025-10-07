@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Bot } from 'lucide-react';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -102,7 +104,7 @@ export default function IdentityPage() {
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Identité du Bot</h1>
                 <p className="text-muted-foreground mt-2">
-                    Personnalisez le nom du bot spécifiquement pour ce serveur.
+                    Personnalisez l'apparence du bot sur votre serveur.
                 </p>
             </div>
             <Separator />
@@ -132,22 +134,14 @@ export default function IdentityPage() {
                             onChange={(e) => handleValueChange('nickname', e.target.value)}
                         />
                     </div>
-                    <Separator />
-                     <div className="space-y-2 opacity-50">
-                        <Label htmlFor="avatar_url" className="font-bold text-sm uppercase text-muted-foreground">
-                            URL de l'avatar (Fonctionnalité désactivée)
-                        </Label>
-                         <p className="text-sm text-muted-foreground/80">
-                           L'API Discord ne permet pas de changer l'avatar d'un bot pour un serveur spécifique.
-                        </p>
-                        <Input
-                            id="avatar_url"
-                            placeholder="https://example.com/mon-super-avatar.png"
-                            value={config.avatar_url || ''}
-                            onChange={(e) => handleValueChange('avatar_url', e.target.value)}
-                            disabled={true}
-                        />
-                    </div>
+                     <Separator />
+                    <Alert>
+                        <Bot className="h-4 w-4" />
+                        <AlertTitle>Comment personnaliser l'avatar ?</AlertTitle>
+                        <AlertDescription>
+                            L'API Discord ne permet pas de changer l'avatar d'un bot pour un serveur spécifique. Cependant, il est possible de le faire pour les messages envoyés via **webhook**. Les fonctionnalités comme les **Personnages IA** ou la **Traduction Automatique** (en mode remplacement) utilisent déjà cette technique pour une personnalisation complète.
+                        </AlertDescription>
+                    </Alert>
                     <div className="flex justify-end">
                         <Button onClick={handleSave}>
                             <Save className="mr-2"/>

@@ -152,15 +152,18 @@ export function startApi(client: Client) {
             console.log(`[Bot API] Mise à jour de la config pour le serveur ${guildId}, module ${module}`);
             await updateServerConfig(guildId, module as any, configData);
 
-            updateGuildCommands(guildId, client).catch(error => {
-                console.error(`[API] Erreur asynchrone lors de la mise à jour des commandes pour ${guildId}:`, error);
-            });
-
-            if (module === 'server-identity' && configData.enabled) {
-                const guild = await client.guilds.fetch(guildId);
-                if (guild.members.me) {
-                    await guild.members.me.setNickname(configData.nickname || null);
+            // Handle specific post-update actions
+            if (module === 'server-identity') {
+                const guild = await client.guilds.fetch(guildId).catch(() => null);
+                if (guild?.members.me) {
+                    const nickname = configData.enabled ? configData.nickname : null;
+                    await guild.members.me.setNickname(nickname);
                 }
+            } else {
+                 // For most other config changes, just update commands.
+                updateGuildCommands(guildId, client).catch(error => {
+                    console.error(`[API] Erreur asynchrone lors de la mise à jour des commandes pour ${guildId}:`, error);
+                });
             }
             
             res.status(200).json({ success: true, message: `Configuration pour le module ${module} mise à jour.` });
