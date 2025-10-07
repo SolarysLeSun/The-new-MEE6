@@ -114,6 +114,7 @@ export const navCategories = [
         items: [
             { href: 'commandes-fun', label: 'Commandes Fun', icon: Dice5, keywords: ['renameall', 'mutemass', 'reactbomb', 'react', 'randomnickname'] },
             { href: 'roue-de-la-fortune', label: 'Roue de la Fortune', icon: Dices, keywords: ['tirage', 'giveaway', 'roue', 'fortune', 'aléatoire'] },
+            { href: 'creation-amitie', label: "Création d'Amitié", icon: Users, isPremium: true, isDisabled: true, keywords: ['amitié', 'relation', 'affinité', 'lien'] },
         ]
     },
     {
