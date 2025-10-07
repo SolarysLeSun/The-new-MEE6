@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -67,6 +66,7 @@ export const navCategories = [
             { href: 'suggestions', label: 'Suggestions', icon: Lightbulb },
             { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages },
             { href: 'niveaux', label: 'Niveaux & XP', icon: Award },
+            { href: 'affinites', label: 'Affinités', icon: Users, isPremium: true },
         ]
     },
     {
@@ -94,6 +94,7 @@ export const navCategories = [
             { href: 'captcha', label: 'Captcha', icon: Fingerprint, isPremium: true },
             { href: 'backup', label: 'Backup', icon: DatabaseBackup },
             { href: 'securite-avancee', label: 'Sécurité Avancée', icon: ShieldAlert },
+            { href: 'role-persistence', label: 'Persistance des Rôles', icon: BadgePlus, isPremium: true },
         ]
     },
     {
@@ -151,7 +152,17 @@ function SidebarHeaderSkeleton() {
 }
 
 
-export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { serverId: string, isOpen: boolean, setOpen: (isOpen: boolean) => void }) {
+export function ModuleSidebar({ 
+    serverId: serverIdProp, 
+    isOpen, 
+    setOpen,
+    isMobileView = false
+}: { 
+    serverId: string, 
+    isOpen?: boolean, 
+    setOpen?: (isOpen: boolean) => void,
+    isMobileView?: boolean
+}) {
   const pathname = usePathname();
   const params = useParams();
   const serverId = (params.serverId || serverIdProp) as string;
@@ -160,18 +171,16 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
   
   useEffect(() => {
     // Close sidebar on route change on mobile
-    setOpen(false);
+    if (setOpen) {
+        setOpen(false);
+    }
   }, [pathname, setOpen]);
 
 
   return (
-    <>
-    {/* Overlay for mobile */}
-    {isOpen && <div className="fixed inset-0 z-20 bg-black/60 md:hidden" onClick={() => setOpen(false)} />}
-
     <aside className={cn(
-        "fixed md:relative inset-y-0 left-0 z-30 flex h-full w-72 flex-col bg-card/80 backdrop-blur-xl p-4 border-r border-border/10 transition-transform duration-300 ease-in-out md:translate-x-0",
-        isOpen ? "translate-x-0" : "-translate-x-full"
+        "flex h-full w-72 flex-col bg-card/80 backdrop-blur-xl p-4 border-r border-border/10",
+        isMobileView && "w-full" // Take full width in mobile sheet
     )}>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3 px-2">
@@ -195,9 +204,11 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
             <SidebarHeaderSkeleton /> // Show skeleton on error or if no details
             )}
         </div>
-        <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen(false)}>
-            <X className="h-6 w-6" />
-        </Button>
+        {isMobileView && setOpen && (
+            <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
+                <X className="h-6 w-6" />
+            </Button>
+        )}
       </div>
 
       <nav className="flex-1 space-y-2 overflow-y-auto pr-2 no-scrollbar">
@@ -244,6 +255,5 @@ export function ModuleSidebar({ serverId: serverIdProp, isOpen, setOpen }: { ser
           </a>
       </div>
     </aside>
-    </>
   );
 }

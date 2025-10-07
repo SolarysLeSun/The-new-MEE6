@@ -78,7 +78,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
 
   return (
     <TooltipProvider delayDuration={0}>
-      <aside className="flex h-full w-20 flex-col items-center gap-3 bg-card/50 backdrop-blur-sm p-4">
+      <aside className="hidden md:flex h-full w-20 flex-col items-center gap-3 bg-card/50 backdrop-blur-sm p-4">
         {loading ? (
             <ServerSidebarSkeleton />
         ) : (

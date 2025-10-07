@@ -10,6 +10,8 @@ import { Loader2, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PanelAlert } from '@/components/panel-alert';
 import { CommandMenu } from '@/components/command-menu';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
 
 const RippleGrid = dynamic(() => import('@/components/ripple-grid'), {
   ssr: false,
@@ -66,7 +68,7 @@ export default function DashboardLayout({
   children: ReactNode;
   params: { serverId: string };
 }) {
-  const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
     <div className="relative flex h-screen bg-background text-foreground overflow-hidden">
@@ -87,11 +89,25 @@ export default function DashboardLayout({
         />
       </div>
       <div className="relative z-10 flex h-full w-full">
-        <ServerSidebar serverId={params.serverId} />
-        <ModuleSidebar serverId={params.serverId} isOpen={isSidebarOpen} setOpen={setSidebarOpen} />
+        {/* --- Unified Mobile Sidebar --- */}
+        <div className="md:hidden">
+            <Sheet open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+                <SheetContent side="left" className="flex gap-0 p-0 w-full">
+                    <ServerSidebar serverId={params.serverId} />
+                    <ModuleSidebar serverId={params.serverId} isOpen={isMobileSidebarOpen} setOpen={setMobileSidebarOpen} isMobileView={true} />
+                </SheetContent>
+            </Sheet>
+        </div>
+        
+        {/* --- Desktop Sidebars --- */}
+        <div className="hidden md:flex">
+            <ServerSidebar serverId={params.serverId} />
+            <ModuleSidebar serverId={params.serverId} />
+        </div>
+
         <main className="flex-1 overflow-y-auto bg-transparent flex flex-col">
            <div className="sticky top-0 z-20 flex items-center justify-between p-4 bg-background/80 backdrop-blur-sm border-b border-border">
-              <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
+              <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileSidebarOpen(true)}>
                   <Menu className="h-6 w-6" />
               </Button>
               <div className="flex-1"></div> {/* Spacer */}
