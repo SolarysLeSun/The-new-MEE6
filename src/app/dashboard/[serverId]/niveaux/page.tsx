@@ -13,13 +13,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Trash2, Shield, Gem, Settings, MessageSquare, Mic, MousePointerClick, Video, Award } from 'lucide-react';
+import { PlusCircle, Trash2, Settings, MessageSquare, Mic, MousePointerClick, Video, Award } from 'lucide-react';
 import type { RoleReward, XPBoost } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { Gem, Shield } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -192,7 +193,7 @@ export default function LevelingPage() {
         </Card>
 
         <Tabs defaultValue="gains">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
                 <TabsTrigger value="gains">Gains d'XP</TabsTrigger>
                 <TabsTrigger value="recompenses">Récompenses</TabsTrigger>
                 <TabsTrigger value="personnalisation">Personnalisation</TabsTrigger>
@@ -244,8 +245,8 @@ export default function LevelingPage() {
                         </CardHeader>
                         <CardContent className="space-y-4 flex-grow">
                             {config.role_rewards.map((reward, index) => (
-                                <div key={index} className="flex items-end gap-2">
-                                    <div className="w-24">
+                                <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
+                                    <div className="w-full sm:w-24">
                                         <Label className="text-xs">Niveau</Label>
                                         <Input type="number" placeholder="Niv." defaultValue={reward.level} onChange={e => handleListChange('role_rewards', index, 'level', parseInt(e.target.value))} />
                                     </div>
@@ -253,7 +254,7 @@ export default function LevelingPage() {
                                         <Label className="text-xs">Rôle</Label>
                                         <Combobox options={roleOptions} value={reward.role_id} onChange={val => handleListChange('role_rewards', index, 'role_id', val)} placeholder="Sélectionner un rôle..." />
                                     </div>
-                                    <Button variant="ghost" size="icon" onClick={() => removeListItem('role_rewards', index)}><Trash2 className="text-destructive"/></Button>
+                                    <Button variant="ghost" size="icon" className="shrink-0" onClick={() => removeListItem('role_rewards', index)}><Trash2 className="text-destructive"/></Button>
                                 </div>
                             ))}
                         </CardContent>
@@ -268,29 +269,29 @@ export default function LevelingPage() {
                         </CardHeader>
                         <CardContent className="space-y-4 flex-grow">
                              {config.xp_boost_roles.map((boost, index) => (
-                                <div key={index} className="flex items-end gap-2">
+                                <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
                                     <div className="flex-1">
                                          <Label className="text-xs">Rôle</Label>
                                          <Combobox options={roleOptions} value={boost.role_id} onChange={val => handleListChange('xp_boost_roles', index, 'role_id', val)} placeholder="Sélectionner un rôle..." />
                                     </div>
-                                    <div className="w-28">
+                                    <div className="w-full sm:w-28">
                                         <Label className="text-xs">Multiplicateur</Label>
                                         <Input type="number" step="0.1" placeholder="Ex: 1.5" defaultValue={boost.multiplier} onChange={e => handleListChange('xp_boost_roles', index, 'multiplier', parseFloat(e.target.value))} />
                                     </div>
-                                    <Button variant="ghost" size="icon" onClick={() => removeListItem('xp_boost_roles', index)}><Trash2 className="text-destructive"/></Button>
+                                    <Button variant="ghost" size="icon" className="shrink-0" onClick={() => removeListItem('xp_boost_roles', index)}><Trash2 className="text-destructive"/></Button>
                                 </div>
                             ))}
                              {config.xp_boost_channels.map((boost, index) => (
-                                <div key={index} className="flex items-end gap-2">
+                                <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
                                      <div className="flex-1">
                                          <Label className="text-xs">Salon</Label>
                                         <Combobox options={voiceChannelOptions} value={boost.channel_id} onChange={val => handleListChange('xp_boost_channels', index, 'channel_id', val)} placeholder="Sélectionner un salon..." />
                                     </div>
-                                     <div className="w-28">
+                                     <div className="w-full sm:w-28">
                                         <Label className="text-xs">Multiplicateur</Label>
                                         <Input type="number" step="0.1" placeholder="Ex: 1.5" defaultValue={boost.multiplier} onChange={e => handleListChange('xp_boost_channels', index, 'multiplier', parseFloat(e.target.value))} />
                                     </div>
-                                    <Button variant="ghost" size="icon" onClick={() => removeListItem('xp_boost_channels', index)}><Trash2 className="text-destructive"/></Button>
+                                    <Button variant="ghost" size="icon" className="shrink-0" onClick={() => removeListItem('xp_boost_channels', index)}><Trash2 className="text-destructive"/></Button>
                                 </div>
                             ))}
                         </CardContent>
@@ -322,7 +323,7 @@ export default function LevelingPage() {
                         </div>
                         <div className="space-y-2">
                             <Label>Message de montée de niveau</Label>
-                            <p className="text-sm text-muted-foreground">Variables: {'{user}'} (mentionne l'utilisateur), {'{username}'} (nom de l'utilisateur sans mention)</p>
+                            <p className="text-sm text-muted-foreground">Variables: {'{user}'} (mentionne l'utilisateur), {'{username}'} (nom), {'{level}'} (niveau)</p>
                             <Textarea defaultValue={config.level_up_message} onBlur={(e) => handleValueChange('level_up_message', e.target.value)} />
                         </div>
                          <div className="flex items-center justify-between">
@@ -341,7 +342,7 @@ export default function LevelingPage() {
                             <Label>URL de l'image de fond pour la carte de niveau</Label>
                             <Input placeholder="https://example.com/background.png" defaultValue={config.level_card_background_url || ''} onBlur={(e) => handleValueChange('level_card_background_url', e.target.value)} />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Couleur de la barre d'XP</Label>
                                 <Input type="color" defaultValue={config.level_card_bar_color || '#FFFFFF'} onBlur={(e) => handleValueChange('level_card_bar_color', e.target.value)} />
@@ -363,12 +364,12 @@ export default function LevelingPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {levelingCommands.map(command => (
-                            <div key={command.key} className="flex items-center justify-between p-4 border rounded-lg">
-                                <div>
+                            <div key={command.key} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-4">
+                                <div className="flex-1">
                                     <h3 className="font-semibold">{command.name}</h3>
                                     <p className="text-sm text-muted-foreground">{command.description}</p>
                                 </div>
-                                <div className="w-56">
+                                <div className="w-full sm:w-56">
                                     <Combobox
                                         options={[ { value: 'none', label: '@everyone' }, ...roleOptions]}
                                         value={config.command_permissions?.[command.key] || 'none'}
