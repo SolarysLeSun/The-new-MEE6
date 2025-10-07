@@ -6,12 +6,13 @@ import { ServerSidebar } from '@/components/server-sidebar';
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, Menu } from 'lucide-react';
+import { Loader2, Menu, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PanelAlert } from '@/components/panel-alert';
 import { CommandMenu } from '@/components/command-menu';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const RippleGrid = dynamic(() => import('@/components/ripple-grid'), {
   ssr: false,
@@ -25,8 +26,10 @@ function AuthGuard({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // If there's no serverId in the URL, we aren't loading, we're just waiting for user action.
     if (!serverId) {
-      router.push('/dashboard');
+      setLoading(false);
+      setIsVerified(false);
       return;
     }
 
@@ -49,12 +52,32 @@ function AuthGuard({ children }: { children: ReactNode }) {
       );
   }
 
-  if (!isVerified) {
-     return (
+  // If there's a server ID but it's not verified (e.g. during redirect) show loader.
+  if (serverId && !isVerified) {
+    return (
+       <div className="flex h-full w-full items-center justify-center">
+         <Loader2 className="w-12 h-12 animate-spin text-primary" />
+       </div>
+     );
+  }
+
+  // If there's no serverId, show a prompt to select a server.
+  if (!serverId) {
+    return (
         <div className="flex h-full w-full items-center justify-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            <Card className="max-w-md text-center bg-card/80">
+                <CardHeader>
+                    <CardTitle className="flex items-center justify-center gap-2">
+                        <Server className="h-6 w-6"/>
+                        Aucun Serveur Sélectionné
+                    </CardTitle>
+                    <CardDescription>
+                        Veuillez sélectionner un serveur dans la barre latérale de gauche pour commencer la configuration.
+                    </CardDescription>
+                </CardHeader>
+            </Card>
         </div>
-      );
+    )
   }
 
   return <>{children}</>;
