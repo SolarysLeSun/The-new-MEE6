@@ -11,11 +11,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useServerInfo } from '@/hooks/use-server-info';
 import { Button } from '@/components/ui/button';
-import { Save } from 'lucide-react';
+import { Bot, Save } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Bot } from 'lucide-react';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -115,9 +114,9 @@ export default function IdentityPage() {
                 <CardContent className="space-y-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <Label htmlFor="enable-module" className="font-bold">Activer la personnalisation</Label>
+                            <Label htmlFor="enable-module" className="font-bold">Activer l'identité personnalisée</Label>
                             <p className="text-sm text-muted-foreground/80">
-                                Si désactivé, le bot utilisera son profil global.
+                                Si activé, le bot utilisera le surnom et l'avatar ci-dessous.
                             </p>
                         </div>
                         <Switch id="enable-module" checked={config.enabled} onCheckedChange={(val) => handleValueChange('enabled', val)} />
@@ -125,7 +124,7 @@ export default function IdentityPage() {
                     <Separator/>
                      <div className="space-y-2">
                         <Label htmlFor="nickname" className="font-bold text-sm uppercase text-muted-foreground">
-                            Surnom sur le serveur
+                            Surnom du bot (utilisé partout)
                         </Label>
                         <Input
                             id="nickname"
@@ -134,12 +133,22 @@ export default function IdentityPage() {
                             onChange={(e) => handleValueChange('nickname', e.target.value)}
                         />
                     </div>
-                     <Separator />
-                    <Alert>
+                     <div className="space-y-2">
+                        <Label htmlFor="avatar-url" className="font-bold text-sm uppercase text-muted-foreground">
+                            Avatar du bot (utilisé par les webhooks)
+                        </Label>
+                         <Input
+                            id="avatar-url"
+                            placeholder="https://example.com/avatar.png"
+                            value={config.avatar_url || ''}
+                            onChange={(e) => handleValueChange('avatar_url', e.target.value)}
+                        />
+                    </div>
+                     <Alert>
                         <Bot className="h-4 w-4" />
-                        <AlertTitle>Comment personnaliser l'avatar ?</AlertTitle>
+                        <AlertTitle>Fonctionnement des Webhooks</AlertTitle>
                         <AlertDescription>
-                            L'API Discord ne permet pas de changer l'avatar d'un bot pour un serveur spécifique. Cependant, il est possible de le faire pour les messages envoyés via **webhook**. Les fonctionnalités comme les **Personnages IA** ou la **Traduction Automatique** (en mode remplacement) utilisent déjà cette technique pour une personnalisation complète.
+                            L'avatar personnalisé ne s'affichera que pour les messages envoyés via webhook (ex: Annonces, Patchnotes si l'identité est activée). Pour les autres interactions, seul le surnom sera visible.
                         </AlertDescription>
                     </Alert>
                     <div className="flex justify-end">

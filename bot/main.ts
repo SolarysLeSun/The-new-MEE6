@@ -425,6 +425,7 @@ async function handleReminderButton(interaction: ButtonInteraction) {
     }, delayMs);
 }
 
+const WEBHOOK_NAME = "Marcus";
 
 client.on(Events.MessageCreate, async (message) => {
     if (message.author.bot) return;
@@ -553,21 +554,12 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
         // --- Handler for Content Creator Buttons ---
         if (customId === 'publish_content' || customId === 'publish_dev_content') {
-            if (!interaction.channel || !interaction.message.embeds[0]) return;
+            if (!interaction.guild || !interaction.channel || !interaction.message.embeds[0]) return;
             
             const embed = interaction.message.embeds[0];
             const footerText = embed.footer?.text || '';
 
-            if (footerText.includes('announce_channel')) {
-                const channelId = footerText.split(':')[1];
-                const targetChannel = await client.channels.fetch(channelId).catch(() => null) as TextChannel;
-                if (targetChannel) {
-                    await targetChannel.send({ embeds: [embed] });
-                    await interaction.update({ content: '<:Oui:1421563353888723084> Annonce publiée avec succès !', components: [], embeds: [] });
-                } else {
-                    await interaction.update({ content: '<:Non:1421563259537850471> Erreur : Le salon d\'annonce est introuvable.', components: [], embeds: [] });
-                }
-            } else if (footerText.includes('admin_announce') || footerText.includes('dev_admin_announce')) {
+            if (footerText.includes('admin_announce') || footerText.includes('dev_admin_announce')) {
                 const isDevAnnounce = footerText.includes('dev_admin_announce');
                 await interaction.update({ content: `🚀 Envoi de l'annonce ${isDevAnnounce ? 'de dev' : 'globale'} en cours...`, components: [], embeds: [] });
                 
@@ -613,9 +605,35 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                         console.error(`[AdminAnnounce] Impossible d'envoyer le rapport d'erreurs en DM.`, dmError);
                     }
                 }
-            } else { // Fallback for iacontent
-                await interaction.channel.send({ embeds: [embed] });
-                await interaction.update({ content: '<:Oui:1421563353888723084> Contenu publié avec succès !', components: [], embeds: [] });
+            } else { 
+                // Handles /announce and /iacontent publication
+                const identityConfig = await getServerConfig(interaction.guild.id, 'server-identity');
+                const targetChannelId = footerText.includes('announce_channel') ? footerText.split(':')[1] : interaction.channelId;
+                const targetChannel = await client.channels.fetch(targetChannelId).catch(() => null) as TextChannel;
+
+                if (targetChannel) {
+                    if (identityConfig?.enabled) {
+                        const webhooks = await targetChannel.fetchWebhooks();
+                        let webhook = webhooks.find(wh => wh.name === WEBHOOK_NAME && wh.token !== null);
+                        if (!webhook) {
+                            webhook = await targetChannel.createWebhook({
+                                name: WEBHOOK_NAME,
+                                avatar: identityConfig.avatar_url || client.user?.displayAvatarURL(),
+                                reason: 'Webhook pour les annonces'
+                            });
+                        }
+                        await webhook.send({
+                            username: identityConfig.nickname || client.user?.username,
+                            avatarURL: identityConfig.avatar_url || client.user?.displayAvatarURL(),
+                            embeds: [embed]
+                        });
+                    } else {
+                        await targetChannel.send({ embeds: [embed] });
+                    }
+                    await interaction.update({ content: '<:Oui:1421563353888723084> Contenu publié avec succès !', components: [], embeds: [] });
+                } else {
+                     await interaction.update({ content: '<:Non:1421563259537850471> Erreur : Le salon de destination est introuvable.', components: [], embeds: [] });
+                }
             }
             return;
         }

@@ -6,6 +6,7 @@ import { patchNoteFlow } from '@/ai/flows/patchnote-flow';
 import { getServerConfig, getGlobalAiStatus } from '@/lib/db';
 
 const OWNER_ID = '556529963877138442';
+const WEBHOOK_NAME = "Marcus";
 
 const PatchNoteCommand: Command = {
     data: new SlashCommandBuilder()
@@ -30,7 +31,7 @@ const PatchNoteCommand: Command = {
                 .setRequired(false)),
 
     async execute(interaction: ChatInputCommandInteraction) {
-        if (!interaction.guild || !interaction.channel) {
+        if (!interaction.guild || !interaction.channel || !(interaction.channel instanceof TextChannel)) {
             await interaction.reply({ content: 'Cette commande ne peut être utilisée que dans un serveur.', ephemeral: true });
             return;
         }
@@ -67,8 +68,31 @@ const PatchNoteCommand: Command = {
                 .setColor(isOfficial ? 0xFFD700 : 0x3498DB)
                 .setTimestamp();
             
-            // Send the public message to the channel
-            await interaction.channel.send({ embeds: [embed] });
+            // --- Webhook Logic ---
+            const identityConfig = await getServerConfig(interaction.guild.id, 'server-identity');
+            if (identityConfig?.enabled) {
+                const webhooks = await (interaction.channel as TextChannel).fetchWebhooks();
+                let webhook = webhooks.find(wh => wh.name === WEBHOOK_NAME && wh.token !== null);
+
+                if (!webhook) {
+                    webhook = await (interaction.channel as TextChannel).createWebhook({
+                        name: WEBHOOK_NAME,
+                        avatar: identityConfig.avatar_url || interaction.client.user?.displayAvatarURL(),
+                        reason: 'Webhook pour les annonces et patchnotes'
+                    });
+                }
+                
+                await webhook.send({
+                    username: identityConfig.nickname || interaction.client.user?.username,
+                    avatarURL: identityConfig.avatar_url || interaction.client.user?.displayAvatarURL(),
+                    embeds: [embed]
+                });
+
+            } else {
+                 // Send the public message to the channel via bot
+                await interaction.channel.send({ embeds: [embed] });
+            }
+
 
             // Send an ephemeral confirmation to the user
             await interaction.editReply({ 
