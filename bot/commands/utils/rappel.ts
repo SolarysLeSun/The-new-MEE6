@@ -41,20 +41,23 @@ const RappelCommand: Command = {
             return;
         }
 
-        await interaction.reply({ content: `<:Oui:1421563353888723084> D'accord ! Je vous rappellerai votre message dans **${delayStr}**.`, ephemeral: true });
+        const reminderTimestamp = Math.floor((Date.now() + delayMs) / 1000);
+        const creationTimestamp = Math.floor(Date.now() / 1000);
+
+        await interaction.reply({ content: `<:Oui:1421563353888723084> D'accord ! Je vous le rappellerai <t:${reminderTimestamp}:R>.`, ephemeral: true });
 
         setTimeout(async () => {
             const embed = new EmbedBuilder()
                 .setColor(0x3498DB)
                 .setTitle('⏰ C\'est l\'heure !')
-                .setDescription(`Il y a **${delayStr}**, vous m'avez demandé de vous rappeler ceci :`)
+                .setDescription(`Il y a <t:${creationTimestamp}:R>, vous m'avez demandé de vous rappeler ceci :`)
                 .addFields({ name: 'Votre message', value: message });
 
             const row = new ActionRowBuilder<ButtonBuilder>()
                 .addComponents(
                     new ButtonBuilder()
                         .setCustomId(`reschedule_reminder::${delayStr}::${destination}::${Buffer.from(message).toString('base64')}`)
-                        .setLabel('Relancer le rappel')
+                        .setLabel(`Relancer (${delayStr})`)
                         .setStyle(ButtonStyle.Primary)
                         .setEmoji('🔄')
                 );
@@ -69,10 +72,14 @@ const RappelCommand: Command = {
                 console.error('[Rappel] Erreur lors de l\'envoi du rappel :', error);
                 // Try to notify user in the original channel if DM fails
                 if (destination === 'mp' && interaction.channel) {
-                    await interaction.followUp({
-                        content: `Impossible de vous envoyer votre rappel en message privé. Vos MPs sont probablement fermés.`,
-                        ephemeral: true,
-                    });
+                    try {
+                        await interaction.followUp({
+                            content: `Impossible de vous envoyer votre rappel en message privé. Vos MPs sont probablement fermés.`,
+                            ephemeral: true,
+                        });
+                    } catch(e) {
+                         console.error('[Rappel] Impossible de notifier l\'utilisateur de l\'échec du DM.');
+                    }
                 }
             }
         }, delayMs);

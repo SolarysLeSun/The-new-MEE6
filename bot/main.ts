@@ -378,23 +378,30 @@ async function handleReminderButton(interaction: ButtonInteraction) {
 
     if (!delayStr || !destination || !base64Message) return;
 
-    await interaction.reply({ content: `<:Oui:1421563353888723084> D'accord ! Je vous rappellerai à nouveau ce message dans **${delayStr}**.`, ephemeral: true });
+    const delayMs = ms(delayStr);
+    if (!delayMs) {
+        await interaction.reply({ content: 'Erreur lors de la relance du rappel : délai invalide.', ephemeral: true });
+        return;
+    }
+
+    const reminderTimestamp = Math.floor((Date.now() + delayMs) / 1000);
+    await interaction.reply({ content: `<:Oui:1421563353888723084> D'accord ! Je vous le rappellerai à nouveau <t:${reminderTimestamp}:R>.`, ephemeral: true });
 
     const message = Buffer.from(base64Message, 'base64').toString('utf-8');
-    const delayMs = ms(delayStr);
+    const creationTimestamp = Math.floor(Date.now() / 1000);
     
     setTimeout(async () => {
         const embed = new EmbedBuilder()
             .setColor(0x3498DB)
-            .setTitle('⏰ C\'est l\'heure !')
-            .setDescription(`Il y a **${delayStr}**, vous m'avez demandé de vous rappeler ceci :`)
+            .setTitle('⏰ C\'est l\'heure ! (Relance)')
+            .setDescription(`Il y a <t:${creationTimestamp}:R>, vous m'avez demandé de vous rappeler ceci :`)
             .addFields({ name: 'Votre message', value: message });
 
         const row = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId(interaction.customId) // Reuse the same customId
-                    .setLabel('Relancer le rappel')
+                    .setLabel(`Relancer (${delayStr})`)
                     .setStyle(ButtonStyle.Primary)
                     .setEmoji('🔄')
             );
@@ -407,6 +414,9 @@ async function handleReminderButton(interaction: ButtonInteraction) {
                  const originalChannel = await client.channels.fetch(interaction.channelId).catch(() => null);
                  if (originalChannel && originalChannel.isTextBased()) {
                      await originalChannel.send({ content: `${interaction.user}`, embeds: [embed], components: [row] });
+                 } else {
+                     console.warn(`[Rappel-Relance] Le salon original ${interaction.channelId} n'a pas été trouvé. Envoi en MP en guise de repli.`);
+                     await interaction.user.send({ content: `Je n'ai pas pu envoyer votre rappel dans le salon original (il a peut-être été supprimé), le voici donc :`, embeds: [embed], components: [row] });
                  }
             }
         } catch (error) {
