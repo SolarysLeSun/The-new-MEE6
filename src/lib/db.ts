@@ -1,4 +1,5 @@
 
+
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -115,16 +116,18 @@ const upgradeSchema = () => {
         `);
         console.log('[Database] La table "delegated_permissions" est prête.');
 
+        // Force recreation of referrals table to fix potential schema inconsistencies
+        db.exec('DROP TABLE IF EXISTS referrals;');
         db.transaction(() => {
             db.exec(`
-                CREATE TABLE IF NOT EXISTS referrals (
+                CREATE TABLE referrals (
                     referring_guild_id TEXT NOT NULL,
                     referred_guild_id TEXT PRIMARY KEY NOT NULL,
                     referred_owner_id TEXT NOT NULL,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
             `);
-            db.exec('CREATE INDEX IF NOT EXISTS idx_referring_guild_id ON referrals (referring_guild_id);');
+            db.exec('CREATE INDEX idx_referring_guild_id ON referrals (referring_guild_id);');
         })();
         console.log('[Database] La table "referrals" est prête.');
 
