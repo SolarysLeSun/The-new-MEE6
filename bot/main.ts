@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
 import type { Command, CustomField } from '@/types';
-import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers } from '@/lib/db';
+import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds } from '@/lib/db';
 import { startApi } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
@@ -552,7 +552,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         }
 
         // --- Handler for Content Creator Buttons ---
-        if (customId === 'publish_content') {
+        if (customId === 'publish_content' || customId === 'publish_dev_content') {
             if (!interaction.channel || !interaction.message.embeds[0]) return;
             
             const embed = interaction.message.embeds[0];
@@ -567,14 +567,15 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 } else {
                     await interaction.update({ content: '<:Non:1421563259537850471> Erreur : Le salon d\'annonce est introuvable.', components: [], embeds: [] });
                 }
-            } else if (footerText.includes('admin_announce')) {
-                await interaction.update({ content: '🚀 Envoi de l\'annonce globale en cours...', components: [], embeds: [] });
+            } else if (footerText.includes('admin_announce') || footerText.includes('dev_admin_announce')) {
+                const isDevAnnounce = footerText.includes('dev_admin_announce');
+                await interaction.update({ content: `🚀 Envoi de l'annonce ${isDevAnnounce ? 'de dev' : 'globale'} en cours...`, components: [], embeds: [] });
                 
-                const allServers = getAllBotServers();
+                const targetGuildIds = isDevAnnounce ? getDevGuilds() : getAllBotServers().map(s => s.id);
                 let successCount = 0;
                 const failures: { name: string; id: string; reason: string }[] = [];
 
-                for (const serverId of allServers.map(s => s.id)) {
+                for (const serverId of targetGuildIds) {
                     let guild;
                     try {
                         guild = await client.guilds.fetch(serverId).catch(() => null);
@@ -602,7 +603,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 await interaction.followUp({ content: summaryMessage, ephemeral: true });
 
                 if (failures.length > 0) {
-                    let report = "Rapport d'échec pour la commande `/adminannounce`:\n\n";
+                    let report = `Rapport d'échec pour la commande \`/${isDevAnnounce ? 'devadminannounce' : 'adminannounce'}\`:\n\n`;
                     for (const fail of failures) {
                         report += `**Serveur :** ${fail.name} (\`${fail.id}\`)\n**Raison :** ${fail.reason}\n-----------------\n`;
                     }

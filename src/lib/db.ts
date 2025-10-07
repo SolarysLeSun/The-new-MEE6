@@ -1,5 +1,4 @@
 
-
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -126,6 +125,13 @@ const upgradeSchema = () => {
         `);
          db.exec('CREATE INDEX IF NOT EXISTS idx_referring_guild_id ON referrals (referring_guild_id);');
         console.log('[Database] La table "referrals" est prête.');
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS dev_guilds (
+                guild_id TEXT PRIMARY KEY NOT NULL
+            );
+        `);
+        console.log('[Database] La table "dev_guilds" est prête.');
 
 
     } catch (error) {
@@ -555,6 +561,24 @@ export function setPanelMessage(message: PanelMessage | null) {
         console.error('[Database] Failed to set panel message:', error);
     }
 }
+
+// --- Dev Guilds ---
+export function addDevGuild(guildId: string): void {
+    const stmt = db.prepare('INSERT OR IGNORE INTO dev_guilds (guild_id) VALUES (?)');
+    stmt.run(guildId);
+}
+
+export function removeDevGuild(guildId: string): void {
+    const stmt = db.prepare('DELETE FROM dev_guilds WHERE guild_id = ?');
+    stmt.run(guildId);
+}
+
+export function getDevGuilds(): string[] {
+    const stmt = db.prepare('SELECT guild_id FROM dev_guilds');
+    const rows = stmt.all() as { guild_id: string }[];
+    return rows.map(row => row.guild_id);
+}
+
 
 // --- Server Configs ---
 
@@ -1093,4 +1117,3 @@ export function getGuildLeaderboard(guildId: string, limit: number = 10): (UserL
     }));
 }
 
-    
