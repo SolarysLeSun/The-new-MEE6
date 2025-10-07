@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -191,7 +192,7 @@ function WheelCard({ wheel, onUpdate, onDelete }: { wheel: Wheel, onUpdate: (whe
                 {wheel.options.map((option, index) => (
                     <div key={index} className="flex items-center gap-2">
                          <CircleDot className="w-4 h-4 text-muted-foreground shrink-0"/>
-                        <Input value={option} onBlur={(e) => handleOptionChange(index, e.target.value)} placeholder={`Option ${index + 1}`} />
+                        <Input value={option} onChange={(e) => handleOptionChange(index, e.target.value)} placeholder={`Option ${index + 1}`} />
                         <Button variant="ghost" size="icon" onClick={() => removeOption(index)} disabled={wheel.options.length <= 1}><Trash2 className="w-4 h-4"/></Button>
                     </div>
                 ))}
