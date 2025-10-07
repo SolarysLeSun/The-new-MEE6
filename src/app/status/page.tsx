@@ -4,11 +4,27 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { AppHeader } from "@/components/app-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Loader2, ServerCrash, XCircle, AlertTriangle } from "lucide-react";
+import { CheckCircle, Loader2, ServerCrash, XCircle, AlertTriangle, MessageSquareWarning } from "lucide-react";
 import RippleGrid from "@/components/ripple-grid";
 import { PageTransitionWrapper } from "@/components/page-transition-wrapper";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+
 
 const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -63,6 +79,107 @@ const LatencyBadge = ({ latency, status }: { latency: number | null, status: Ser
     return <span className={cn("text-sm font-mono", colorClass)}>{latency} ms</span>;
 };
 
+function ReportIssueDialog() {
+    const { toast } = useToast();
+    const [description, setDescription] = useState("");
+    const [contact, setContact] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleSubmit = async () => {
+        if (!description) {
+            toast({
+                title: "Description manquante",
+                description: "Veuillez décrire le problème que vous rencontrez.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`${BOT_API_URL}/report-issue`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ description, contact }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Impossible d'envoyer le rapport.");
+            }
+
+            toast({
+                title: "Rapport envoyé !",
+                description: "Merci pour votre contribution. L'équipe a été notifiée.",
+            });
+            setIsOpen(false);
+            setDescription("");
+            setContact("");
+        } catch (error: any) {
+            toast({
+                title: "Erreur",
+                description: error.message || "Une erreur est survenue lors de l'envoi du rapport.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" className="w-full max-w-sm">
+                    <MessageSquareWarning className="mr-2 h-4 w-4" />
+                    Signaler un problème
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Signaler un problème</DialogTitle>
+                    <DialogDescription>
+                        Décrivez le problème que vous avez rencontré. Soyez aussi précis que possible.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="description" className="text-right">
+                            Problème
+                        </Label>
+                        <Textarea
+                            id="description"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            className="col-span-3"
+                            placeholder="Ex: Le bot ne répond plus dans le salon #general..."
+                            rows={5}
+                        />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="contact" className="text-right">
+                            Contact
+                        </Label>
+                        <Input
+                            id="contact"
+                            value={contact}
+                            onChange={(e) => setContact(e.target.value)}
+                            className="col-span-3"
+                            placeholder="Votre pseudo Discord (optionnel)"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="ghost">Annuler</Button></DialogClose>
+                    <Button onClick={handleSubmit} disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Envoyer le rapport
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 
 export default function StatusPage() {
     const [services, setServices] = useState<StatusItem[]>([
@@ -110,12 +227,9 @@ export default function StatusPage() {
         
         // 3. AI Services Status
         const aiService = newServices.find(s => s.name === "Genkit & Services IA")!;
-        // The AI status is now implicitly checked via the bot's global status.
-        // A real check would ping the Google AI endpoint, but that's not feasible from client-side.
         try {
             const response = await fetch(`${BOT_API_URL}/global-ai-status`);
             if (!response.ok) {
-                 // If the endpoint itself fails, it might be tied to the main API outage
                 aiService.status = panelBotService.status === 'outage' ? 'outage' : 'degraded';
                 aiService.description = "Impossible de vérifier l'état des services IA.";
             } else {
@@ -127,7 +241,7 @@ export default function StatusPage() {
                     aiService.status = 'operational';
                     aiService.description = "Les services d'IA sont opérationnels.";
                  }
-                 aiService.latency = panelBotService.latency; // Latency is via bot API
+                 aiService.latency = panelBotService.latency;
             }
 
         } catch (e) {
@@ -216,6 +330,9 @@ export default function StatusPage() {
             ))}
           </CardContent>
         </Card>
+        <div className="max-w-4xl mx-auto text-center mt-8">
+            <ReportIssueDialog />
+        </div>
       </main>
     </PageTransitionWrapper>
   );

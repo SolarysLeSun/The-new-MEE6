@@ -1,7 +1,7 @@
 
 import express from 'express';
 import cors from 'cors';
-import { Client, CategoryChannel, ChannelType, REST, Routes } from 'discord.js';
+import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder } from 'discord.js';
 import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage } from '@/lib/db';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
@@ -9,8 +9,10 @@ import { updateGuildCommands } from './handlers/commandHandler';
 import { generateKeywords } from '@/ai/flows/keyword-generation-flow';
 import { knowledgeCreationFlow } from '@/ai/flows/knowledge-creation-flow';
 import { randomBytes } from 'crypto';
+import { exec } from 'child_process';
 
 const API_PORT = process.env.BOT_API_PORT || 3630; // toujour le port 3630 !!
+const OWNER_ID = '556529963877138442';
 
 // --- Panel User Authentication ---
 
@@ -488,6 +490,54 @@ export function startApi(client: Client) {
         }
     });
 
+    app.post('/api/restart-bot', (req, res) => {
+        const { password } = req.body;
+        if (password !== 'cresus') {
+            return res.status(401).json({ error: 'Mot de passe invalide.' });
+        }
+
+        console.log('[API] Commande de redémarrage reçue. Exécution de "pm2 restart bot"...');
+
+        exec('pm2 restart bot', (error, stdout, stderr) => {
+            if (error) {
+                console.error(`[API] Erreur lors de l'exécution de la commande de redémarrage : ${error.message}`);
+                return res.status(500).json({ error: "Échec de l'exécution de la commande de redémarrage.", details: stderr });
+            }
+            console.log(`[API] PM2 stdout: ${stdout}`);
+            console.error(`[API] PM2 stderr: ${stderr}`);
+            res.status(200).json({ success: true, message: 'Commande de redémarrage envoyée à PM2.' });
+        });
+    });
+
+    app.post('/api/report-issue', async (req, res) => {
+        const { description, contact } = req.body;
+        if (!description) {
+            return res.status(400).json({ error: 'La description est requise.' });
+        }
+
+        try {
+            const owner = await client.users.fetch(OWNER_ID);
+            
+            const embed = new EmbedBuilder()
+                .setColor(0xFF0000)
+                .setTitle('🚨 Nouveau Rapport de Problème')
+                .addFields(
+                    { name: 'Description du Problème', value: description },
+                )
+                .setTimestamp();
+            
+            if (contact) {
+                embed.addFields({ name: 'Contact Utilisateur', value: contact, inline: true });
+            }
+
+            await owner.send({ embeds: [embed] });
+
+            res.status(200).json({ success: true, message: 'Rapport envoyé.' });
+        } catch (error) {
+            console.error('[API] Erreur lors de l\'envoi du rapport de problème :', error);
+            res.status(500).json({ error: 'Impossible d\'envoyer le rapport au propriétaire du bot.' });
+        }
+    });
 
     app.listen(API_PORT, () => {
         console.log(`[Bot API] Le serveur API interne écoute sur le port ${API_PORT}`);
