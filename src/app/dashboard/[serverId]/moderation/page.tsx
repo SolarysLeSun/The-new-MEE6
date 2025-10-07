@@ -46,6 +46,7 @@ const moderationCommands = [
     { name: '/mute', key: 'mute', description: 'Rend un utilisateur muet.' },
     { name: '/warn', key: 'warn', description: 'Avertit un utilisateur.' },
     { name: '/listwarns', key: 'listwarns', description: "Liste les avertissements d'un utilisateur." },
+    { name: '/clearwarns', key: 'clearwarns', description: "Supprime tous les avertissements d'un utilisateur." },
     { name: '/kickvoc', key: 'kickvoc', description: "Déconnecte un utilisateur d'un salon vocal." },
 ];
 
@@ -344,5 +345,3 @@ function ModerationPageSkeleton() {
     </div>
   )
 }
-
-    

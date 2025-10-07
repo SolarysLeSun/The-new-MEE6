@@ -1,5 +1,4 @@
 
-
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -180,6 +179,7 @@ const defaultConfigs: DefaultConfigs = {
             mute: null,
             warn: null,
             listwarns: null,
+            clearwarns: null,
             kickvoc: null,
         }
     },
@@ -1039,6 +1039,15 @@ export function getUserSanctionHistory(guildId: string, userId: string): Sanctio
         LIMIT 10
     `);
     return stmt.all(guildId, userId) as SanctionHistoryEntry[];
+}
+
+export function clearUserWarns(guildId: string, userId: string): number {
+    const stmt = db.prepare(`
+        DELETE FROM sanction_history 
+        WHERE guild_id = ? AND user_id = ? AND action_type = 'warn'
+    `);
+    const result = stmt.run(guildId, userId);
+    return result.changes;
 }
 
 
