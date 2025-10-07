@@ -111,7 +111,7 @@ function EventsPageContent({ isPremium }: { isPremium: boolean }) {
     }
 
     const roleOptions = [
-        { value: 'none', label: '@everyone' },
+        { value: 'none', label: 'Admin seulement' },
         ...roles.filter(r => r.name !== '@everyone').map(role => ({ value: role.id, label: role.name }))
     ];
 
@@ -134,34 +134,34 @@ function EventsPageContent({ isPremium }: { isPremium: boolean }) {
                     <Switch id="enable-module" checked={config.enabled} onCheckedChange={(val) => handleValueChange('enabled', val)} />
                 </div>
                 <Separator />
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between opacity-50">
                     <div>
                     <Label
                         htmlFor="suggest-time"
                         className="font-bold text-sm uppercase text-muted-foreground"
                     >
-                        Suggérer l'heure de l'événement
+                        Suggérer l'heure de l'événement (Bientôt)
                     </Label>
                     <p className="text-sm text-muted-foreground/80">
                         Suggérer automatiquement les heures optimales lors de la création d'un événement.
                     </p>
                     </div>
-                    <Switch id="suggest-time" checked={config.suggest_time} onCheckedChange={(val) => handleValueChange('suggest_time', val)} />
+                    <Switch id="suggest-time" checked={config.suggest_time} onCheckedChange={(val) => handleValueChange('suggest_time', val)} disabled />
                 </div>
                 <Separator />
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2 opacity-50">
                     <div>
                     <Label
                         htmlFor="event-templates"
                         className="font-bold text-sm uppercase text-muted-foreground"
                     >
-                        Modèles d'événements
+                        Modèles d'événements (Bientôt)
                     </Label>
                     <p className="text-sm text-muted-foreground/80">
                         Activer les modèles prédéfinis pour créer des événements rapidement.
                     </p>
                     </div>
-                    <Select value={config.templates} onValueChange={(val) => handleValueChange('templates', val)}>
+                    <Select value={config.templates} onValueChange={(val) => handleValueChange('templates', val)} disabled>
                     <SelectTrigger id="event-templates" className="w-full md:w-[280px]">
                         <SelectValue placeholder="Sélectionner un modèle" />
                     </SelectTrigger>
@@ -173,34 +173,34 @@ function EventsPageContent({ isPremium }: { isPremium: boolean }) {
                     </Select>
                 </div>
                 <Separator />
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between opacity-50">
                     <div>
                     <Label
                         htmlFor="rsvp-tracking"
                         className="font-bold text-sm uppercase text-muted-foreground"
                     >
-                        Suivi des participations (RSVP)
+                        Suivi des participations (Bientôt)
                     </Label>
                     <p className="text-sm text-muted-foreground/80">
                         Activer le suivi, les rappels et l'attribution de rôles pour les participants.
                     </p>
                     </div>
-                    <Switch id="rsvp-tracking" checked={config.rsvp_tracking} onCheckedChange={(val) => handleValueChange('rsvp_tracking', val)} />
+                    <Switch id="rsvp-tracking" checked={config.rsvp_tracking} onCheckedChange={(val) => handleValueChange('rsvp_tracking', val)} disabled/>
                 </div>
                 <Separator />
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between opacity-50">
                     <div>
                     <Label
                         htmlFor="recurring-events"
                         className="font-bold text-sm uppercase text-muted-foreground"
                     >
-                        Événements récurrents
+                        Événements récurrents (Bientôt)
                     </Label>
                     <p className="text-sm text-muted-foreground/80">
                         Activer les options de récurrence pour les événements.
                     </p>
                     </div>
-                    <Switch id="recurring-events" checked={config.recurring_events} onCheckedChange={(val) => handleValueChange('recurring_events', val)} />
+                    <Switch id="recurring-events" checked={config.recurring_events} onCheckedChange={(val) => handleValueChange('recurring_events', val)} disabled/>
                 </div>
                 </CardContent>
             </Card>
@@ -260,11 +260,10 @@ export default function EventsPage() {
     <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            Événements &amp; Calendrier IA
-            <Badge className="bg-yellow-400 text-yellow-900">Premium</Badge>
+            Événements & Calendrier
         </h1>
         <p className="text-muted-foreground mt-2">
-          Planifiez des événements en vous basant sur des cartes d'activité, avec des modèles et des rappels.
+          Planifiez des événements, avec des modèles et des rappels.
         </p>
       </div>
 
