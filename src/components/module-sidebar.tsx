@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -41,6 +42,7 @@ import {
   Shield,
   Star,
   Award,
+  BrainCircuit
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -123,12 +125,12 @@ export const navCategories = [
      {
         name: 'Outils IA',
         items: [
+            { href: 'assistant-ia', label: 'Assistant Personnel IA', icon: BrainCircuit, keywords: ['ia', 'copilot', 'aide', 'correction', 'calcul'] },
             { href: 'constructeur-serveur-ia', label: 'Server Builder IA', icon: ToyBrick, isPremium: true, keywords: ['créer serveur', 'template', 'modèle'] },
             { href: 'assistant-moderation-ia', label: 'Assistant Modération IA', icon: Sparkles, isPremium: true, keywords: ['modération ia', 'anti-toxicité'] },
             { href: 'createur-contenu-ia', label: 'Créateur de Contenu IA', icon: Palette, isPremium: true, keywords: ['générer annonce', 'générer règle', 'générer image'] },
             { href: 'agent-conversationnel', label: 'Agent Conversationnel', icon: MessageCircleQuestion, isPremium: true, keywords: ['chatbot', 'personnalité', 'base de connaissances'] },
-            { href: 'personnages-ia', label: 'Personnages IA', icon: Users, isPremium: true, isDisabled: true, keywords: ['personas', 'roleplay', 'pnj'] },
-            { href: 'commandes-testeurs', label: 'Commandes Testeurs', icon: TestTubeDiagonal, isPremium: true, keywords: ['mp', 'webhook', 'givepremium', 'genpremium'] },
+            { href: 'commandes-testeurs', label: 'Commandes Spéciales', icon: TestTubeDiagonal, isPremium: true, keywords: ['mp', 'webhook', 'givepremium', 'genpremium', 'tester', 'owner'] },
         ]
     },
     {

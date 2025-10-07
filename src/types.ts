@@ -43,6 +43,7 @@ export type Module =
     | 'conversational-agent'
     | 'suggestions'
     | 'ai-personas'
+    | 'ai-assistant'
     | 'autoroles'
     | 'server-identity'
     | 'security-alerts'
@@ -145,6 +146,12 @@ export interface AiRoleMapping {
     id: string;
     role_id: string;
     keywords: string[];
+}
+
+export interface KnowledgeBaseItem {
+    id: string;
+    question: string;
+    answer: string;
 }
 
 export interface PanelMessage {

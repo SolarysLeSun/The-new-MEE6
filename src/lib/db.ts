@@ -382,6 +382,12 @@ const defaultConfigs: DefaultConfigs = {
             personnage: null,
         },
     },
+    'ai-assistant': {
+        enabled: true,
+        command_permissions: {
+            ia: null
+        },
+    },
     'server-identity': {
         enabled: true,
         nickname: null,
