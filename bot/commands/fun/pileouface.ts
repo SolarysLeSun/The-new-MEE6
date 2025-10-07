@@ -51,9 +51,14 @@ const CoinFlipCommand: Command = {
         
         const result = Math.random() < 0.5 ? 'pile' : 'face';
         const win = result === choice;
-        const xpChange = win ? amount : -amount;
 
-        updateUserXP(interaction.user.id, interaction.guild.id, xpChange);
+        if (win) {
+            updateUserXP(interaction.user.id, interaction.guild.id, amount);
+        } else {
+            updateUserXP(interaction.user.id, interaction.guild.id, -amount);
+        }
+
+        const newXp = win ? userLevel.xp + amount : userLevel.xp - amount;
 
         const embed = new EmbedBuilder()
             .setTitle('Pile ou Face')
@@ -61,7 +66,7 @@ const CoinFlipCommand: Command = {
             .setColor(win ? 0x00FF00 : 0xFF0000)
             .addFields({
                 name: win ? '🎉 Victoire ! 🎉' : '💀 Défaite... 💀',
-                value: `Vous avez ${win ? 'gagné' : 'perdu'} **${amount}** XP. Votre nouveau solde est de **${userLevel.xp + xpChange}** XP.`
+                value: `Vous avez ${win ? 'gagné' : 'perdu'} **${amount}** XP. Votre nouveau solde est de **${newXp}** XP.`
             });
 
         await interaction.reply({ embeds: [embed] });
