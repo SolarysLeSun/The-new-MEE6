@@ -56,7 +56,8 @@ export type Module =
     | 'utils'
     | 'referral'
     | 'fortune-wheel'
-    | 'role-memory';
+    | 'role-memory'
+    | 'faq-navigation';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale

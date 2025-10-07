@@ -35,6 +35,7 @@ const generalCommands = [
     { name: '/ping', key: 'ping', description: 'Vérifie la latence du bot.' },
     { name: '/traduire', key: 'traduire', description: 'Traduit un texte dans une langue spécifique.' },
     { name: '/say', key: 'say', description: 'Fait parler le bot dans le salon.' },
+    { name: '/marcusfaq', key: 'marcusfaq', description: 'Pose une question à l\'IA pour trouver un module.' },
 ];
 
 export default function GeneralCommandsPage() {

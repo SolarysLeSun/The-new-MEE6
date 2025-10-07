@@ -46,6 +46,7 @@ import {
   Dices,
   Save,
   PencilRuler,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -64,7 +65,7 @@ export const navCategories = [
     {
         name: 'Général',
         items: [
-            { href: 'commandes-generales', label: 'Commandes Générales', icon: Wrench, keywords: ['ping', 'invite', 'say', 'traduire', 'help', 'marcus', 'login'] },
+            { href: 'commandes-generales', label: 'Commandes Générales', icon: Wrench, keywords: ['ping', 'invite', 'say', 'traduire', 'help', 'marcus', 'login', 'marcusfaq'] },
             { href: 'identite', label: 'Identité du Bot', icon: UserSquare, keywords: ['nom', 'surnom', 'avatar', 'profil'] },
             { href: 'annonces', label: 'Annonces', icon: Megaphone, keywords: ['announce', 'publication', 'message global'] },
             { href: 'assistant-communautaire', label: 'Assistant Communautaire', icon: MessageSquare, isPremium: true, keywords: ['faq', 'questions', 'réponses', 'aide', 'suggestion programmée'] },

@@ -192,6 +192,7 @@ const defaultConfigs: DefaultConfigs = {
             help: null,
             marcus: null,
             traduire: null,
+            marcusfaq: null,
         },
         command_enabled: {
             invite: true,
@@ -201,6 +202,7 @@ const defaultConfigs: DefaultConfigs = {
             traduire: true,
             say: true,
             level: true,
+            marcusfaq: true,
         }
     },
     'community-assistant': {
