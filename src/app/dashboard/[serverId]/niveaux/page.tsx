@@ -34,6 +34,7 @@ interface LevelingConfig {
     level_up_message: string;
     level_up_channel_id: string | null;
     mention_user_on_levelup: boolean;
+    level_up_frequency: number;
     level_card_background_url: string | null;
     level_card_bar_color: string | null;
     level_card_text_color: string | null;
@@ -325,6 +326,11 @@ export default function LevelingPage() {
                             <Label>Message de montée de niveau</Label>
                             <p className="text-sm text-muted-foreground">Variables: {'{user}'} (mentionne l'utilisateur), {'{username}'} (nom), {'{level}'} (niveau)</p>
                             <Textarea defaultValue={config.level_up_message} onBlur={(e) => handleValueChange('level_up_message', e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Fréquence des annonces</Label>
+                            <p className="text-sm text-muted-foreground">Annoncer la montée de niveau tous les X niveaux. (1 = à chaque niveau, 0 = jamais)</p>
+                            <Input type="number" min="0" defaultValue={config.level_up_frequency} onBlur={(e) => handleValueChange('level_up_frequency', parseInt(e.target.value))} className="w-24"/>
                         </div>
                          <div className="flex items-center justify-between">
                             <div className="space-y-1">

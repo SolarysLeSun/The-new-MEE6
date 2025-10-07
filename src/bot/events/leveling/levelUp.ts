@@ -11,6 +11,12 @@ export async function execute(user: User, guild: Guild, newLevel: number) {
     const config = await getServerConfig(guild.id, 'leveling');
     if (!config || !config.enabled) return;
 
+    // --- Check frequency ---
+    const frequency = config.level_up_frequency || 1;
+    if (frequency === 0 || (newLevel % frequency !== 0)) {
+        return;
+    }
+
     // --- Send level up message ---
     if (config.level_up_channel_id && config.level_up_message) {
         const channel = await guild.channels.fetch(config.level_up_channel_id).catch(() => null) as TextChannel;

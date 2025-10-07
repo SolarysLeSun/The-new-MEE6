@@ -440,6 +440,7 @@ const defaultConfigs: DefaultConfigs = {
         level_up_message: 'Félicitations {user}, vous avez atteint le niveau {level} !',
         level_up_channel_id: null,
         mention_user_on_levelup: true,
+        level_up_frequency: 1,
         level_card_background_url: null,
         level_card_bar_color: '#FFFFFF',
         level_card_text_color: '#FFFFFF',
