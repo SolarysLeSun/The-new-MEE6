@@ -2,37 +2,23 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageComponentInteraction } from 'discord.js';
 import type { Command } from '@/types';
 import { getServerConfig } from '@/lib/db';
-
-const truths = [
-    "Quelle est la chose la plus embarrassante que tu aies faite ?",
-    "Quel est ton plus grand secret ?",
-    "Si tu pouvais être quelqu'un d'autre pour une journée, qui serais-tu et pourquoi ?",
-    "Quelle est la chose la plus folle que tu aies faite par amour ?",
-    "As-tu déjà triché à un examen ?",
-    "Quel est le mensonge le plus important que tu aies jamais dit ?",
-    "De quoi as-tu le plus peur ?",
-    "Quelle est la chose que tu regrettes le plus ?",
-    "Qui est ton crush secret sur ce serveur ?",
-    "Quelle est la rumeur la plus folle que tu aies entendue sur toi ?"
-];
-
-const dares = [
-    "Envoie un message privé embarrassant à la dernière personne à qui tu as parlé.",
-    "Change ta photo de profil pour une image ridicule pendant 10 minutes.",
-    "Poste un selfie peu flatteur dans le salon #général.",
-    "Parle en utilisant uniquement des emojis pendant les 5 prochaines minutes.",
-    "Fais une imitation d'un autre membre du serveur en vocal.",
-    "Raconte une blague nulle dans le salon principal.",
-    "Écris un poème sur les lamas et partage-le.",
-    "Change ton surnom pour quelque chose de ridicule choisi par les autres joueurs.",
-    "Avoue un faux secret totalement absurde en faisant semblant d'être sérieux.",
-    "Demande à quelqu'un du serveur de sortir avec toi (en précisant que c'est un gage)."
-];
+import { truthOrDareFlow } from '@/ai/flows/truth-or-dare-flow';
+import { v4 as uuidv4 } from 'uuid';
 
 const TruthOrDareCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('action-verite')
-        .setDescription('Joue à Action ou Vérité avec les membres du salon.'),
+        .setDescription('Joue à Action ou Vérité avec l\'IA.')
+        .addStringOption(option =>
+            option.setName('theme')
+                .setDescription("Le thème pour les questions et les défis.")
+                .setRequired(false)
+                .addChoices(
+                    { name: 'Classique', value: 'classic' },
+                    { name: 'Piquant / Amour', value: 'spicy' },
+                    { name: 'Bizarre / WTF', value: 'weird' },
+                    { name: '🔥 +18 (Contenu adulte)', value: 'adult' }
+                )),
 
     async execute(interaction: ChatInputCommandInteraction) {
         if (!interaction.guild) {
@@ -45,41 +31,61 @@ const TruthOrDareCommand: Command = {
             await interaction.reply({ content: "Le module de commandes fun est désactivé.", ephemeral: true });
             return;
         }
+        
+        const theme = interaction.options.getString('theme') || 'classic';
+        const gameId = uuidv4();
 
         const embed = new EmbedBuilder()
             .setColor(0x3498DB)
             .setTitle('Action ou Vérité !')
-            .setDescription(`${interaction.user.toString()} a lancé une partie ! Qui veut jouer ?`);
+            .setDescription(`${interaction.user.toString()} a lancé une partie avec le thème **${theme}** ! Qui veut jouer ?`);
         
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder().setCustomId('truth_or_dare_truth').setLabel('Vérité').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('truth_or_dare_dare').setLabel('Action').setStyle(ButtonStyle.Danger)
+            new ButtonBuilder().setCustomId(`truth_${gameId}_${theme}`).setLabel('Vérité').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`dare_${gameId}_${theme}`).setLabel('Action').setStyle(ButtonStyle.Danger)
         );
 
         const message = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
 
-        const collector = message.createMessageComponentCollector({ time: 600000 }); // 10 minutes
+        const collector = message.createMessageComponentCollector({ time: 3_600_000 }); // 1 hour
 
         collector.on('collect', async (i: MessageComponentInteraction) => {
             if (!i.isButton()) return;
             
-            let title: string;
-            let description: string;
-            
-            if (i.customId === 'truth_or_dare_truth') {
-                title = '❓ Vérité';
-                description = truths[Math.floor(Math.random() * truths.length)];
-            } else {
-                title = '🔥 Action';
-                description = dares[Math.floor(Math.random() * dares.length)];
-            }
+            await i.deferReply();
 
-            const gameEmbed = new EmbedBuilder()
-                .setColor(i.customId === 'truth_or_dare_truth' ? 0x2ECC71 : 0xE74C3C)
-                .setTitle(title)
-                .setDescription(`${i.user.toString()}, voici ton choix :\n\n**${description}**`);
-            
-            await i.reply({ embeds: [gameEmbed] });
+            const [type, collectedGameId, collectedTheme] = i.customId.split('_');
+
+            if (collectedGameId !== gameId) return;
+
+            try {
+                const result = await truthOrDareFlow({
+                    type: type as 'truth' | 'dare',
+                    theme: collectedTheme,
+                });
+                
+                let title: string;
+                let color: number;
+
+                if (type === 'truth') {
+                    title = '❓ Vérité';
+                    color = 0x2ECC71;
+                } else {
+                    title = '🔥 Action';
+                    color = 0xE74C3C;
+                }
+
+                const gameEmbed = new EmbedBuilder()
+                    .setColor(color)
+                    .setTitle(title)
+                    .setDescription(`${i.user.toString()}, voici ton choix :\n\n**${result.content}**`);
+                
+                await i.editReply({ embeds: [gameEmbed] });
+
+            } catch (error) {
+                console.error('[Action-Verite] Error calling AI flow:', error);
+                await i.editReply({ content: "Désolé, l'IA est en panne d'inspiration. Réessayez !" });
+            }
         });
 
         collector.on('end', () => {
