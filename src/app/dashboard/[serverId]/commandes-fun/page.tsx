@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -31,6 +32,10 @@ const funCommands = [
     { name: '/reactbomb', key: 'reactbomb', description: 'Bombarde un message de réactions aléatoires.' },
     { name: '/react', key: 'react', description: 'Réagit à un message avec un emoji spécifique.' },
     { name: '/randomnickname', key: 'randomnickname', description: 'Donne un surnom aléatoire à un ou plusieurs utilisateurs.' },
+    { name: '/pileouface', key: 'pileouface', description: 'Pariez votre XP sur un lancer de pièce.', isLevel: true },
+    { name: '/slots', key: 'slots', description: 'Jouez à la machine à sous avec votre XP.', isLevel: true },
+    { name: '/de', key: 'de', description: 'Lance un ou plusieurs dés.' },
+    { name: '/action-verite', key: 'action-verite', description: 'Joue à Action ou Vérité avec les membres du salon.' },
 ];
 
 function PageSkeleton() {
@@ -140,6 +145,7 @@ export default function FunCommandsPage() {
         { value: 'none', label: 'Admin seulement' },
         ...roles.filter(r => r.name !== '@everyone').map(r => ({ value: r.id, label: r.name }))
     ];
+    const everyoneRoleOption = [{ value: 'none', label: '@everyone' }, ...roleOptions.slice(1)];
 
   return (
     <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
@@ -194,13 +200,14 @@ export default function FunCommandsPage() {
                         <div className="space-y-2">
                             <Label htmlFor={`role-select-${command.key}`} className="text-sm font-medium">Rôle minimum requis</Label>
                             <Combobox
-                                options={roleOptions}
+                                options={command.isLevel ? everyoneRoleOption : roleOptions}
                                 value={config.command_permissions?.[command.key] || 'none'}
                                 onChange={(value) => handlePermissionChange(command.key, value)}
                                 placeholder="Sélectionner un rôle"
                                 searchPlaceholder="Rechercher un rôle..."
                                 emptyPlaceholder="Aucun rôle trouvé."
                             />
+                             {command.isLevel && <p className="text-xs text-muted-foreground pt-1">Cette commande est liée au système de niveaux.</p>}
                         </div>
                     </CardContent>
                 </Card>
@@ -210,5 +217,3 @@ export default function FunCommandsPage() {
     </PageTransitionWrapper>
   );
 }
-
-    

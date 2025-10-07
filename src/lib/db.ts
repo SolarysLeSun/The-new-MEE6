@@ -1,4 +1,5 @@
 
+
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -853,7 +854,7 @@ export function createPremiumKey(generatedBy: string, expiresAt: Date | null): s
     return key;
 }
 
-export function redeemPremiumKey(key: string, guildId: string): { success: boolean; message: string; expires_at?: Date | null; } {
+export function redeemPremiumKey(key: string, guildId: string, usedById: string): { success: boolean; message: string; expires_at?: Date | null; } {
     const stmt = db.prepare('SELECT * FROM premium_keys WHERE key = ?');
     const row = stmt.get(key) as { is_used: number; used_by_guild: string; expires_at: string | null } | undefined;
 
@@ -875,6 +876,14 @@ export function redeemPremiumKey(key: string, guildId: string): { success: boole
 
     setPremiumStatus(guildId, true);
 
+    // After successfully redeeming a key, check if the redeemer should get tester status
+    const supportServerId = process.env.SUPPORT_SERVER_ID;
+    if (supportServerId && expiresAt) { // Only give tester status for non-lifetime keys
+        console.log(`[+] Assigning tester status to ${usedById} on support server ${supportServerId}`);
+        giveTesterStatus(usedById, supportServerId, expiresAt);
+    }
+
+
     return { success: true, message: 'Clé premium activée avec succès !', expires_at: expiresAt };
 }
 
@@ -894,7 +903,7 @@ export async function applyReferral(referralCode: string, referredGuildId: strin
     const referringGuildId = sponsor.guild_id;
 
     if (referringGuildId === referredGuildId) {
-        return { success: false, message: "Vous не pouvez pas parrainer votre propre serveur." };
+        return { success: false, message: "Vous ne pouvez pas parrainer votre propre serveur." };
     }
 
     const checkReferredStmt = db.prepare("SELECT 1 FROM referrals WHERE referred_guild_id = ?");
@@ -1050,18 +1059,17 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
     };
 }
 
-export const updateUserXP = db.transaction((userId: string, guildId: string, xpToAdd: number) => {
-    if (xpToAdd <= 0) return;
-
+export const updateUserXP = db.transaction((userId: string, guildId: string, xpToModify: number) => {
+    
     const stmt = db.prepare(`
         INSERT INTO user_levels (user_id, guild_id, xp, level)
         VALUES (?, ?, ?, 0)
         ON CONFLICT(user_id, guild_id) DO UPDATE SET
         xp = xp + excluded.xp;
     `);
-    stmt.run(userId, guildId, xpToAdd);
+    stmt.run(userId, guildId, xpToModify);
 
-    // Check for level up
+    // After updating, check for level up/down
     const { xp, level } = getUserLevel(userId, guildId);
     let requiredXp = calculateRequiredXp(level);
     
@@ -1116,4 +1124,3 @@ export function getGuildLeaderboard(guildId: string, limit: number = 10): (UserL
         requiredXp: calculateRequiredXp(row.level)
     }));
 }
-
