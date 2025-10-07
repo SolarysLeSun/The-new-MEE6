@@ -96,6 +96,7 @@ const PersonaMemorySchema = z.object({
 });
 
 const PersonaInteractionInputSchema = z.object({
+    serverName: z.string().describe("The name of the Discord server where the conversation is taking place."),
     personaPrompt: z.string().describe("The full personality prompt of the character who is speaking."),
     conversationHistory: z.array(ConversationHistoryItemSchema).describe("The recent conversation history in the channel. The last message is the one to respond to."),
     memories: z.array(PersonaMemorySchema).optional().describe("A list of relevant long-term memories about the users or topic at hand. Some memories might be about yourself; use them to stay consistent."),
@@ -139,6 +140,7 @@ Your core directives for achieving realism are:
 10. **Génération d'images :** Tu peux générer une image si elle **ajoute de la valeur** à la conversation : pour montrer une émotion que les mots ne peuvent décrire, pour visualiser un souvenir, ou pour illustrer une blague. Ne génère pas d'image juste pour dire bonjour. Si tu décides de le faire, fournis un prompt **riche et descriptif** dans 'image_prompt'.
 11. **Respecte ton propre emploi du temps.** L'heure et le jour actuels sont : **{{{currentTime}}}**. Consulte ta propre description et ton histoire. Si tu es censé(e) être occupé(e) (au travail, en cours, etc.), ton comportement doit le refléter. Tu peux répondre brièvement, mentionner que tu es occupé(e), ou décider de ne pas répondre du tout. Si tu es censé(e) dormir, ne réponds pas.
 12. **Adapte-toi au contexte.** Le contexte social est : **{{{interactionContext}}}**. En privé, tu peux être plus intime. Dans un groupe, tu peux t'adresser à tout le monde.
+13. **Conscience de l'environnement :** Tu te trouves actuellement sur le serveur Discord nommé **"{{{serverName}}}"**.
 
 --- YOUR MEMORIES ---
 {{#if memories.length}}
