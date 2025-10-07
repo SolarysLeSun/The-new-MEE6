@@ -3,23 +3,26 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle, KeyRound, ServerCrash } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
-// This is a simplified auth page. In a real-world scenario, you'd handle
-// loading states, errors, and session management more robustly.
+type AuthStatus = 'loading' | 'success' | 'token_error' | 'api_error';
 
 function AuthProcessor() {
     const searchParams = useSearchParams();
     const router = useRouter();
-    const [message, setMessage] = useState('Vérification de votre session...');
-    const [error, setError] = useState(false);
+    const [status, setStatus] = useState<AuthStatus>('loading');
+    const [errorMessage, setErrorMessage] = useState('');
+    const supportServerUrl = "https://discord.gg/WSpz7FqFsC";
 
     useEffect(() => {
         const token = searchParams.get('token');
 
         if (!token) {
-            setError(true);
-            setMessage('Token de connexion manquant. Veuillez réessayer de vous connecter depuis Discord.');
+            setStatus('token_error');
+            setErrorMessage('Token de connexion manquant dans l\'URL.');
             return;
         }
 
@@ -34,43 +37,116 @@ function AuthProcessor() {
                     body: JSON.stringify({ token }),
                 });
 
+                if (response.status === 401) {
+                     setStatus('token_error');
+                     setErrorMessage('Ce lien de connexion est invalide ou a expiré.');
+                     return;
+                }
+
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Token invalide ou expiré.');
+                    const errorData = await response.json().catch(() => ({ error: `Le serveur a répondu avec une erreur ${response.status}.` }));
+                    throw new Error(errorData.error);
                 }
 
                 const { guildId } = await response.json();
 
-                // Get existing authed guilds from localStorage, or initialize a new array
                 const authedGuilds = JSON.parse(localStorage.getItem('authed_guilds') || '[]');
-
-                // Add the new guildId if it's not already in the list
                 if (!authedGuilds.includes(guildId)) {
                     authedGuilds.push(guildId);
                     localStorage.setItem('authed_guilds', JSON.stringify(authedGuilds));
                 }
-
-                setMessage('Authentification réussie ! Redirection en cours...');
-                router.push(`/dashboard/${guildId}/moderation`);
+                
+                setStatus('success');
+                router.push(`/dashboard/${guildId}`);
 
             } catch (err: any) {
-                setError(true);
-                setMessage(`Erreur d'authentification : ${err.message}. Veuillez réessayer.`);
+                // This block catches network errors (bot is down) or other unexpected errors
+                console.error("API Verification Error:", err);
+                setStatus('api_error');
+                setErrorMessage(err.message || 'La communication avec le bot a échoué.');
             }
         };
 
-        verifyToken();
+        // Delay verification slightly to allow UI to render the loader
+        setTimeout(verifyToken, 500);
 
     }, [searchParams, router]);
 
-    return (
-        <div className="flex flex-col items-center gap-4">
-            {!error && <Loader2 className="w-12 h-12 animate-spin text-primary" />}
-            <p className={`text-xl ${error ? 'text-destructive' : 'text-muted-foreground'}`}>
-                {message}
-            </p>
-        </div>
-    );
+    if (status === 'loading') {
+        return (
+            <div className="flex flex-col items-center gap-4 text-center">
+                <Loader2 className="w-12 h-12 animate-spin text-primary" />
+                <p className="text-xl text-muted-foreground">Vérification de votre session...</p>
+                <p className="text-sm text-muted-foreground">Connexion sécurisée au bot en cours.</p>
+            </div>
+        );
+    }
+    
+    if (status === 'success') {
+        return (
+            <div className="flex flex-col items-center gap-4 text-center">
+                <Loader2 className="w-12 h-12 animate-spin text-primary" />
+                <p className="text-xl text-muted-foreground">Authentification réussie !</p>
+                <p className="text-sm text-muted-foreground">Redirection vers votre tableau de bord...</p>
+            </div>
+        );
+    }
+
+    if (status === 'token_error') {
+        return (
+            <Card className="w-full max-w-md text-center">
+                <CardHeader>
+                    <CardTitle className="flex items-center justify-center gap-2 text-destructive">
+                        <KeyRound className="h-6 w-6"/>
+                        Lien de Connexion Invalide
+                    </CardTitle>
+                    <CardDescription>
+                        {errorMessage}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground">
+                        Veuillez retourner sur votre serveur Discord et utiliser à nouveau la commande <code className="bg-muted px-1.5 py-1 rounded-md text-foreground">/login</code> pour générer un nouveau lien.
+                    </p>
+                </CardContent>
+            </Card>
+        );
+    }
+    
+    if (status === 'api_error') {
+         return (
+            <Card className="w-full max-w-md text-center">
+                <CardHeader>
+                    <CardTitle className="flex items-center justify-center gap-2 text-destructive">
+                        <ServerCrash className="h-6 w-6"/>
+                        Le Bot ne répond pas
+                    </CardTitle>
+                    <CardDescription>
+                        Impossible de se connecter à l'API du bot. Il est peut-être hors ligne ou en cours de redémarrage.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                     <p className="text-muted-foreground">
+                        Vous pouvez vérifier l'état actuel des services ou demander de l'aide sur notre serveur de support.
+                    </p>
+                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                        <Link href="/status">
+                             <Button variant="outline" className="w-full">
+                                Voir la page de statut
+                            </Button>
+                        </Link>
+                         <a href={supportServerUrl} target="_blank" rel="noopener noreferrer">
+                            <Button variant="secondary" className="w-full">
+                                Rejoindre le support
+                            </Button>
+                        </a>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+    
+    return null;
 }
 
 
