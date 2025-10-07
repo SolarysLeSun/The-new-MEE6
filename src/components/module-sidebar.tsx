@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -46,6 +45,7 @@ import {
   Gift,
   Dices,
   Save,
+  PencilRuler,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -107,7 +107,7 @@ export const navCategories = [
         items: [
             { href: 'commandes-personnalisees', label: 'Commandes Personnalisées', icon: Code, isPremium: true, isDisabled: true, keywords: ['custom commands', 'créer commande'] },
             { href: 'salons-prives', label: 'Salons Privés', icon: Ticket, keywords: ['tickets', 'support', 'groupes', 'addprivate', 'privateresum'] },
-            { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, isPremium: true, keywords: ['events', 'planning', 'organisation', 'event-create', 'event-list'] },
+            { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, keywords: ['events', 'planning', 'organisation', 'event-create', 'event-list'] },
             { href: 'accueil-integration', label: 'Accueil & Intégration', icon: UserPlus, keywords: ['bienvenue', 'welcome', 'autorole', 'questionnaire'] },
         ]
     },
@@ -142,7 +142,8 @@ export const navCategories = [
         name: 'Outils',
         items: [
             { href: 'transcript-viewer', label: 'Lecteur de Transcriptions', icon: FileText, keywords: ['html', 'log', 'conversation', 'sauvegarde', 'save'] },
-             { href: 'utils', label: 'Commandes Utilitaires', icon: Wrench, keywords: ['save', 'patchnote', 'rappel'] },
+            { href: 'embed-builder', label: "Constructeur d'Embeds", icon: PencilRuler, isPremium: true, isDisabled: true, keywords: ['embed', 'message personnalisé', 'créer embed'] },
+            { href: 'utils', label: 'Commandes Utilitaires', icon: Wrench, keywords: ['save', 'patchnote', 'rappel'] },
         ]
     }
 ];
