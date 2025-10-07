@@ -341,7 +341,8 @@ const defaultConfigs: DefaultConfigs = {
         custom_instructions: '',
         allow_nsfw_images: false,
         command_permissions: {
-            iacontent: null
+            iacontent: null,
+            histoire: null,
         }
     },
     'server-builder': { 

@@ -26,5 +26,6 @@ import '@/ai/flows/role-assignment-flow.ts';
 import '@/ai/flows/patchnote-flow.ts';
 import '@/ai/flows/scheduled-suggestion-flow.ts';
 import '@/ai/flows/assistant-flow.ts';
+import '@/ai/flows/story-flow.ts';
 
 import '@/ai/tools/discord-structure-tool.ts';

@@ -21,7 +21,7 @@ import {
   SelectGroup,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Palette, AlertTriangle } from 'lucide-react';
+import { Palette, AlertTriangle, BookOpen } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
 import { useServerInfo } from '@/hooks/use-server-info';
@@ -48,11 +48,18 @@ interface DiscordRole {
     name: string;
 }
 
-const contentCommand = {
-    name: '/iacontent',
-    key: 'iacontent',
-    description: 'Rédige des règles, annonces et génère des images avec l\'IA.',
-};
+const contentCommands = [
+    {
+        name: '/iacontent',
+        key: 'iacontent',
+        description: 'Rédige des règles, annonces et génère des images avec l\'IA.',
+    },
+    {
+        name: '/histoire',
+        key: 'histoire',
+        description: 'Fait écrire une petite histoire à l\'IA sur un sujet donné.',
+    }
+];
 
 function AiContentCreatorPageContent({ isPremium }: { isPremium: boolean }) {
     const params = useParams();
@@ -201,46 +208,50 @@ function AiContentCreatorPageContent({ isPremium }: { isPremium: boolean }) {
                 <div>
                 <h2 className="text-xl font-bold">Commandes</h2>
                 <p className="text-muted-foreground">
-                    Gérez la permission pour la commande de ce module.
+                    Gérez les permissions pour chaque commande de ce module.
                 </p>
                 </div>
-                <Card key={contentCommand.name}>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                    <Palette className="w-5 h-5 text-primary" />
-                    <span>{contentCommand.name}</span>
-                    </CardTitle>
-                    <CardDescription>{contentCommand.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-2">
-                    <Label
-                        htmlFor={`role-select-${contentCommand.name}`}
-                        className="text-sm font-medium"
-                    >
-                        Rôle minimum requis
-                    </Label>
-                    <Select
-                        value={config.command_permissions[contentCommand.key] || 'none'}
-                        onValueChange={(value) => handlePermissionChange(contentCommand.key, value)}
-                    >
-                        <SelectTrigger id={`role-select-${contentCommand.name}`} className="w-full">
-                        <SelectValue placeholder="Sélectionner un rôle" />
-                        </SelectTrigger>
-                        <SelectContent>
-                        <SelectGroup>
-                             <SelectItem value="none">Admin seulement</SelectItem>
-                             {roles.filter(r => r.name !== '@everyone').map((role) => (
-                                <SelectItem key={role.id} value={role.id}>
-                                    {role.name}
-                                </SelectItem>
-                            ))}
-                        </SelectGroup>
-                        </SelectContent>
-                    </Select>
-                    </div>
-                </CardContent>
-                </Card>
+                <div className="grid md:grid-cols-2 gap-6">
+                    {contentCommands.map((command) => (
+                        <Card key={command.name}>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                <Palette className="w-5 h-5 text-primary" />
+                                <span>{command.name}</span>
+                                </CardTitle>
+                                <CardDescription>{command.description}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-2">
+                                <Label
+                                    htmlFor={`role-select-${command.name}`}
+                                    className="text-sm font-medium"
+                                >
+                                    Rôle minimum requis
+                                </Label>
+                                <Select
+                                    value={config.command_permissions[command.key] || 'none'}
+                                    onValueChange={(value) => handlePermissionChange(command.key, value)}
+                                >
+                                    <SelectTrigger id={`role-select-${command.name}`} className="w-full">
+                                    <SelectValue placeholder="Sélectionner un rôle" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                    <SelectGroup>
+                                        <SelectItem value="none">Admin seulement</SelectItem>
+                                        {roles.filter(r => r.name !== '@everyone').map((role) => (
+                                            <SelectItem key={role.id} value={role.id}>
+                                                {role.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
             </div>
             </PageTransitionWrapper>
         </PremiumFeatureWrapper>
@@ -257,7 +268,7 @@ export default function AiContentCreatorPage() {
             <Badge className="bg-yellow-400 text-yellow-900">Premium</Badge>
         </h1>
         <p className="text-muted-foreground mt-2">
-          Générez des annonces, des règles ou des images directement avec l'IA.
+          Générez des annonces, des règles, des images ou même des histoires directement avec l'IA.
         </p>
       </div>
 
@@ -271,5 +282,3 @@ export default function AiContentCreatorPage() {
     </PageTransitionWrapper>
   );
 }
-
-    
