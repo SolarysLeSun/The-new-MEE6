@@ -70,11 +70,6 @@ export default function PresentationPage() {
                                 Accéder au Panel
                             </Button>
                         </Link>
-                        <a href={supportServerUrl} target="_blank" rel="noopener noreferrer">
-                            <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg py-7 px-8">
-                                Rejoindre le support
-                            </Button>
-                        </a>
                     </div>
 
                     <div className="mt-8 text-sm text-muted-foreground">
