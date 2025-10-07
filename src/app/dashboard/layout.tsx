@@ -117,7 +117,7 @@ export default function DashboardLayout({
             <Sheet open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
                 <SheetContent side="left" className="flex gap-0 p-0 w-full">
                     <ServerSidebar serverId={params.serverId} />
-                    <ModuleSidebar serverId={params.serverId} isOpen={isMobileSidebarOpen} setOpen={setMobileSidebarOpen} isMobileView={true} />
+                    <ModuleSidebar serverId={params.serverId} onLinkClick={() => setMobileSidebarOpen(false)} isMobileView={true} />
                 </SheetContent>
             </Sheet>
         </div>

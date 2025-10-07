@@ -164,28 +164,18 @@ function SidebarHeaderSkeleton() {
 
 export function ModuleSidebar({ 
     serverId: serverIdProp, 
-    isOpen, 
-    setOpen,
-    isMobileView = false
+    isMobileView = false,
+    onLinkClick
 }: { 
     serverId: string, 
-    isOpen?: boolean, 
-    setOpen?: (isOpen: boolean) => void,
-    isMobileView?: boolean
+    isMobileView?: boolean,
+    onLinkClick?: () => void
 }) {
   const pathname = usePathname();
   const params = useParams();
   const serverId = (params.serverId || serverIdProp) as string;
 
   const { serverInfo, loading } = useServerInfo();
-  
-  useEffect(() => {
-    // Close sidebar on route change on mobile
-    if (setOpen) {
-        setOpen(false);
-    }
-  }, [pathname, setOpen]);
-
 
   return (
     <aside className={cn(
@@ -214,8 +204,8 @@ export function ModuleSidebar({
             <SidebarHeaderSkeleton /> // Show skeleton on error or if no details
             )}
         </div>
-        {isMobileView && setOpen && (
-            <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
+        {isMobileView && onLinkClick && (
+            <Button variant="ghost" size="icon" onClick={onLinkClick}>
                 <X className="h-6 w-6" />
             </Button>
         )}
@@ -231,7 +221,7 @@ export function ModuleSidebar({
                       const fullPath = serverId ? `/dashboard/${serverId}/${item.href}` : '#';
                       const isActive = pathname === fullPath;
                       return (
-                        <Link key={item.label} href={fullPath} className={!serverId ? 'pointer-events-none' : ''}>
+                        <Link key={item.label} href={fullPath} className={!serverId ? 'pointer-events-none' : ''} onClick={onLinkClick}>
                            <Button
                              variant={isActive ? 'secondary' : 'ghost'}
                              className={cn('w-full justify-start gap-3', { 'bg-secondary text-white': isActive, 'text-muted-foreground hover:text-white': !isActive})}
