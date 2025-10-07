@@ -42,7 +42,8 @@ import {
   Shield,
   Star,
   Award,
-  BrainCircuit
+  BrainCircuit,
+  Gift,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -68,6 +69,7 @@ export const navCategories = [
             { href: 'suggestions', label: 'Suggestions', icon: Lightbulb, keywords: ['idées', 'boîte à idées', 'feedback', 'setsuggest'] },
             { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages, isPremium: true, keywords: ['translate', 'multilingue', 'langue'] },
             { href: 'niveaux', label: 'Niveaux & XP', icon: Award, keywords: ['levels', 'rank', 'classement', 'exp', 'expérience', 'récompenses', 'topxp'] },
+            { href: 'parrainage', label: 'Parrainage', icon: Gift, keywords: ['récompense', 'premium', 'inviter', 'code'] },
         ]
     },
     {

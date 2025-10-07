@@ -3,9 +3,10 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable } from 'discord.js';
+import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder } from 'discord.js';
 import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage } from '../types';
 import { randomBytes } from 'crypto';
+import ms from 'ms';
 
 // Assurez-vous que le répertoire de la base de données existe
 const dbDir = path.resolve(process.cwd(), 'database');
@@ -114,6 +115,17 @@ const upgradeSchema = () => {
             );
         `);
         console.log('[Database] La table "delegated_permissions" est prête.');
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS referrals (
+                referring_guild_id TEXT NOT NULL,
+                referred_guild_id TEXT PRIMARY KEY NOT NULL,
+                referred_owner_id TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+         db.exec('CREATE INDEX IF NOT EXISTS idx_referring_guild_id ON referrals (referring_guild_id);');
+        console.log('[Database] La table "referrals" est prête.');
 
 
     } catch (error) {
@@ -475,6 +487,15 @@ const defaultConfigs: DefaultConfigs = {
             save: null,
             patchnote: null,
             rappel: null,
+            parrainage: null,
+        }
+    },
+     'referral': {
+        enabled: true,
+        referral_code: null,
+        referral_count: 0,
+        command_permissions: {
+            parrainage: null,
         }
     },
 };
@@ -538,7 +559,6 @@ export function setPanelMessage(message: PanelMessage | null) {
 // --- Server Configs ---
 
 export function getServerConfig(guildId: string, module: Module): ModuleConfig | null {
-    // **CORRECTIF AJOUTÉ ICI**
     if (!guildId) {
         console.error(`[Database] Tentative de récupération de configuration avec un guildId non défini pour le module : ${module}.`);
         return defaultConfigs[module] || null;
@@ -570,16 +590,28 @@ export function getServerConfig(guildId: string, module: Module): ModuleConfig |
                     }
                 }
             }
+
+            if (module === 'referral' && !finalConfig.referral_code) {
+                finalConfig.referral_code = `MARCUS-${guildId.slice(-6)}`;
+                updateServerConfig(guildId, module, finalConfig);
+            }
+
             finalConfig.premium = !!result.premium;
             return finalConfig;
         } else {
-             // If no config exists for this module, create the default one and return it.
+            // If no config exists for this module, create the default one and return it.
             console.log(`[Database] Aucune config trouvée pour ${guildId} et le module ${module}. Création de la config par défaut.`);
-            updateServerConfig(guildId, module, defaultConfig);
+            
+            let configToSave = {...defaultConfig};
+            if (module === 'referral') {
+                configToSave.referral_code = `MARCUS-${guildId.slice(-6)}`;
+            }
+
+            updateServerConfig(guildId, module, configToSave);
             const premiumStatusStmt = db.prepare('SELECT premium FROM server_configs WHERE guild_id = ? LIMIT 1');
             const premiumResult = premiumStatusStmt.get(guildId) as { premium: number } | undefined;
-            defaultConfig.premium = premiumResult ? !!premiumResult.premium : false;
-            return defaultConfig;
+            configToSave.premium = premiumResult ? !!premiumResult.premium : false;
+            return configToSave;
         }
     } catch (error) {
         console.error(`[Database] Erreur lors de la récupération de la config pour ${guildId} (module: ${module}):`, error);
@@ -588,7 +620,6 @@ export function getServerConfig(guildId: string, module: Module): ModuleConfig |
 }
 
 export function updateServerConfig(guildId: string, module: Module, configData: ModuleConfig) {
-     // **CORRECTIF AJOUTÉ ICI**
     if (!guildId) {
         console.error(`[Database] Tentative de mise à jour de configuration avec un guildId non défini pour le module : ${module}.`);
         return;
@@ -819,10 +850,82 @@ export function redeemPremiumKey(key: string, guildId: string): { success: boole
     updateStmt.run(guildId, key);
 
     setPremiumStatus(guildId, true);
-    // When a key is redeemed, the redeemer doesn't automatically become a "tester". This is a separate status.
-    // If you want to grant tester status on key redemption, you could call giveTesterStatus here.
 
     return { success: true, message: 'Clé premium activée avec succès !', expires_at: expiresAt };
+}
+
+export function getReferralCode(guildId: string): string {
+    const config = getServerConfig(guildId, 'referral');
+    return config?.referral_code || `MARCUS-${guildId.slice(-6)}`;
+}
+
+export async function applyReferral(referralCode: string, referredGuildId: string, referredOwnerId: string, client: Client): Promise<{ success: boolean; message: string }> {
+    const getGuildIdStmt = db.prepare("SELECT guild_id FROM server_configs WHERE module = 'referral' AND json_extract(config, '$.referral_code') = ?");
+    const sponsor = getGuildIdStmt.get(referralCode) as { guild_id: string } | undefined;
+
+    if (!sponsor) {
+        return { success: false, message: "Ce code de parrainage est invalide." };
+    }
+
+    const referringGuildId = sponsor.guild_id;
+
+    if (referringGuildId === referredGuildId) {
+        return { success: false, message: "Vous не pouvez pas parrainer votre propre serveur." };
+    }
+
+    const checkReferredStmt = db.prepare("SELECT 1 FROM referrals WHERE referred_guild_id = ?");
+    if (checkReferredStmt.get(referredGuildId)) {
+        return { success: false, message: "Ce serveur a déjà été parrainé." };
+    }
+    
+    const checkOwnerStmt = db.prepare("SELECT 1 FROM referrals WHERE referring_guild_id = ? AND referred_owner_id = ?");
+    if(checkOwnerStmt.get(referringGuildId, referredOwnerId)) {
+        return { success: false, message: "Vous ne pouvez pas parrainer un autre de vos serveurs avec ce code." };
+    }
+
+    const insertStmt = db.prepare("INSERT INTO referrals (referring_guild_id, referred_guild_id, referred_owner_id) VALUES (?, ?, ?)");
+    insertStmt.run(referringGuildId, referredGuildId, referredOwnerId);
+
+    // Check for reward
+    const countStmt = db.prepare("SELECT COUNT(DISTINCT referred_owner_id) as count FROM referrals WHERE referring_guild_id = ?");
+    const { count } = countStmt.get(referringGuildId) as { count: number };
+    
+    // Update count in config
+    const referralConfig = getServerConfig(referringGuildId, 'referral');
+    if (referralConfig) {
+        updateServerConfig(referringGuildId, 'referral', { ...referralConfig, referral_count: count });
+    }
+
+    if (count >= 10) {
+        try {
+            const guild = await client.guilds.fetch(referringGuildId);
+            const owner = await guild.fetchOwner();
+            const premiumKey = createPremiumKey(`referral_reward_${referringGuildId}`, new Date(Date.now() + ms('30d')));
+
+            const embed = new EmbedBuilder()
+                .setColor(0xFFD700)
+                .setTitle('🎉 Récompense de Parrainage !')
+                .setDescription(`Félicitations ! Vous avez parrainé 10 serveurs uniques. En récompense, voici une clé premium de 30 jours pour le serveur de votre choix.`)
+                .addFields({ name: "Votre Clé", value: `\`\`\`${premiumKey}\`\`\`` });
+
+            await owner.send({ embeds: [embed] });
+
+            // Reset referrals for this guild to prevent spamming rewards
+            const deleteReferralsStmt = db.prepare("DELETE FROM referrals WHERE referring_guild_id = ?");
+            deleteReferralsStmt.run(referringGuildId);
+            if (referralConfig) {
+                updateServerConfig(referringGuildId, 'referral', { ...referralConfig, referral_count: 0 });
+            }
+            
+            return { success: true, message: "Parrainage appliqué avec succès ! Une récompense a été envoyée au propriétaire du serveur parrain." };
+
+        } catch (e) {
+             console.error("[Referral Reward] Failed to send reward DM:", e);
+             return { success: true, message: "Parrainage appliqué avec succès ! La récompense n'a pas pu être envoyée par MP." };
+        }
+    }
+
+    return { success: true, message: "Merci ! Votre parrainage a bien été pris en compte." };
 }
 
 // --- Delegated Permissions ---

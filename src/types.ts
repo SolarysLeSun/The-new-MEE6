@@ -53,7 +53,8 @@ export type Module =
     | 'leveling'
     | 'fun-commands'
     | 'admin'
-    | 'utils';
+    | 'utils'
+    | 'referral';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale
