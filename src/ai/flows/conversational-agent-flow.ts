@@ -154,7 +154,7 @@ export const conversationalAgentFlow = ai.defineFlow(
         lastError = error;
         console.warn(`[Agent] Model ${model} failed with error:`, error.message);
         if (error.status === 429 || error.message.includes('quota')) {
-          console.log(`[Agent] Quota exceeded for ${model}. Trying next model...`);
+          console.error(`[CRITICAL_AI_ERROR] Quota error on model ${model}.`);
           continue; // Try the next model in the cascade
         }
         // For other types of errors, we might not want to retry.

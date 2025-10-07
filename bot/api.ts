@@ -93,14 +93,20 @@ export function startApi(client: Client) {
     });
     
     const checkGlobalAiStatus = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-        const status = getGlobalAiStatus();
-        if (status.disabled) {
-            return res.status(503).json({ 
-                error: 'AI features are temporarily disabled by the administrator.',
-                reason: status.reason 
+        try {
+            const status = getGlobalAiStatus();
+            if (status.disabled) {
+                return res.status(503).json({ 
+                    error: 'AI features are temporarily disabled by the administrator.',
+                    reason: status.reason 
+                });
+            }
+            next();
+        } catch(e) {
+            return res.status(500).json({ 
+                error: 'Failed to check AI status.',
             });
         }
-        next();
     };
 
     app.get('/api/ping', (req, res) => {

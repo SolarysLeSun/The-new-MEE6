@@ -3,16 +3,14 @@
 
 import { AppHeader } from "@/components/app-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Circle, Loader2, ServerCrash, XCircle, AlertTriangle } from "lucide-react";
+import { CheckCircle, Loader2, ServerCrash, XCircle, AlertTriangle } from "lucide-react";
 import RippleGrid from "@/components/ripple-grid";
 import { PageTransitionWrapper } from "@/components/page-transition-wrapper";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Label } from "@/components/ui/label";
 
-const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
+const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
 type ServiceStatus = 'operational' | 'degraded' | 'outage' | 'loading';
 
@@ -20,12 +18,11 @@ interface StatusItem {
     name: string;
     status: ServiceStatus;
     description: string;
+    latency: number | null;
 }
 
-interface StatusHistoryEntry {
-    time: Date;
-    statuses: Record<string, ServiceStatus>;
-}
+const LATENCY_DEGRADED_THRESHOLD = 500; // ms
+const LATENCY_OUTAGE_THRESHOLD = 2000; // ms
 
 const StatusIndicator = ({ status }: { status: ServiceStatus }) => {
     switch (status) {
@@ -53,87 +50,101 @@ const getStatusText = (status: ServiceStatus) => {
     }
 };
 
-const StatusHistoryBar = ({ history, serviceName }: { history: StatusHistoryEntry[], serviceName: string }) => {
-    return (
-        <TooltipProvider>
-            <div className="flex w-full h-8 rounded-lg bg-muted overflow-hidden">
-                {history.map((entry, index) => {
-                    const status = entry.statuses[serviceName];
-                    const statusColor = {
-                        operational: 'bg-green-500',
-                        degraded: 'bg-yellow-500',
-                        outage: 'bg-destructive',
-                        loading: 'bg-muted-foreground',
-                    }[status];
-                    return (
-                         <Tooltip key={index}>
-                            <TooltipTrigger asChild>
-                                <div
-                                    className={cn("flex-1 h-full transition-colors duration-300", statusColor)}
-                                    style={{ flexBasis: `${100 / history.length}%`}}
-                                />
-                            </TooltipTrigger>
-                             <TooltipContent>
-                                <p>{entry.time.toLocaleTimeString('fr-FR')}: {getStatusText(status)}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    );
-                })}
-            </div>
-        </TooltipProvider>
-    );
+const LatencyBadge = ({ latency, status }: { latency: number | null, status: ServiceStatus }) => {
+    if (status === 'loading' || latency === null) {
+        return <span className="text-xs text-muted-foreground">-- ms</span>;
+    }
+    const colorClass = latency > LATENCY_OUTAGE_THRESHOLD 
+        ? 'text-destructive' 
+        : latency > LATENCY_DEGRADED_THRESHOLD 
+        ? 'text-yellow-400' 
+        : 'text-green-400';
+
+    return <span className={cn("text-sm font-mono", colorClass)}>{latency} ms</span>;
 };
+
 
 export default function StatusPage() {
     const [services, setServices] = useState<StatusItem[]>([
-        { name: "Panel Web", status: 'operational', description: "L'interface de configuration est accessible." },
-        { name: "API & Bot Discord", status: 'loading', description: "Le cœur du bot qui interagit avec Discord." },
-        { name: "Services Google AI", status: 'loading', description: "Les fonctionnalités d'intelligence artificielle." },
+        { name: "Votre Connexion > Panel", status: 'loading', description: "Latence entre votre navigateur et le panel web.", latency: null },
+        { name: "Panel > API du Bot", status: 'loading', description: "Connectivité entre le panel et le bot Discord.", latency: null },
+        { name: "Genkit & Services IA", status: 'loading', description: "État des services d'IA (Google Gemini).", latency: null },
     ]);
-    const [statusHistory, setStatusHistory] = useState<StatusHistoryEntry[]>([]);
     const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
-    useEffect(() => {
-        const checkStatuses = async () => {
-            let botApiStatus: ServiceStatus = 'operational';
-            try {
-                const response = await fetch(`${API_URL}/ping`);
-                if (!response.ok) throw new Error('API response not OK');
-                const data = await response.json();
-                if (data.status !== 'ok') throw new Error('Invalid status from API');
-            } catch (error) {
-                console.error("Bot status check failed:", error);
-                botApiStatus = 'outage';
+    const checkStatuses = useCallback(async () => {
+        const newServices: StatusItem[] = [...services];
+
+        // 1. User -> Web Panel
+        const userPanelService = newServices.find(s => s.name === "Votre Connexion > Panel")!;
+        try {
+            const startTime = performance.now();
+            await fetch('/api/ping');
+            const endTime = performance.now();
+            const latency = Math.round(endTime - startTime);
+            userPanelService.latency = latency;
+            userPanelService.status = latency > LATENCY_DEGRADED_THRESHOLD ? 'degraded' : 'operational';
+        } catch (e) {
+            userPanelService.status = 'outage';
+            userPanelService.latency = null;
+        }
+
+        // 2. Panel -> Bot API
+        const panelBotService = newServices.find(s => s.name === "Panel > API du Bot")!;
+        try {
+            const startTime = performance.now();
+            const response = await fetch(`${BOT_API_URL}/ping`);
+            const endTime = performance.now();
+            if (!response.ok) throw new Error();
+            const latency = Math.round(endTime - startTime);
+            panelBotService.latency = latency;
+            panelBotService.status = latency > LATENCY_OUTAGE_THRESHOLD 
+                ? 'outage'
+                : latency > LATENCY_DEGRADED_THRESHOLD 
+                ? 'degraded' 
+                : 'operational';
+        } catch (e) {
+            panelBotService.status = 'outage';
+            panelBotService.latency = null;
+        }
+        
+        // 3. AI Services Status
+        const aiService = newServices.find(s => s.name === "Genkit & Services IA")!;
+        // The AI status is now implicitly checked via the bot's global status.
+        // A real check would ping the Google AI endpoint, but that's not feasible from client-side.
+        try {
+            const response = await fetch(`${BOT_API_URL}/global-ai-status`);
+            if (!response.ok) {
+                 // If the endpoint itself fails, it might be tied to the main API outage
+                aiService.status = panelBotService.status === 'outage' ? 'outage' : 'degraded';
+                aiService.description = "Impossible de vérifier l'état des services IA.";
+            } else {
+                 const data = await response.json();
+                 if (data.disabled) {
+                    aiService.status = 'degraded';
+                    aiService.description = `Désactivé par un admin : ${data.reason}`;
+                 } else {
+                    aiService.status = 'operational';
+                    aiService.description = "Les services d'IA sont opérationnels.";
+                 }
+                 aiService.latency = panelBotService.latency; // Latency is via bot API
             }
-            
-            // For now, Google AI services status is tied to the bot API status
-            const googleAiStatus = botApiStatus;
 
-            const newStatuses = {
-                "Panel Web": 'operational',
-                "API & Bot Discord": botApiStatus,
-                "Services Google AI": googleAiStatus,
-            };
+        } catch (e) {
+            aiService.status = 'outage';
+            aiService.description = "La connexion à l'API du bot a échoué.";
+        }
 
-            setServices([
-                { name: "Panel Web", status: 'operational', description: "L'interface de configuration est accessible." },
-                { name: "API & Bot Discord", status: botApiStatus, description: "Le cœur du bot qui interagit avec Discord." },
-                { name: "Services Google AI", status: googleAiStatus, description: "Les fonctionnalités d'intelligence artificielle." },
-            ]);
-            
-            setStatusHistory(prev => {
-                const newEntry = { time: new Date(), statuses: newStatuses };
-                // Keep only the last 24 entries
-                return [newEntry, ...prev].slice(0, 24);
-            });
 
-            setLastChecked(new Date());
-        };
-
-        checkStatuses();
-        const interval = setInterval(checkStatuses, 3600000); // Re-check every hour
-        return () => clearInterval(interval);
+        setServices(newServices);
+        setLastChecked(new Date());
     }, []);
+
+    useEffect(() => {
+        checkStatuses();
+        const interval = setInterval(checkStatuses, 30000); // Re-check every 30 seconds
+        return () => clearInterval(interval);
+    }, [checkStatuses]);
 
     const overallStatus = services.some(s => s.status === 'outage') 
         ? 'outage' 
@@ -178,16 +189,16 @@ export default function StatusPage() {
                  {lastChecked && <p className="text-xs text-muted-foreground">Dernière vérification : {lastChecked.toLocaleString('fr-FR')}</p>}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <Separator />
-            {services.map((service) => (
-                 <div key={service.name} className="flex flex-col gap-4 p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="font-semibold text-lg text-white">{service.name}</p>
-                            <p className="text-sm text-muted-foreground">{service.description}</p>
-                        </div>
-                         <div className={cn(
+          <CardContent className="space-y-2">
+            {services.map((service, index) => (
+                 <React.Fragment key={service.name}>
+                 <div className="flex flex-col sm:flex-row gap-4 justify-between p-4">
+                    <div className="flex-1">
+                        <p className="font-semibold text-lg text-white">{service.name}</p>
+                        <p className="text-sm text-muted-foreground">{service.description}</p>
+                    </div>
+                     <div className="flex flex-col items-start sm:items-end gap-2">
+                        <div className={cn(
                              "flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1",
                              service.status === 'operational' && 'bg-green-500/10 text-green-400',
                              service.status === 'degraded' && 'bg-yellow-500/10 text-yellow-400',
@@ -197,12 +208,11 @@ export default function StatusPage() {
                             <StatusIndicator status={service.status} />
                            {getStatusText(service.status)}
                         </div>
-                    </div>
-                     <div className="pt-2">
-                        <Label className="text-xs text-muted-foreground pb-2">Historique des 24 dernières heures</Label>
-                        <StatusHistoryBar history={statusHistory} serviceName={service.name} />
-                    </div>
+                        <LatencyBadge latency={service.latency} status={service.status} />
+                     </div>
                  </div>
+                 {index < services.length - 1 && <Separator />}
+                 </React.Fragment>
             ))}
           </CardContent>
         </Card>
