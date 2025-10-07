@@ -44,7 +44,7 @@ const MarcusCommand: Command = {
         const allCommands = interaction.client.commands;
         const commandCategories = new Collection<string, Command[]>();
         
-        const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'adminannounce', 'delegate', 'restart', 'panelmessage', 'status'];
+        const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'adminannounce', 'delegate', 'restart', 'panelmessage', 'status', 'devserver', 'devadminannounce'];
         const testerCommands = ['mp', 'webhook', 'tester'];
         
         const commandsPath = path.join(__dirname, '..');
@@ -70,8 +70,30 @@ const MarcusCommand: Command = {
                     continue;
                 }
             }
+
+            // Find the file path from the client's command collection
+            const commandFileName = client.commands.find(c => c.data.name === command.data.name);
+            if (!commandFileName) continue;
             
-            const commandFilePath = require.resolve(`../${command.data.name.split(' ')[0]}`);
+            // This assumes the command loader stores the path or can be used to resolve it.
+            // A more robust way might be to store file paths on the client.commands collection during load.
+            // For now, let's rebuild the path logic more carefully.
+            let commandFilePath = '';
+            try {
+                // This is a bit of a hack, but `require.resolve` will find the module if it's in node's cache
+                commandFilePath = require.resolve(`../${command.data.name.split(' ')[0]}`);
+            } catch (e) {
+                 // Fallback for nested commands or different folder structures
+                 const commandFiles = fs.readdirSync(commandsPath, { withFileTypes: true, recursive: true });
+                 const foundFile = commandFiles.find(file => file.isFile() && file.name.startsWith(command.data.name) && (file.name.endsWith('.ts') || file.name.endsWith('.js')));
+                 if (foundFile) {
+                    commandFilePath = path.join(foundFile.path, foundFile.name);
+                 } else {
+                    console.warn(`[MarcusCmd] Could not resolve path for command: ${command.data.name}`);
+                    continue;
+                 }
+            }
+            
             const category = getCommandCategory(commandFilePath, commandsPath);
 
             if (!commandCategories.has(category)) {
