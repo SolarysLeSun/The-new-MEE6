@@ -210,10 +210,17 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
 
     if (footerText.includes('admin_announce') || footerText.includes('announce_channel')) {
         // --- Handle Announcement Modification ---
+        // The original raw text is stored in the author.name field of the embed.
+        const rawText = originalEmbed.author?.name;
+        if (!rawText) {
+            await interaction.editReply({ content: 'Erreur : Impossible de trouver le texte original de l\'annonce à modifier.', ephemeral: true });
+            return;
+        }
+
         try {
             const result = await announcementFlow({
-                rawText: originalEmbed.description || '',
-                authorName: originalEmbed.author?.name || interaction.user.username,
+                rawText: rawText,
+                authorName: interaction.user.username,
                 modificationRequest: modificationRequest
             });
 

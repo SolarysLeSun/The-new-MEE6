@@ -50,7 +50,7 @@ const AnnounceCommand: Command = {
                 .setColor(0x3498DB)
                 .setTitle(result.title)
                 .setDescription(result.description)
-                .setAuthor({ name: `Annonce de ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() || undefined })
+                .setAuthor({ name: rawText }) // Store original raw text here
                 .setTimestamp()
                 .setFooter({ text: `announce_channel:${config.announcement_channel_id}` });
 

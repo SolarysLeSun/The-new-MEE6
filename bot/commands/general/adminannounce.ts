@@ -67,6 +67,7 @@ const AdminAnnounceCommand: Command = {
         }
 
         const embed = new EmbedBuilder()
+            .setAuthor({ name: rawText }) // Store original raw text here for modifications
             .setTitle(title)
             .setDescription(description)
             .setColor(0x5865F2)

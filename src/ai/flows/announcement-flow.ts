@@ -9,10 +9,10 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const AnnouncementInputSchema = z.object({
-  rawText: z.string().describe("The user's raw, unformatted announcement text."),
+  rawText: z.string().describe("The user's raw, unformatted announcement text, or the base text to modify."),
   authorName: z.string().describe("The name of the person making the announcement."),
   targetLanguage: z.string().optional().describe("The specific language to translate the announcement into. If not provided, the original language will be kept."),
-  modificationRequest: z.string().optional().describe("A user's request to modify the previously generated text. The rawText field will contain the text to be modified."),
+  modificationRequest: z.string().optional().describe("A user's request to modify the previously generated text. 'rawText' will contain the original text to be modified."),
 });
 
 const AnnouncementOutputSchema = z.object({
@@ -44,7 +44,7 @@ You MUST use these custom emojis where appropriate. Always use the full format <
 
 You must:
 {{#if modificationRequest}}
-1. Take the original text provided in 'rawText' and modify it based on the 'modificationRequest'.
+1. Take the original text provided in 'rawText' and modify it based on the 'modificationRequest'. The final output must be a new, complete version of the announcement incorporating the changes.
 {{else}}
 1. Read the raw text to understand the core message.
 {{/if}}
@@ -59,7 +59,7 @@ You must:
 
 The announcement was written by: {{{authorName}}}
 {{#if modificationRequest}}
-Text to modify:
+Base text to modify:
 """
 {{{rawText}}}
 """
