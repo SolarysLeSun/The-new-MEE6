@@ -107,7 +107,7 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
 
 
     // Fond de la barre
-    ctx.fillStyle = '#4f4f4f';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
     ctx.beginPath();
     ctx.roundRect(barX, barY, barWidth, barHeight, barHeight/2);
     ctx.fill();
