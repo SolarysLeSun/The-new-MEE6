@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     const rank = parseInt(searchParams.get('rank') || '0', 10);
     const barColor = searchParams.get('barColor') || '#e597c4' // A nice pink from your template
     const textColor = searchParams.get('textColor') || '#e597c4'
-    const backgroundUrl = searchParams.get('backgroundUrl');
+    const backgroundUrl = searchParams.get('backgroundUrl') || 'https://nightproject.nationquest.fr/levelbw.jpg';
 
 
     // 1. Création du canvas
