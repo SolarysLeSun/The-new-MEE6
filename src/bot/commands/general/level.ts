@@ -44,9 +44,14 @@ const LevelCommand: Command = {
             cardUrl.searchParams.append('username', targetUser.username); // Fallback for normalization
             cardUrl.searchParams.append('avatarUrl', targetUser.displayAvatarURL({ extension: 'png', size: 256 }));
             cardUrl.searchParams.append('level', levelInfo.level.toString());
-            cardUrl.searchParams.append('xp', levelInfo.levelXp.toString()); // Use levelXp
-            cardUrl.searchParams.append('requiredXp', levelInfo.requiredXp.toString()); // Use requiredXp for the level
             cardUrl.searchParams.append('rank', rank.toString());
+            // Progress bar values
+            cardUrl.searchParams.append('currentXp', levelInfo.levelXp.toString());
+            cardUrl.searchParams.append('neededXp', levelInfo.requiredXpForLevel.toString());
+            // Text display values
+            cardUrl.searchParams.append('totalXp', levelInfo.xp.toString());
+            cardUrl.searchParams.append('totalNeededXp', levelInfo.requiredXpForNextLevel.toString());
+
             if (config.level_card_background_url) {
                  cardUrl.searchParams.append('backgroundUrl', config.level_card_background_url);
             }

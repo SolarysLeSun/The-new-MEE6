@@ -12,12 +12,14 @@ const formatXP = (num: number): string => {
         return num.toString();
     }
     const k = num / 1000;
-    return k.toFixed(1).replace(/\.0$/, '') + 'k';
+    const formatted = k.toFixed(1).replace(/\.0$/, '');
+    return `${formatted}k`;
 };
 
 // Helper function to normalize fancy unicode characters to standard latin characters
 // Also checks if the name consists only of simple characters.
 function normalizeUsername(name: string): { normalized: string, isSimple: boolean } {
+    if(!name) return { normalized: '', isSimple: true };
     const normalized = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const isSimple = /^[a-zA-Z0-9_.\s-]*$/.test(normalized);
     return { normalized, isSimple };
@@ -30,15 +32,22 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     const username = searchParams.get('username') || 'User' // Fallback username
     const avatarUrl = searchParams.get('avatarUrl')
     const level = parseInt(searchParams.get('level') || '1', 10)
-    const xp = parseInt(searchParams.get('xp') || '0', 10)
-    const requiredXp = parseInt(searchParams.get('requiredXp') || '100', 10)
     const rank = parseInt(searchParams.get('rank') || '0', 10);
+    
+    // Progress Bar values
+    const currentXp = parseInt(searchParams.get('currentXp') || '0', 10);
+    const neededXp = parseInt(searchParams.get('neededXp') || '100', 10);
+    
+    // Text Display values
+    const totalXp = parseInt(searchParams.get('totalXp') || '0', 10);
+    const totalNeededXp = parseInt(searchParams.get('totalNeededXp') || '100', 10);
+
     const barColor = searchParams.get('barColor') || '#e597c4'
     const textColor = searchParams.get('textColor') || '#e597c4'
     const backgroundUrl = searchParams.get('backgroundUrl') || 'https://nightproject.nationquest.fr/levelbw.jpg';
 
     // Decide which name to display
-    const { normalized: normalizedDisplayName, isSimple } = normalizeUsername(displayName);
+    const { isSimple } = normalizeUsername(displayName);
     const finalDisplayName = isSimple ? displayName : username;
 
     // 1. Création du canvas
@@ -96,7 +105,7 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     const barY = 160;
     const barWidth = width - barX - 50;
     const barHeight = 40;
-    const progress = Math.min(xp / requiredXp, 1)
+    const progress = Math.min(currentXp / neededXp, 1);
 
     // Fond de la barre
     ctx.fillStyle = '#4f4f4f';
@@ -115,7 +124,7 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     // Texte XP
     ctx.font = 'bold 28px "Inter", sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(`${formatXP(xp)} / ${formatXP(requiredXp)}`, width - 50, 120);
+    ctx.fillText(`${formatXP(totalXp)} / ${formatXP(totalNeededXp)} XP`, width - 50, 120);
 
     // Texte Rang
     ctx.font = '32px "Inter", sans-serif';

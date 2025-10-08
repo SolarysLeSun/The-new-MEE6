@@ -136,9 +136,11 @@ export interface XPBoost {
 }
 
 export interface UserLevel {
+    user_id?: string;
     xp: number;
     level: number;
-    requiredXp: number;
+    requiredXpForLevel: number;
+    requiredXpForNextLevel: number;
     levelXp: number;
 }
 
