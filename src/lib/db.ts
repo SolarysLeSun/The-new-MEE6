@@ -474,8 +474,6 @@ const defaultConfigs: DefaultConfigs = {
         xp_per_minute_in_voice: 10,
         xp_boost_webcam_multiplier: 1.5,
         cooldown_seconds: 60,
-        level_up_message: 'Félicitations {user}, vous avez atteint le niveau {level} !',
-        level_up_channel_id: null,
         mention_user_on_levelup: true,
         level_up_frequency: 1,
         level_card_background_url: null,

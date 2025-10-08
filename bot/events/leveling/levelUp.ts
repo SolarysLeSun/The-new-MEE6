@@ -22,26 +22,21 @@ export async function execute(user: User, guild: Guild, newLevel: number) {
         const channel = await guild.channels.fetch(config.level_up_channel_id).catch(() => null) as TextChannel;
         if (channel && channel.isTextBased()) {
             
-            const userDisplay = (config.mention_user_on_levelup ?? true) ? user.toString() : user.username;
-            const message = (config.level_up_message || 'Félicitations {user}, vous avez atteint le niveau {level} !')
-                .replace('{user}', userDisplay)
-                .replace('{username}', user.username) // Also support {username} for non-mention cases
-                .replace('{level}', newLevel.toString());
+            const messageContent = (config.mention_user_on_levelup ?? true) 
+                ? `Félicitations ${user.toString()}, vous avez atteint le niveau **${newLevel}** !`
+                : `Félicitations ${user.username}, vous avez atteint le niveau **${newLevel}** !`;
 
             // --- Generate Card Embed ---
             const member = await guild.members.fetch(user.id).catch(() => null);
             if (!member) return;
             
             try {
-                const levelInfo = getUserLevel(user.id, guild.id);
                 const rank = getUserRank(user.id, guild.id);
 
-                const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/card/level/${guild.id}/${user.id}`);
+                const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/card/levelup/${guild.id}/${user.id}`);
                 cardUrl.searchParams.append('displayName', member.displayName);
                 cardUrl.searchParams.append('avatarUrl', user.displayAvatarURL({ extension: 'png', size: 256 }));
-                cardUrl.searchParams.append('level', levelInfo.level.toString());
-                cardUrl.searchParams.append('xp', levelInfo.xp.toString());
-                cardUrl.searchParams.append('requiredXp', levelInfo.requiredXp.toString());
+                cardUrl.searchParams.append('level', newLevel.toString());
                 cardUrl.searchParams.append('rank', rank.toString());
                 if (config.level_card_background_url) {
                     cardUrl.searchParams.append('backgroundUrl', config.level_card_background_url);
@@ -57,7 +52,7 @@ export async function execute(user: User, guild: Guild, newLevel: number) {
                     .setColor(config.level_card_bar_color ? parseInt(config.level_card_bar_color.replace('#', ''), 16) : 0x3498DB)
                     .setImage(cardUrl.toString());
 
-                await channel.send({ content: message, embeds: [embed] });
+                await channel.send({ content: messageContent, embeds: [embed] });
 
             } catch (error) {
                  console.error(`[LevelUp] Could not send level up card to ${channel.id} in ${guild.name}:`, error);
