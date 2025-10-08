@@ -164,3 +164,24 @@ export interface PanelMessage {
     content: string;
     active: boolean;
 }
+
+export interface LevelingConfig {
+    enabled: boolean;
+    xp_per_message: number;
+    xp_per_reaction: number;
+    xp_per_minute_in_voice: number;
+    xp_boost_webcam_multiplier: number;
+    cooldown_seconds: number;
+    level_up_message: string;
+    level_up_channel_id: string | null;
+    mention_user_on_levelup: boolean;
+    level_up_frequency: number;
+    level_card_background_url: string | null;
+    level_card_bar_color: string | null;
+    level_card_text_color: string | null;
+    ignored_channels: string[];
+    role_rewards: RoleReward[];
+    xp_boost_roles: XPBoost[];
+    xp_boost_channels: XPBoost[];
+    command_permissions: { [key: string]: string | null };
+}

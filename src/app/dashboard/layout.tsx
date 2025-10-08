@@ -1,4 +1,5 @@
 
+
 'use client';
 import type { ReactNode } from 'react';
 import { ModuleSidebar } from '@/components/module-sidebar';
@@ -13,6 +14,7 @@ import { CommandMenu } from '@/components/command-menu';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { WelcomeDialog } from '@/components/welcome-dialog';
 
 const RippleGrid = dynamic(() => import('@/components/ripple-grid'), {
   ssr: false,
@@ -138,6 +140,7 @@ export default function DashboardLayout({
               </div>
             </div>
           <div className="flex-1 container mx-auto p-6 lg:p-8 pt-0 md:pt-8">
+             <WelcomeDialog />
              <PanelAlert />
              <AuthGuard>{children}</AuthGuard>
           </div>

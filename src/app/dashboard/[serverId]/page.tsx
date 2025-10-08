@@ -3,9 +3,10 @@
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import RotatingText from '@/components/ui/rotating-text';
 import { useServerInfo } from '@/hooks/use-server-info';
-import { Bot, Hammer, Sparkles } from 'lucide-react';
+import { Bot, Hammer, Sparkles, Server } from 'lucide-react';
 import Link from 'next/link';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { WelcomeDialog } from '@/components/welcome-dialog';
 
 export default function ServerDashboardPage() {
   const { serverInfo, loading } = useServerInfo();
@@ -18,6 +19,7 @@ export default function ServerDashboardPage() {
 
   return (
     <PageTransitionWrapper className="space-y-8">
+      <WelcomeDialog />
       <div>
         <h1 className="text-4xl font-bold tracking-tight text-white">{welcomeText}</h1>
         <div className="text-muted-foreground mt-2 text-lg flex items-center gap-1.5">
