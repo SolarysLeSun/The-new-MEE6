@@ -149,29 +149,18 @@ async function handlePersonaInteraction(message: Message, persona: Persona, guil
 
     let result;
     let lastError: any;
-    for (const model of textModelCascade) {
-        try {
-            console.log(`[Persona] Trying model ${model} for persona interaction...`);
-             result = await personaInteractionFlow({
-                serverName: guild.name,
-                personaPrompt: persona.persona_prompt,
-                conversationHistory: currentHistory, 
-                memories: relevantMemories.map(m => ({ content: m.content, salience_score: m.salience_score })),
-                photoDataUri: photoDataUri,
-                interactionContext: interactionContext,
-            });
-            console.log(`[Persona] Model ${model} succeeded.`);
-            break; 
-        } catch (error: any) {
-            lastError = error;
-             console.warn(`[Persona] Model ${model} failed with error:`, error.message);
-            if (error.status === 429 || error.message.includes('quota')) {
-                 console.log(`[Persona] Quota exceeded for ${model}. Trying next model...`);
-                continue;
-            }
-            // For other errors, don't retry, just fail.
-            break;
-        }
+    try {
+        result = await personaInteractionFlow({
+            serverName: guild.name,
+            personaPrompt: persona.persona_prompt,
+            conversationHistory: currentHistory, 
+            memories: relevantMemories.map(m => ({ content: m.content, salience_score: m.salience_score })),
+            photoDataUri: photoDataUri,
+            interactionContext: interactionContext,
+        });
+    } catch (error: any) {
+        lastError = error;
+        console.error(`[Persona] Persona interaction flow failed. Error:`, error);
     }
 
 
@@ -239,22 +228,26 @@ async function handlePersonaInteraction(message: Message, persona: Persona, guil
              console.log(`[Persona] Persona "${persona.name}" chose not to respond.`);
         }
     } else {
-         // All models failed, handle the final error
-        console.error(`[Persona] All models in cascade failed. Last error:`, lastError);
-        const ownerIds = ['556529963877138442', '760977578839506985', '800041004400902145'];
-        const errorMessage = `🚨 **Erreur Critique de l'API Gemini** 🚨\n\nTous les modèles de la cascade ont échoué sur le serveur **${guild.name || 'DM'}**. Les fonctionnalités IA sont probablement indisponibles.\n\n**Détails de la dernière erreur :**\n\`\`\`json\n${JSON.stringify(lastError.errorDetails || { message: lastError.message }, null, 2)}\n\`\`\``;
-        
-        for (const id of ownerIds) {
-            try {
-                const user = await message.client.users.fetch(id);
-                await user.send(errorMessage);
-            } catch (dmError) {
-                console.error(`[Persona Error] Impossible d'envoyer un DM d'erreur à l'utilisateur ${id}`, dmError);
+        let errorMessage = "Désolé, une erreur est survenue pendant que je réfléchissais. Veuillez réessayer.";
+
+        if (lastError?.status === 429) {
+            errorMessage = "Désolé, j'ai atteint ma limite de requêtes pour aujourd'hui. Veuillez réessayer demain.";
+            const ownerIds = ['556529963877138442', '760977578839506985', '800041004400902145'];
+            const ownerMessage = `🚨 **Erreur de Quota API Gemini** 🚨\n\nTous les modèles de la cascade ont échoué sur le serveur **${guild.name || 'DM'}**. Les fonctionnalités IA sont probablement indisponibles.\n\n**Détails de la dernière erreur :**\n\`\`\`json\n${JSON.stringify(lastError.errorDetails || { message: lastError.message }, null, 2)}\n\`\`\``;
+            for (const id of ownerIds) {
+                try {
+                    const user = await message.client.users.fetch(id);
+                    await user.send(ownerMessage);
+                } catch (dmError) {
+                    console.error(`[Persona Error] Impossible d'envoyer un DM d'erreur à l'utilisateur ${id}`, dmError);
+                }
             }
+        } else if (lastError?.status === 503) {
+            errorMessage = "Les services de l'IA (Google) sont actuellement indisponibles ou surchargés. Veuillez réessayer dans quelques instants.";
         }
         
         try {
-            await message.reply("Désolé, une erreur est survenue pendant que je réfléchissais. Les administrateurs ont été notifiés.");
+            await message.reply(errorMessage);
         } catch (replyError: any) {
             if (replyError.code !== 10008) { // Ignore "Unknown Message" error
                 console.error('[Persona] Failed to send error message:', replyError);
