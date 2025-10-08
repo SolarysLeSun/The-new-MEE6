@@ -1,25 +1,24 @@
-
-'use client';
-
-import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
 
-function LevelCardContent() {
-    const searchParams = useSearchParams();
+interface LevelCardPageProps {
+    searchParams: { [key: string]: string | string[] | undefined };
+}
 
-    // Safely get parameters with fallbacks
-    const displayName = searchParams.get('displayName') || 'Utilisateur';
-    const avatarUrl = searchParams.get('avatarUrl');
-    const level = parseInt(searchParams.get('level') || '0', 10);
-    const rank = parseInt(searchParams.get('rank') || '0', 10);
-    const xp = parseInt(searchParams.get('xp') || '0', 10);
-    const requiredXp = parseInt(searchParams.get('requiredXp') || '100', 10);
+// This is now a Server Component
+export default function LevelCardPage({ searchParams }: LevelCardPageProps) {
+    // Safely get parameters with fallbacks, now from searchParams prop
+    const displayName = searchParams.displayName as string || 'Utilisateur';
+    const avatarUrl = searchParams.avatarUrl as string | undefined;
+    const level = parseInt(searchParams.level as string || '0', 10);
+    const rank = parseInt(searchParams.rank as string || '0', 10);
+    const xp = parseInt(searchParams.xp as string || '0', 10);
+    const requiredXp = parseInt(searchParams.requiredXp as string || '100', 10);
     
     // Customization parameters
-    const backgroundUrl = searchParams.get('backgroundUrl');
-    const barColor = searchParams.get('barColor') || '#FFFFFF';
-    const textColor = searchParams.get('textColor') || '#FFFFFF';
+    const backgroundUrl = searchParams.backgroundUrl as string | undefined;
+    const barColor = searchParams.barColor as string || '#FFFFFF';
+    const textColor = searchParams.textColor as string || '#FFFFFF';
     
     const progress = requiredXp > 0 ? (xp / requiredXp) * 100 : 0;
 
@@ -117,7 +116,9 @@ function LevelCardContent() {
                     {/* Bottom part: Progress bar and XP */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <div style={{ flexGrow: 1 }}>
-                            <Progress value={progress} style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} color={barColor} />
+                            <div style={{ height: '1.25rem', width: '100%', borderRadius: '9999px', backgroundColor: 'rgba(255,255,255,0.2)' }}>
+                                <div style={{ width: `${progress}%`, height: '100%', backgroundColor: barColor, borderRadius: '9999px', transition: 'width 0.5s ease-in-out' }}></div>
+                            </div>
                         </div>
                         <p style={{
                             fontSize: '1.125rem',
@@ -129,22 +130,5 @@ function LevelCardContent() {
                 </div>
             </div>
         </div>
-    );
-}
-
-// Custom Progress component for styling
-function Progress({ value, style, color }: { value: number, style?: React.CSSProperties, color: string }) {
-    return (
-        <div style={{ height: '1.25rem', width: '100%', borderRadius: '9999px', ...style }}>
-            <div style={{ width: `${value}%`, height: '100%', backgroundColor: color, borderRadius: '9999px', transition: 'width 0.5s ease-in-out' }}></div>
-        </div>
-    )
-}
-
-export default function LevelCardPage() {
-    return (
-        <Suspense fallback={<div>Loading card...</div>}>
-            <LevelCardContent />
-        </Suspense>
     );
 }
