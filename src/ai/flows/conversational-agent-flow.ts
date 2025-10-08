@@ -33,6 +33,7 @@ export const ConversationalAgentInputSchema = z.object({
   conversationHistory: z.array(ConversationHistoryItemSchema).optional().describe('The last few messages in the conversation for context.'),
   allow_imagination: z.boolean().optional().describe("If true, the agent can create new information if it doesn't know the answer."),
   allow_freewheeling: z.boolean().optional().describe("If true, the agent can use insults, NSFW language, etc."),
+  allow_image_generation: z.boolean().optional().describe("If true, the agent can decide to generate an image."),
   photoDataUri: z
     .string()
     .optional()
@@ -95,9 +96,13 @@ You have access to the following information.
 {{/if}}
 
 Image Generation:
+{{#if allow_image_generation}}
 - You have the ability to generate an image to accompany your text response.
 - **IMPORTANT: Only generate an image if it adds significant value to the conversation (e.g., to show a strong emotion, illustrate a complex point, visualize a memory, or for a joke).** Do NOT generate images for simple greetings or basic questions.
 - If you decide to generate an image, provide a rich, descriptive prompt for the image generation model in the 'image_prompt' field. Otherwise, leave it empty or null.
+{{else}}
+- **Image generation is disabled.** You cannot generate images. The 'image_prompt' field must be null or empty.
+{{/if}}
 
 Freewheeling Mode:
 {{#if allow_freewheeling}}

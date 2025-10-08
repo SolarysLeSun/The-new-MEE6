@@ -4,7 +4,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig } from '../types';
+import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig } from '../types';
 import { randomBytes } from 'crypto';
 import ms from 'ms';
 
@@ -416,6 +416,7 @@ const defaultConfigs: DefaultConfigs = {
         dedicated_channel_id: null,
         allow_imagination: false,
         allow_freewheeling: false,
+        allow_image_generation: true,
     },
     'suggestions': {
         enabled: true,
@@ -741,7 +742,7 @@ export function updateServerConfig(guildId: string, module: Module, configData: 
 
 export function addKnowledgeBaseItem(guildId: string, newItem: KnowledgeBaseItem): void {
     try {
-        const currentConfig = getServerConfig(guildId, 'conversational-agent');
+        const currentConfig = getServerConfig(guildId, 'conversational-agent') as ConversationalAgentConfig | null;
         if (!currentConfig) throw new Error('Config not found for conversational-agent');
 
         const newKnowledgeBase = [...(currentConfig.knowledge_base || []), newItem];
@@ -894,7 +895,7 @@ export function getMemoriesForPersona(personaId: string, userIds: (string | null
     if (memories.length > 0) {
         const touchStmt = db.prepare(`UPDATE persona_memories SET last_accessed_at = CURRENT_TIMESTAMP WHERE id = ?`);
         const touchTransaction = db.transaction((mems) => {
-            for (const mem of mems touchStmt.run(mem.id);
+            for (const mem of mems) touchStmt.run(mem.id);
         });
         touchTransaction(memories);
     }
@@ -917,7 +918,7 @@ export function createMultipleMemories(memories: Omit<PersonaMemory, 'id' | 'cre
         VALUES (@persona_id, @user_id, @memory_type, @content, @salience_score)
     `);
     const insertMany = db.transaction((mems) => {
-        for (const mem of mems insert.run(mem);
+        for (const mem of mems) insert.run(mem);
     });
     insertMany(memories);
 }

@@ -198,3 +198,17 @@ export interface WelcomeConfig {
     card_text_color: string | null;
     send_in_dm: boolean;
 }
+
+export interface ConversationalAgentConfig {
+    enabled: boolean;
+    premium: boolean;
+    agent_name: string;
+    agent_role: string;
+    agent_personality: string;
+    custom_prompt: string;
+    knowledge_base: KnowledgeBaseItem[];
+    dedicated_channel_id: string | null;
+    allow_imagination: boolean;
+    allow_freewheeling: boolean;
+    allow_image_generation?: boolean; // Optional, so existing configs don't break
+}

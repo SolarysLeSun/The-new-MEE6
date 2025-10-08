@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageCircleQuestion, Trash2, PlusCircle, Gamepad2, BrainCircuit, AlertTriangle } from 'lucide-react';
+import { MessageCircleQuestion, Trash2, PlusCircle, Gamepad2, BrainCircuit, AlertTriangle, Image } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { KnowledgeBaseItem } from '@/types';
@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGr
 import { GlobalAiStatusAlert } from '@/components/global-ai-status-alert';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { Combobox } from '@/components/ui/combobox';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -36,6 +37,7 @@ interface AgentConfig {
     dedicated_channel_id: string | null;
     allow_imagination: boolean;
     allow_freewheeling: boolean;
+    allow_image_generation?: boolean;
 }
 
 interface DiscordChannel {
@@ -134,6 +136,12 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
         return <PageSkeleton />;
     }
 
+    const channelOptions = [
+        { value: 'none', label: 'Aucun (répond aux mentions seulement)' },
+        ...channels.map(c => ({ value: c.id, label: `# ${c.name}` }))
+    ];
+
+
     return (
         <PremiumFeatureWrapper isPremium={isPremium}>
             <PageTransitionWrapper className="space-y-8">
@@ -155,20 +163,15 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                              <p className="text-sm text-muted-foreground/80">
                                 Dans ce salon, chaque message sera traité par l'IA (les mentions ne sont pas nécessaires).
                             </p>
-                             <Select value={config.dedicated_channel_id || 'none'} onValueChange={(value) => handleValueChange('dedicated_channel_id', value === 'none' ? null : value)}>
-                                <SelectTrigger id="dedicated-channel" className="w-full md:w-[280px]">
-                                    <SelectValue placeholder="Sélectionner un salon" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectLabel>Salons textuels</SelectLabel>
-                                        <SelectItem value="none">Aucun (répond aux mentions seulement)</SelectItem>
-                                        {channels.map(channel => (
-                                            <SelectItem key={channel.id} value={channel.id}># {channel.name}</SelectItem>
-                                        ))}
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
+                             <Combobox
+                                options={channelOptions}
+                                value={config.dedicated_channel_id || 'none'}
+                                onChange={(value) => handleValueChange('dedicated_channel_id', value === 'none' ? null : value)}
+                                placeholder="Sélectionner un salon"
+                                searchPlaceholder="Rechercher un salon..."
+                                emptyPlaceholder="Aucun salon trouvé."
+                                className="w-full md:w-[280px]"
+                            />
                         </div>
                     </CardContent>
                 </Card>
@@ -234,6 +237,16 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                                 </p>
                             </div>
                             <Switch id="enable-imagination" checked={config.allow_imagination ?? false} onCheckedChange={(val) => handleValueChange('allow_imagination', val)} />
+                        </div>
+                        <Separator />
+                         <div className="flex items-center justify-between">
+                            <div>
+                                <Label htmlFor="enable-image-generation" className="font-bold flex items-center gap-2"><Image/>Autoriser la génération d'images</Label>
+                                <p className="text-sm text-muted-foreground/80">
+                                    Permet à l'agent de décider de générer une image pour accompagner sa réponse.
+                                </p>
+                            </div>
+                            <Switch id="enable-image-generation" checked={config.allow_image_generation ?? false} onCheckedChange={(val) => handleValueChange('allow_image_generation', val)} />
                         </div>
                         <Separator />
                         <div className="space-y-3">
