@@ -72,10 +72,10 @@ const MarcusCommand: Command = {
             }
 
             // Find the file path from the client's command collection
-            const commandFileName = client.commands.find(c => c.data.name === command.data.name);
+            const commandFileName = interaction.client.commands.find(c => c.data.name === command.data.name);
             if (!commandFileName) continue;
             
-            // This assumes the command loader stores the path or can be used to resolve it.
+            // This is a bit of a hack, but `require.resolve` will find the module if it's in node's cache
             // A more robust way might be to store file paths on the client.commands collection during load.
             // For now, let's rebuild the path logic more carefully.
             let commandFilePath = '';
