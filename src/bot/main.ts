@@ -639,8 +639,16 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         }
 
         if (customId === 'cancel_content') {
-             await interaction.message.delete();
-             return;
+            try {
+                await interaction.message.delete();
+            } catch (error: any) {
+                if (error.code === 10008) { // Unknown Message
+                    console.log(`[Interaction] Tried to delete a message for 'cancel_content' that was already gone: ${interaction.message.id}`);
+                } else {
+                    console.error("Error deleting message for 'cancel_content':", error);
+                }
+            }
+            return;
         }
         
         if (customId === 'modify_content') {
