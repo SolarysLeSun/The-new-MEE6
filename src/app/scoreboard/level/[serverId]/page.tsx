@@ -22,12 +22,13 @@ interface LeaderboardEntry {
     user: {
         id: string;
         username: string;
+        displayName: string;
         tag: string;
         avatar: string | null;
     };
     level: number;
     xp: number;
-    requiredXp: number; // Corrected this based on expected data
+    requiredXp: number;
 }
 interface ServerInfo {
     name: string;
@@ -56,6 +57,10 @@ const LeaderboardSkeleton = () => (
         ))}
     </div>
 );
+
+function hasSpecialChars(name: string): boolean {
+    return /[^\w\s\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(name);
+}
 
 export default function LevelScoreboardPage() {
     const params = useParams();
@@ -141,39 +146,42 @@ export default function LevelScoreboardPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {leaderboard.map((entry) => (
-                                            <TableRow key={entry.user.id}>
-                                                <TableCell className="text-center font-bold text-lg">
-                                                    <span className={getRankColor(entry.rank)}>
-                                                        {entry.rank === 1 ? <Crown/> : entry.rank}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-3">
-                                                        <Avatar>
-                                                            <AvatarImage src={entry.user.avatar || ''} alt={entry.user.username} />
-                                                            <AvatarFallback>{entry.user.username.charAt(0)}</AvatarFallback>
-                                                        </Avatar>
-                                                        <span className="font-medium">{entry.user.username}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-center font-bold text-lg">{entry.level}</TableCell>
-                                                <TableCell>
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <div>
-                                                                    <Progress value={(entry.xp / entry.requiredXp) * 100} className="h-2"/>
-                                                                </div>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                                <p>{entry.xp} / {entry.requiredXp} XP</p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
+                                        {leaderboard.map((entry) => {
+                                            const nameToDisplay = hasSpecialChars(entry.user.displayName) ? entry.user.username : entry.user.displayName;
+                                            return (
+                                                <TableRow key={entry.user.id}>
+                                                    <TableCell className="text-center font-bold text-lg">
+                                                        <span className={getRankColor(entry.rank)}>
+                                                            {entry.rank === 1 ? <Crown/> : entry.rank}
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-3">
+                                                            <Avatar>
+                                                                <AvatarImage src={entry.user.avatar || ''} alt={entry.user.username} />
+                                                                <AvatarFallback>{entry.user.username.charAt(0)}</AvatarFallback>
+                                                            </Avatar>
+                                                            <span className="font-medium">{nameToDisplay}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-center font-bold text-lg">{entry.level}</TableCell>
+                                                    <TableCell>
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <div>
+                                                                        <Progress value={(entry.xp / entry.requiredXp) * 100} className="h-2"/>
+                                                                    </div>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>{entry.xp} / {entry.requiredXp} XP</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
                                     </TableBody>
                                 </Table>
                             )}

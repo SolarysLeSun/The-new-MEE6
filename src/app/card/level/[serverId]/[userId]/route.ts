@@ -103,7 +103,7 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     ctx.font = 'bold 24px "Inter", sans-serif';
     ctx.fillStyle = '#FFFFFF';
     ctx.textAlign = 'right';
-    ctx.fillText(xpText, barX + barWidth, barY - 15);
+    ctx.fillText(xpText, barX + barWidth, barY - 10);
 
 
     // Fond de la barre

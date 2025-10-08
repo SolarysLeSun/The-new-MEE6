@@ -99,18 +99,11 @@ export default function DashboardLayout({
     <div className="relative flex h-screen bg-background text-foreground overflow-hidden">
       <div className="absolute inset-0 z-0">
         <RippleGrid
-            enableRainbow={true}
-            gridColor="#2c3e50"
-            rippleIntensity={0.07}
-            gridSize={30}
-            gridThickness={15}
-            fadeDistance={1.5}
-            vignetteStrength={2}
-            glowIntensity={0.1}
-            opacity={1}
-            gridRotation={0}
-            mouseInteraction={true}
-            mouseInteractionRadius={0.5}
+            gridColor="#ffffff10"
+            rippleIntensity={0.03}
+            gridSize={25}
+            fadeDistance={1}
+            vignetteStrength={1.5}
         />
       </div>
       <div className="relative z-10 flex h-full w-full">
