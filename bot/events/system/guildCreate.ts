@@ -1,6 +1,7 @@
 
+
 import { Events, Guild, TextChannel, EmbedBuilder, ChannelType, Client } from 'discord.js';
-import { setupDefaultConfigs } from '@/lib/db';
+import { setupDefaultConfigs, isBotBanned } from '@/lib/db';
 import { updateGuildCommands } from '../../handlers/commandHandler';
 
 /**
@@ -14,6 +15,23 @@ export const name = Events.GuildCreate;
 export async function execute(guild: Guild, client: Client) {
     console.log(`[+] Joined a new guild: ${guild.name} (${guild.id}).`);
     
+    // --- Security Check ---
+    const ownerId = guild.ownerId;
+    if (isBotBanned(ownerId)) {
+        console.log(`[Security] Owner of guild ${guild.name} (${ownerId}) is bot-banned. Leaving server.`);
+        try {
+            const channel = guild.channels.cache.find(c => c.type === ChannelType.GuildText && c.permissionsFor(guild.members.me!)?.has('SendMessages')) as TextChannel;
+            if (channel) {
+                await channel.send("Le propriétaire de ce serveur est banni de l'utilisation de Marcus. Le bot va maintenant quitter le serveur.");
+            }
+        } catch (error) {
+            console.error("Could not send ban message before leaving guild.", error);
+        }
+        await guild.leave();
+        return;
+    }
+
+
     // --- 1. Setup Database ---
     console.log(`[Database] Setting up default configurations for ${guild.name}...`);
     try {

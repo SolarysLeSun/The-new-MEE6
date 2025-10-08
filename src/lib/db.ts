@@ -149,6 +149,16 @@ const upgradeSchema = () => {
         `);
         console.log('[Database] La table "role_memory" est prête.');
 
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS bot_bans (
+                user_id TEXT PRIMARY KEY NOT NULL,
+                banned_by TEXT NOT NULL,
+                reason TEXT,
+                banned_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log('[Database] Table "bot_bans" is ready.');
+
 
     } catch (error) {
         console.error('[Database] Erreur lors de la mise à jour du schéma:', error);
@@ -547,6 +557,29 @@ export function initializeDatabase() {
     upgradeSchema(); // Ensure all tables are created/updated
     console.log('[Database] Initialisation de la base de données terminée.');
 }
+
+// --- Bot Ban System ---
+
+export function addBotBan(userId: string, bannedBy: string, reason: string | null): void {
+    const stmt = db.prepare('INSERT OR REPLACE INTO bot_bans (user_id, banned_by, reason) VALUES (?, ?, ?)');
+    stmt.run(userId, bannedBy, reason);
+}
+
+export function removeBotBan(userId: string): void {
+    const stmt = db.prepare('DELETE FROM bot_bans WHERE user_id = ?');
+    stmt.run(userId);
+}
+
+export function listBotBans(): { user_id: string; reason: string | null; banned_by: string; banned_at: string }[] {
+    const stmt = db.prepare('SELECT user_id, reason, banned_by, banned_at FROM bot_bans ORDER BY banned_at DESC');
+    return stmt.all() as { user_id: string; reason: string | null; banned_by: string; banned_at: string }[];
+}
+
+export function isBotBanned(userId: string): boolean {
+    const stmt = db.prepare('SELECT 1 FROM bot_bans WHERE user_id = ?');
+    return !!stmt.get(userId);
+}
+
 
 // --- Global Settings ---
 
