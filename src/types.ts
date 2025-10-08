@@ -138,9 +138,8 @@ export interface XPBoost {
 export interface UserLevel {
     xp: number;
     level: number;
-    currentLevelXp: number;
-    requiredXpForLevel: number;
-    totalXp: number;
+    requiredXpForLevel: number; // XP to complete current level
+    totalXp: number; // Total XP accumulated by the user
     requiredXpForNextLevel: number;
 }
 
@@ -179,6 +178,7 @@ export interface LevelingConfig {
     mention_user_on_levelup: boolean;
     level_up_frequency: number;
     level_up_channel_id: string | null;
+    level_up_message: string;
     level_card_background_url: string | null;
     level_card_bar_color: string | null;
     level_card_text_color: string | null;
@@ -187,4 +187,14 @@ export interface LevelingConfig {
     xp_boost_roles: XPBoost[];
     xp_boost_channels: XPBoost[];
     command_permissions: { [key: string]: string | null };
+}
+
+export interface WelcomeConfig {
+    enabled: boolean;
+    welcome_channel_id: string | null;
+    welcome_message: string;
+    use_card: boolean;
+    card_background_url: string | null;
+    card_text_color: string | null;
+    send_in_dm: boolean;
 }

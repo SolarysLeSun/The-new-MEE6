@@ -4,7 +4,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig } from '../types';
+import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig } from '../types';
 import { randomBytes } from 'crypto';
 import ms from 'ms';
 
@@ -334,7 +334,7 @@ const defaultConfigs: DefaultConfigs = {
         enabled: true, 
         creation_channel: null, 
         category_id: null, 
-        embed_message: 'Cliquez sur le bouton ci-dessous pour créer un salon privé.',
+        embed_message: 'Cliquez sur le bouton pour créer un salon privé.',
         channel_name_format: 'ticket-{user}',
         archive_summary: true,
         modal_title: 'Créer un salon privé',
@@ -386,8 +386,11 @@ const defaultConfigs: DefaultConfigs = {
     'welcome-message': {
         enabled: false,
         welcome_channel_id: null,
-        mention_user_on_levelup: true,
-        welcome_message: "Bienvenue sur le serveur, {user} ! 🎉",
+        welcome_message: "Bienvenue sur le serveur, {user} !",
+        use_card: true,
+        card_background_url: null,
+        card_text_color: '#FFFFFF',
+        send_in_dm: false,
     },
     'tester-commands': {
         enabled: true,
@@ -489,6 +492,7 @@ const defaultConfigs: DefaultConfigs = {
         cooldown_seconds: 60,
         mention_user_on_levelup: true,
         level_up_frequency: 1,
+        level_up_message: 'Félicitations {user}, vous avez atteint le niveau {level} !',
         level_up_channel_id: null,
         level_card_background_url: null,
         level_card_bar_color: '#FFFFFF',
@@ -890,7 +894,7 @@ export function getMemoriesForPersona(personaId: string, userIds: (string | null
     if (memories.length > 0) {
         const touchStmt = db.prepare(`UPDATE persona_memories SET last_accessed_at = CURRENT_TIMESTAMP WHERE id = ?`);
         const touchTransaction = db.transaction((mems) => {
-            for (const mem of mems) touchStmt.run(mem.id);
+            for (const mem of mems touchStmt.run(mem.id);
         });
         touchTransaction(memories);
     }
@@ -913,7 +917,7 @@ export function createMultipleMemories(memories: Omit<PersonaMemory, 'id' | 'cre
         VALUES (@persona_id, @user_id, @memory_type, @content, @salience_score)
     `);
     const insertMany = db.transaction((mems) => {
-        for (const mem of mems) insert.run(mem);
+        for (const mem of mems insert.run(mem);
     });
     insertMany(memories);
 }
@@ -1179,20 +1183,21 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
     }
 
     let xpForCurrentLevel = user.xp;
-    let tempLevel = 0;
-    while(tempLevel < user.level) {
-        xpForCurrentLevel -= calculateRequiredXp(tempLevel, difficulty);
-        tempLevel++;
+    let cumulativeXpForPreviousLevels = 0;
+    for (let i = 0; i < user.level; i++) {
+        cumulativeXpForPreviousLevels += calculateRequiredXp(i, difficulty);
     }
+    xpForCurrentLevel -= cumulativeXpForPreviousLevels;
+
 
     const requiredXpForNextLevel = calculateRequiredXp(user.level, difficulty);
     
     return {
-        xp: xpForCurrentLevel, // XP within the current level
+        xp: xpForCurrentLevel,
         level: user.level,
-        requiredXpForLevel: requiredXpForNextLevel, // Total XP required for this level
+        requiredXpForLevel: requiredXpForNextLevel,
         totalXp: user.xp,
-        requiredXpForNextLevel: requiredXpForNextLevel, // Alias for consistency with card
+        requiredXpForNextLevel: requiredXpForNextLevel,
     };
 }
 
@@ -1269,11 +1274,12 @@ export function getGuildLeaderboard(guildId: string, limit: number = 10): (UserL
     
     return rows.map(row => {
         let xpForCurrentLevel = row.xp;
-        let tempLevel = 0;
-        while(tempLevel < row.level) {
-            xpForCurrentLevel -= calculateRequiredXp(tempLevel, difficulty);
-            tempLevel++;
+        let cumulativeXpForPreviousLevels = 0;
+        for (let i = 0; i < row.level; i++) {
+            cumulativeXpForPreviousLevels += calculateRequiredXp(i, difficulty);
         }
+        xpForCurrentLevel -= cumulativeXpForPreviousLevels;
+        
         const requiredXpForNextLevel = calculateRequiredXp(row.level, difficulty);
 
         return {
@@ -1291,6 +1297,3 @@ export function resetGuildXP(guildId: string): void {
     const stmt = db.prepare('DELETE FROM user_levels WHERE guild_id = ?');
     stmt.run(guildId);
 }
-
-
-

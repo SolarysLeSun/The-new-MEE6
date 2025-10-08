@@ -30,6 +30,10 @@ interface WelcomeConfig {
     enabled: boolean;
     welcome_channel_id: string | null;
     welcome_message: string;
+    use_card: boolean;
+    card_background_url: string | null;
+    card_text_color: string | null;
+    send_in_dm: boolean;
 }
 
 interface AutorolesConfig {
@@ -171,26 +175,51 @@ function WelcomePageContent({ isPremium, serverId }: { isPremium: boolean, serve
                         <Label htmlFor="enable-welcome" className="font-bold">Activer le message de bienvenue</Label>
                         <Switch id="enable-welcome" checked={welcomeConfig.enabled} onCheckedChange={(val) => handleWelcomeChange('enabled', val)} />
                     </div>
-                    <Separator />
-                    <div>
-                        <Label htmlFor="welcome-channel">Salon de bienvenue</Label>
-                        <Select value={welcomeConfig.welcome_channel_id || 'none'} onValueChange={(val) => handleWelcomeChange('welcome_channel_id', val === 'none' ? null : val)}>
-                            <SelectTrigger id="welcome-channel">
-                                <SelectValue placeholder="Sélectionner un salon" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">Désactivé</SelectItem>
-                                {channels.map(channel => (
-                                    <SelectItem key={channel.id} value={channel.id}># {channel.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                     <Separator />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                           <Label htmlFor="welcome-channel">Salon de bienvenue</Label>
+                            <Select value={welcomeConfig.welcome_channel_id || 'none'} onValueChange={(val) => handleWelcomeChange('welcome_channel_id', val === 'none' ? null : val)}>
+                                <SelectTrigger id="welcome-channel">
+                                    <SelectValue placeholder="Sélectionner un salon" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">Désactivé</SelectItem>
+                                    {channels.map(channel => (
+                                        <SelectItem key={channel.id} value={channel.id}># {channel.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2 flex flex-col justify-end">
+                             <div className="flex items-center space-x-2">
+                                <Switch id="send-dm" checked={welcomeConfig.send_in_dm} onCheckedChange={(val) => handleWelcomeChange('send_in_dm', val)} />
+                                <Label htmlFor="send-dm">Envoyer aussi en message privé</Label>
+                            </div>
+                        </div>
                     </div>
                     <div>
-                        <Label htmlFor="welcome-message">Message de bienvenue</Label>
+                        <Label htmlFor="welcome-message">Texte de la carte de bienvenue</Label>
                         <p className="text-sm text-muted-foreground">Utilisez {"{user}"} pour mentionner le nouveau membre.</p>
                         <Textarea id="welcome-message" defaultValue={welcomeConfig.welcome_message} onBlur={(e) => handleWelcomeChange('welcome_message', e.target.value)} />
                     </div>
+                    <Separator/>
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="use-card" className="font-bold">Utiliser une carte d'image</Label>
+                        <Switch id="use-card" checked={welcomeConfig.use_card} onCheckedChange={(val) => handleWelcomeChange('use_card', val)} />
+                    </div>
+                     {welcomeConfig.use_card && (
+                        <div className="space-y-4 border p-4 rounded-lg">
+                             <div className="space-y-2">
+                                <Label>URL de l'image de fond</Label>
+                                <Input placeholder="https://example.com/image.png" defaultValue={welcomeConfig.card_background_url || ''} onBlur={(e) => handleWelcomeChange('card_background_url', e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Couleur du texte principal</Label>
+                                <Input type="color" defaultValue={welcomeConfig.card_text_color || '#FFFFFF'} onBlur={(e) => handleWelcomeChange('card_text_color', e.target.value)} />
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -304,7 +333,7 @@ export default function WelcomePage() {
     return (
         <PageTransitionWrapper className="space-y-8 max-w-4xl">
             <div>
-                <h1 className="text-3xl font-bold flex items-center gap-2"><UserPlus/> Accueil &amp; Intégration</h1>
+                <h1 className="text-3xl font-bold flex items-center gap-2"><UserPlus/> Accueil & Intégration</h1>
                 <p className="text-muted-foreground mt-2">
                 Configurez une expérience d'arrivée fluide pour vos nouveaux membres.
                 </p>
