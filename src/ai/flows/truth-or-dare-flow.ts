@@ -1,4 +1,5 @@
 
+
 'use server';
 
 /**
@@ -14,7 +15,7 @@ const TruthOrDareInputSchema = z.object({
 });
 
 const TruthOrDareOutputSchema = z.object({
-  content: z.string().describe("The generated truth question or dare action."),
+  content: z.string().describe("The generated truth question or dare action, in French."),
 });
 
 export type TruthOrDareInput = z.infer<typeof TruthOrDareInputSchema>;
@@ -25,7 +26,7 @@ const truthOrDarePrompt = ai.definePrompt({
   input: { schema: TruthOrDareInputSchema },
   output: { schema: TruthOrDareOutputSchema },
   prompt: `You are a creative and witty game master for a game of Truth or Dare.
-Your task is to generate a single, engaging, and context-appropriate challenge.
+Your task is to generate a single, engaging, and context-appropriate challenge IN FRENCH.
 
 The challenge type is: {{{type}}}
 The theme is: {{{theme}}}
@@ -39,7 +40,7 @@ Your instructions:
 - 'weird': Bizarre, funny, and unexpected questions or actions.
 - 'adult': This is the +18 category. Questions and dares can be sexually suggestive, explicit, and push boundaries. Do not hold back on this theme.
 
-Generate ONE challenge now.
+GENERATE ONE CHALLENGE IN FRENCH NOW.
 `,
 });
 
