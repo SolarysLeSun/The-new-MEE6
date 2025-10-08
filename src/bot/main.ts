@@ -1,5 +1,4 @@
 
-
 import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction, ButtonStyle } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -200,7 +199,8 @@ async function handleBotSuggestionModal(interaction: ModalSubmitInteraction) {
 async function handleContentModificationModal(interaction: ModalSubmitInteraction) {
     if (!interaction.message || !interaction.message.embeds[0]) return;
     
-    await interaction.deferReply({ ephemeral: true });
+    // We defer the update of the modal response itself.
+    await interaction.deferUpdate();
 
     const modificationRequest = interaction.fields.getTextInputValue('modification_request');
     const originalEmbed = interaction.message.embeds[0];
@@ -208,16 +208,14 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
 
     let newEmbed: EmbedBuilder;
 
-    if (footerText.includes('admin_announce') || footerText.includes('dev_admin_announce')) {
-        // --- Handle Announcement Modification ---
-        // The original raw text is stored in the author.name field of the embed.
-        const rawText = originalEmbed.author?.name;
-        if (!rawText) {
-            await interaction.editReply({ content: 'Erreur : Impossible de trouver le texte original de l\'annonce à modifier.', ephemeral: true });
-            return;
-        }
+    try {
+        if (footerText.includes('admin_announce') || footerText.includes('dev_admin_announce')) {
+            const rawText = originalEmbed.author?.name;
+            if (!rawText) {
+                await interaction.followUp({ content: 'Erreur : Impossible de trouver le texte original de l\'annonce à modifier.', ephemeral: true });
+                return;
+            }
 
-        try {
             const result = await announcementFlow({
                 rawText: rawText,
                 authorName: interaction.user.username,
@@ -227,46 +225,37 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
             newEmbed = EmbedBuilder.from(originalEmbed)
                 .setTitle(result.title)
                 .setDescription(result.description);
-                
-        } catch (error) {
-            console.error('[AnnounceModify] Error:', error);
-            await interaction.editReply({ content: 'Une erreur est survenue lors de la modification de l\'annonce.', ephemeral: true });
-            return;
-        }
 
-    } else {
-         // --- Handle IA Content (Rule/Announcement) Modification ---
-         if (!interaction.guild) {
-             await interaction.editReply({ content: 'Cette action ne peut pas être effectuée en messages privés.', ephemeral: true });
-             return;
-         }
-        const title = originalEmbed.title || '';
-        const type = title.includes('Règle') ? 'rule' : 'announcement';
-        const topic = title.replace(/^(📝 Règle : |📢 Annonce : )/i, '').replace(/"/g, '');
+        } else {
+            if (!interaction.guild) {
+                await interaction.followUp({ content: 'Cette action ne peut pas être effectuée en messages privés.', ephemeral: true });
+                return;
+            }
+            const title = originalEmbed.title || '';
+            const type = title.includes('Règle') ? 'rule' : 'announcement';
+            const topic = title.replace(/^(📝 Règle : |📢 Annonce : )/i, '').replace(/"/g, '');
 
-        const config = await getServerConfig(interaction.guild.id, 'content-ai');
+            const config = await getServerConfig(interaction.guild.id, 'content-ai');
 
-        try {
             const result = await generateTextContent({
                 type: type as 'rule' | 'announcement',
                 topic: topic,
                 tone: config.default_tone,
-                customInstructions: originalEmbed.description || '', // Use the old description as context
-                modificationRequest: modificationRequest // Pass the new modification request
+                customInstructions: originalEmbed.description || '',
+                modificationRequest: modificationRequest
             });
 
             newEmbed = EmbedBuilder.from(originalEmbed)
                 .setDescription(result.generatedText.substring(0, 4096));
-
-        } catch (error) {
-            console.error('[ContentModify] Error:', error);
-            await interaction.editReply({ content: 'Une erreur est survenue lors de la modification du contenu.', ephemeral: true });
-            return;
         }
-    }
 
-    await interaction.message.edit({ embeds: [newEmbed] });
-    await interaction.editReply({ content: '<:Oui:1421563353888723084> Le contenu a été modifié. Vous pouvez le modifier à nouveau ou le publier.', ephemeral: true });
+        // Update the original interaction message with the new embed
+        await interaction.editReply({ embeds: [newEmbed], components: interaction.message.components });
+
+    } catch (error) {
+        console.error('[ContentModify] Error:', error);
+        await interaction.followUp({ content: 'Une erreur est survenue lors de la modification du contenu.', ephemeral: true });
+    }
 }
 
 async function handleTranslationSelect(interaction: StringSelectMenuInteraction) {
@@ -473,9 +462,6 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         const { customId } = interaction;
 
         if (customId === 'confirm_normalize_all' || customId === 'cancel_normalize_all') {
-            // This is handled in the command file's collector.
-            // Acknowledging here can prevent 'unknown interaction' errors if the collector is slow.
-            // await interaction.deferUpdate();
             return;
         }
 
@@ -639,13 +625,14 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         }
 
         if (customId === 'cancel_content') {
-            try {
-                await interaction.message.delete();
+             try {
+                // It's an ephemeral message, we can just edit the reply to indicate cancellation
+                // or delete the followup if it's not ephemeral. Since it's from a command, it's safer to edit.
+                await interaction.update({ content: "Opération annulée.", embeds: [], components: [] });
             } catch (error: any) {
-                if (error.code === 10008) { // Unknown Message
-                    console.log(`[Interaction] Tried to delete a message for 'cancel_content' that was already gone: ${interaction.message.id}`);
-                } else {
-                    console.error("Error deleting message for 'cancel_content':", error);
+                // If the interaction has expired, it might fail. Ignore "Unknown interaction" errors.
+                if (error.code !== 10062) {
+                     console.error("Error updating 'cancel_content' interaction:", error);
                 }
             }
             return;
