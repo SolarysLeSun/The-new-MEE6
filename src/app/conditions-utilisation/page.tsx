@@ -37,15 +37,29 @@ export default function ConditionsUtilisationPage() {
                 1. Acceptation des Conditions
               </h2>
               <p>
-                En ajoutant le bot Marcus à votre serveur Discord, vous acceptez sans réserve les présentes Conditions Générales d'Utilisation (CGU). Si vous n'êtes pas d'accord avec ces termes, vous ne devez pas utiliser le bot.
+                En ajoutant le bot Marcus à votre serveur Discord ou en utilisant son panel de gestion, vous acceptez sans réserve les présentes Conditions Générales d'Utilisation (CGU). Si vous n'êtes pas d'accord avec ces termes, vous ne devez pas utiliser le bot ou ses services associés.
               </p>
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl font-semibold text-white">
-                2. Abus et Utilisation Interdite
+                2. Licence du Logiciel et Propriété Intellectuelle
               </h2>
               <p>
-                Il est formellement interdit d'abuser des fonctionnalités du bot, et notamment de ses capacités d'Intelligence Artificielle. Cela inclut, sans s'y limiter, le spam de commandes, les tentatives de contournement des limitations, la génération de contenu illégal ou inapproprié, ou toute utilisation visant à nuire au bon fonctionnement du bot ou à d'autres utilisateurs.
+                Le logiciel du bot Marcus et son panel de gestion sont la propriété intellectuelle de <strong>ForgeNet Collective</strong>. Copyright © 2025.
+              </p>
+               <p>
+                Ce logiciel et sa documentation sont fournis à des fins éducatives et de contribution communautaire uniquement. Vous pouvez consulter le code et suggérer des améliorations via les canaux appropriés, mais il est strictement interdit de copier, modifier, distribuer, héberger ou utiliser ce logiciel ou ses composants dans tout projet public ou privé sans une autorisation écrite explicite de ForgeNet.
+              </p>
+               <p>
+                Toute utilisation non autorisée, reproduction, ou déploiement de ce logiciel — y compris les œuvres dérivées — est strictement interdite. Pour toute demande de licence, contactez : <a href="mailto:contact@forgenet.fr" className="text-primary hover:underline">contact@forgenet.fr</a>.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold text-white">
+                3. Abus et Utilisation Interdite
+              </h2>
+              <p>
+                Il est formellement interdit d'abuser des fonctionnalités du bot, notamment de ses capacités d'Intelligence Artificielle. Cela inclut, sans s'y limiter, le spam de commandes, les tentatives de contournement des limitations, la génération de contenu illégal ou inapproprié, ou toute utilisation visant à nuire au bon fonctionnement du bot ou à d'autres utilisateurs.
               </p>
                <p>
                 Toute violation constatée pourra entraîner une interdiction d'utilisation du bot pour le serveur concerné, sans préavis.
@@ -53,7 +67,7 @@ export default function ConditionsUtilisationPage() {
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl font-semibold text-white">
-                3. Limitation de Responsabilité et Perte de Données
+                4. Limitation de Responsabilité et Perte de Données
               </h2>
               <p>
                 Marcus est fourni "en l'état". Bien que nous nous efforcions de garantir une disponibilité et une fiabilité maximales, des opérations de maintenance ou des problèmes techniques imprévus peuvent survenir.
@@ -64,7 +78,7 @@ export default function ConditionsUtilisationPage() {
             </div>
              <div className="space-y-2">
               <h2 className="text-2xl font-semibold text-white">
-                4. Modification des Conditions
+                5. Modification des Conditions
               </h2>
               <p>
                 Nous nous réservons le droit de modifier ces CGU à tout moment. Les utilisateurs seront informés des changements importants via le serveur Discord de support.
