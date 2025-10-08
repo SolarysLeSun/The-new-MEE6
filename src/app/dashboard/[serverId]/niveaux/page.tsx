@@ -18,6 +18,7 @@ import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -157,7 +158,7 @@ export default function LevelingPage() {
                     <Switch checked={config.enabled} onCheckedChange={(val) => handleValueChange('enabled', val)} />
                 </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                     <Label>Salons ignorés</Label>
                     <p className="text-sm text-muted-foreground">L'XP ne sera pas attribuée dans les salons sélectionnés.</p>
@@ -167,6 +168,20 @@ export default function LevelingPage() {
                         onSelectedChange={(selected) => handleValueChange('ignored_channels', selected)}
                         placeholder="Sélectionner des salons à ignorer..."
                     />
+                </div>
+                <div className="space-y-2">
+                    <Label>Difficulté de progression</Label>
+                    <p className="text-sm text-muted-foreground">Ajuste la quantité d'XP requise pour chaque niveau.</p>
+                    <Select value={config.difficulty || 'medium'} onValueChange={(val: 'easy' | 'medium' | 'hard') => handleValueChange('difficulty', val)}>
+                        <SelectTrigger>
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="easy">Facile</SelectItem>
+                            <SelectItem value="medium">Moyen</SelectItem>
+                            <SelectItem value="hard">Difficile</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
             </CardContent>
         </Card>

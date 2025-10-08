@@ -138,7 +138,10 @@ export interface XPBoost {
 export interface UserLevel {
     xp: number;
     level: number;
-    requiredXp: number;
+    currentLevelXp: number;
+    requiredXpForLevel: number;
+    totalXp: number;
+    requiredXpForNextLevel: number;
 }
 
 export interface CustomField {
@@ -167,6 +170,7 @@ export interface PanelMessage {
 
 export interface LevelingConfig {
     enabled: boolean;
+    difficulty: 'easy' | 'medium' | 'hard';
     xp_per_message: number;
     xp_per_reaction: number;
     xp_per_minute_in_voice: number;

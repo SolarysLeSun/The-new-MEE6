@@ -375,7 +375,7 @@ const defaultConfigs: DefaultConfigs = {
     'welcome-message': {
         enabled: false,
         welcome_channel_id: null,
-        welcome_message: 'Bienvenue sur le serveur, {user} ! 🎉',
+        mention_user_on_levelup: true,
     },
     'tester-commands': {
         enabled: true,
@@ -469,6 +469,7 @@ const defaultConfigs: DefaultConfigs = {
     },
     'leveling': {
         enabled: true,
+        difficulty: 'medium',
         xp_per_message: 15,
         xp_per_reaction: 5,
         xp_per_minute_in_voice: 10,
@@ -476,6 +477,7 @@ const defaultConfigs: DefaultConfigs = {
         cooldown_seconds: 60,
         mention_user_on_levelup: true,
         level_up_frequency: 1,
+        level_up_channel_id: null,
         level_card_background_url: null,
         level_card_bar_color: '#FFFFFF',
         level_card_text_color: '#FFFFFF',
@@ -1109,19 +1111,42 @@ export function setClientInstance(client: Client) {
     clientInstance = client;
 }
 
-const calculateRequiredXp = (level: number) => 5 * (level ** 2) + 50 * level + 100;
+const difficultyMultipliers = {
+    easy: 0.75,
+    medium: 1.0,
+    hard: 1.5,
+};
+
+const calculateRequiredXp = (level: number, difficulty: 'easy' | 'medium' | 'hard' = 'medium') => {
+    const multiplier = difficultyMultipliers[difficulty] || 1.0;
+    return Math.floor((5 * (level ** 2) + 50 * level + 100) * multiplier);
+};
 
 export function getUserLevel(userId: string, guildId: string): UserLevel {
-    let stmt = db.prepare('SELECT xp, level FROM user_levels WHERE user_id = ? AND guild_id = ?');
-    let user = stmt.get(userId, guildId) as { xp: number, level: number } | undefined;
+    const levelingConfig = getServerConfig(guildId, 'leveling') as LevelingConfig | null;
+    const difficulty = levelingConfig?.difficulty || 'medium';
+
+    let userStmt = db.prepare('SELECT xp, level FROM user_levels WHERE user_id = ? AND guild_id = ?');
+    let user = userStmt.get(userId, guildId) as { xp: number, level: number } | undefined;
     
     if (!user) {
         user = { xp: 0, level: 0 };
     }
 
+    let totalXpForCurrentLevel = 0;
+    for (let i = 0; i < user.level; i++) {
+        totalXpForCurrentLevel += calculateRequiredXp(i, difficulty);
+    }
+    
+    const requiredXpForNextLevel = calculateRequiredXp(user.level, difficulty);
+    const currentLevelXp = user.xp - totalXpForCurrentLevel;
+
     return {
-        ...user,
-        requiredXp: calculateRequiredXp(user.level),
+        xp: currentLevelXp,
+        level: user.level,
+        requiredXpForLevel: requiredXpForNextLevel,
+        totalXp: user.xp,
+        requiredXpForNextLevel: totalXpForCurrentLevel + requiredXpForNextLevel,
     };
 }
 
@@ -1135,17 +1160,19 @@ export const updateUserXP = db.transaction((userId: string, guildId: string, xpT
     `);
     stmt.run(userId, guildId, xpToModify);
 
+    const levelingConfig = getServerConfig(guildId, 'leveling') as LevelingConfig | null;
+    const difficulty = levelingConfig?.difficulty || 'medium';
+
     // After updating, check for level up/down
-    const { xp, level } = getUserLevel(userId, guildId);
-    let requiredXp = calculateRequiredXp(level);
+    let { xp: totalXp, level } = (db.prepare('SELECT xp, level FROM user_levels WHERE user_id = ? AND guild_id = ?').get(userId, guildId) as { xp: number, level: number });
     
-    if (xp >= requiredXp) {
+    let requiredXp = calculateRequiredXp(level, difficulty);
+    
+    if (totalXp >= requiredXp) {
         let newLevel = level;
-        let currentXpForLeveling = xp;
-        while (currentXpForLeveling >= requiredXp) {
-            currentXpForLeveling -= requiredXp;
+        while (totalXp >= calculateRequiredXp(newLevel, difficulty)) {
+            totalXp -= calculateRequiredXp(newLevel, difficulty);
             newLevel++;
-            requiredXp = calculateRequiredXp(newLevel);
         }
         
         if (newLevel > level) {
@@ -1178,6 +1205,9 @@ export function getUserRank(userId: string, guildId: string): number {
 }
 
 export function getGuildLeaderboard(guildId: string, limit: number = 10): (UserLevel & { user_id: string })[] {
+    const levelingConfig = getServerConfig(guildId, 'leveling') as LevelingConfig | null;
+    const difficulty = levelingConfig?.difficulty || 'medium';
+
     const stmt = db.prepare(`
         SELECT user_id, xp, level FROM user_levels
         WHERE guild_id = ?
@@ -1185,8 +1215,27 @@ export function getGuildLeaderboard(guildId: string, limit: number = 10): (UserL
         LIMIT ?
     `);
     const rows = stmt.all(guildId, limit) as { user_id: string; xp: number; level: number }[];
-    return rows.map(row => ({
-        ...row,
-        requiredXp: calculateRequiredXp(row.level)
-    }));
+    
+    return rows.map(row => {
+        let totalXpForCurrentLevel = 0;
+        for (let i = 0; i < row.level; i++) {
+            totalXpForCurrentLevel += calculateRequiredXp(i, difficulty);
+        }
+        const requiredXpForNextLevel = calculateRequiredXp(row.level, difficulty);
+        const currentLevelXp = row.xp - totalXpForCurrentLevel;
+
+        return {
+            user_id: row.user_id,
+            xp: currentLevelXp,
+            level: row.level,
+            requiredXpForLevel: requiredXpForNextLevel,
+            totalXp: row.xp,
+            requiredXpForNextLevel: totalXpForCurrentLevel + requiredXpForNextLevel
+        };
+    });
+}
+
+export function resetGuildXP(guildId: string): void {
+    const stmt = db.prepare('DELETE FROM user_levels WHERE guild_id = ?');
+    stmt.run(guildId);
 }
