@@ -43,7 +43,7 @@ const LevelCommand: Command = {
             cardUrl.searchParams.append('displayName', member.displayName);
             cardUrl.searchParams.append('avatarUrl', targetUser.displayAvatarURL({ extension: 'png', size: 256 }));
             cardUrl.searchParams.append('level', levelInfo.level.toString());
-            cardUrl.searchParams.append('xp', levelInfo.xp.toString());
+            cardUrl.searchParams.append('xp', levelInfo.levelXp.toString());
             cardUrl.searchParams.append('requiredXp', levelInfo.requiredXp.toString());
             cardUrl.searchParams.append('rank', rank.toString());
             if (config.level_card_background_url) {
@@ -70,4 +70,3 @@ const LevelCommand: Command = {
 };
 
 export default LevelCommand;
-

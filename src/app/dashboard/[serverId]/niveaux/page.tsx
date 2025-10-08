@@ -9,7 +9,6 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -302,10 +301,12 @@ export default function LevelingPage() {
                             <Label>Salon des annonces de montée de niveau</Label>
                             <Combobox options={textChannelOptions} value={config.level_up_channel_id || ''} onChange={(val) => handleValueChange('level_up_channel_id', val)} placeholder="Utiliser le salon actuel" />
                         </div>
-                        <div className="space-y-2">
-                            <Label>Message de montée de niveau</Label>
-                            <p className="text-sm text-muted-foreground">Variables: {'{user}'} (mentionne l'utilisateur), {'{username}'} (nom), {'{level}'} (niveau)</p>
-                            <Textarea defaultValue={config.level_up_message} onBlur={(e) => handleValueChange('level_up_message', e.target.value)} />
+                         <div className="flex items-center justify-between">
+                            <div>
+                                <Label htmlFor="mention-user" className="font-bold">Mentionner l'utilisateur au level up</Label>
+                                <p className="text-sm text-muted-foreground">Si activé, l'annonce mentionnera l'utilisateur.</p>
+                            </div>
+                            <Switch id="mention-user" checked={config.mention_user_on_levelup} onCheckedChange={(val) => handleValueChange('mention_user_on_levelup', val)} />
                         </div>
                         <div className="space-y-2">
                             <Label>Fréquence des annonces</Label>

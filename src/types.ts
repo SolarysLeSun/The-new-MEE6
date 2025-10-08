@@ -139,6 +139,7 @@ export interface UserLevel {
     xp: number;
     level: number;
     requiredXp: number;
+    levelXp: number;
 }
 
 export interface CustomField {
@@ -172,7 +173,6 @@ export interface LevelingConfig {
     xp_per_minute_in_voice: number;
     xp_boost_webcam_multiplier: number;
     cooldown_seconds: number;
-    level_up_message: string;
     level_up_channel_id: string | null;
     mention_user_on_levelup: boolean;
     level_up_frequency: number;

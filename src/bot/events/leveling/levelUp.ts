@@ -3,7 +3,7 @@
 'use server';
 
 import { Guild, User, TextChannel, EmbedBuilder } from 'discord.js';
-import { getServerConfig, getUserLevel, getUserRank } from '@/lib/db';
+import { getServerConfig, getUserRank } from '@/lib/db';
 
 export const name = 'levelUp';
 
@@ -22,11 +22,14 @@ export async function execute(user: User, guild: Guild, newLevel: number) {
         const channel = await guild.channels.fetch(config.level_up_channel_id).catch(() => null) as TextChannel;
         if (channel && channel.isTextBased()) {
             
-            const userDisplay = (config.mention_user_on_levelup ?? true) ? user.toString() : user.username;
-            const message = (config.level_up_message || 'Félicitations {user}, vous avez atteint le niveau {level} !')
-                .replace('{user}', userDisplay)
-                .replace('{username}', user.username) // Also support {username} for non-mention cases
-                .replace('{level}', newLevel.toString());
+            let message = "Félicitations {user}, vous avez atteint le niveau {level} !";
+            if(config.mention_user_on_levelup) {
+                message = message.replace('{user}', user.toString());
+            } else {
+                message = message.replace('{user}', user.username);
+            }
+            message = message.replace('{level}', newLevel.toString());
+
 
             // --- Generate Card Embed ---
             const member = await guild.members.fetch(user.id).catch(() => null);

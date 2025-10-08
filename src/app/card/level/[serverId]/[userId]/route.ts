@@ -1,4 +1,5 @@
 
+
 import { createCanvas, loadImage } from 'canvas'
 import type { NextRequest } from 'next/server'
 
@@ -25,8 +26,8 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     const displayName = searchParams.get('displayName') || 'User'
     const avatarUrl = searchParams.get('avatarUrl')
     const level = parseInt(searchParams.get('level') || '1', 10)
-    const xp = parseInt(searchParams.get('xp') || '0', 10)
-    const requiredXp = parseInt(searchParams.get('requiredXp') || '100', 10)
+    const xp = parseInt(searchParams.get('xp') || '0', 10) // This is now levelXp
+    const requiredXp = parseInt(searchParams.get('requiredXp') || '100', 10) // This is now xp for next level from current
     const rank = parseInt(searchParams.get('rank') || '0', 10);
     const barColor = searchParams.get('barColor') || '#e597c4'
     const textColor = searchParams.get('textColor') || '#e597c4'
