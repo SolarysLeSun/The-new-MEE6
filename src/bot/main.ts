@@ -1,11 +1,12 @@
 
+
 import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction, ButtonStyle } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
 import type { Command, CustomField } from '@/types';
-import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds } from '@/lib/db';
+import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds, getGuildWarnHistory } from '@/lib/db';
 import { startApi } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
@@ -199,7 +200,6 @@ async function handleBotSuggestionModal(interaction: ModalSubmitInteraction) {
 async function handleContentModificationModal(interaction: ModalSubmitInteraction) {
     if (!interaction.message || !interaction.message.embeds[0]) return;
     
-    // We defer the update of the modal response itself.
     await interaction.deferUpdate();
 
     const modificationRequest = interaction.fields.getTextInputValue('modification_request');
@@ -249,7 +249,6 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
                 .setDescription(result.generatedText.substring(0, 4096));
         }
 
-        // Update the original interaction message with the new embed
         await interaction.editReply({ embeds: [newEmbed], components: interaction.message.components });
 
     } catch (error) {
@@ -469,6 +468,75 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
             await handleReminderButton(interaction);
             return;
         }
+        
+        if (customId.startsWith('lastwarns_')) {
+            await interaction.deferUpdate();
+            const [ , direction, pageStr ] = customId.split('_');
+            const currentPage = parseInt(pageStr, 10);
+            
+            const history = getGuildWarnHistory(interaction.guild!.id);
+            const totalPages = Math.ceil(history.length / 6);
+            
+            let newPage = currentPage;
+            if (direction === 'next') newPage++;
+            if (direction === 'prev') newPage--;
+
+            const generateEmbed = async (page: number) => {
+                const WARNS_PER_PAGE = 6;
+                const start = page * WARNS_PER_PAGE;
+                const end = start + WARNS_PER_PAGE;
+                const currentPageWarns = history.slice(start, end);
+    
+                const embed = new EmbedBuilder()
+                    .setColor(0x00BFFF)
+                    .setTitle(`Historique des Avertissements du Serveur`)
+                    .setFooter({ text: `Page ${page + 1} sur ${totalPages} • Total : ${history.length} warns` });
+                
+                if(currentPageWarns.length === 0) {
+                    embed.setDescription("Aucun avertissement sur cette page.");
+                }
+    
+                for (const warn of currentPageWarns) {
+                     let userTag = warn.user_id;
+                     try {
+                         const user = await client.users.fetch(warn.user_id);
+                         userTag = user.tag;
+                     } catch (e) { console.warn(`[LastWarns] Impossible de fetch l'utilisateur ${warn.user_id}`); }
+                    
+                     let moderatorTag = warn.moderator_id;
+                     try {
+                        if (warn.moderator_id !== 'AUTOMOD_IA' && warn.moderator_id !== 'AUTOMOD') {
+                            const moderator = await client.users.fetch(warn.moderator_id);
+                            moderatorTag = moderator.tag;
+                        }
+                     } catch (e) { console.warn(`[LastWarns] Impossible de fetch le modérateur ${warn.moderator_id}`);}
+    
+                    embed.addFields({
+                        name: `Cas #${warn.id} | ${userTag} | <t:${Math.floor(new Date(warn.timestamp).getTime() / 1000)}:R>`,
+                        value: `> **Raison :** ${warn.reason || 'Non spécifiée'}\n> **Modérateur :** ${moderatorTag}`
+                    });
+                }
+                return embed;
+            }
+
+            const newEmbed = await generateEmbed(newPage);
+            const newRow = new ActionRowBuilder<ButtonBuilder>()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`lastwarns_prev_${newPage}`)
+                        .setLabel('Précédent')
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(newPage <= 0),
+                    new ButtonBuilder()
+                        .setCustomId(`lastwarns_next_${newPage}`)
+                        .setLabel('Suivant')
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(newPage >= totalPages - 1)
+                );
+            
+            await interaction.editReply({ embeds: [newEmbed], components: [newRow] });
+            return;
+        }
 
         if (customId.startsWith('approve_bot_') || customId.startsWith('deny_bot_')) {
             await interaction.deferUpdate();
@@ -626,11 +694,8 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
         if (customId === 'cancel_content') {
              try {
-                // It's an ephemeral message, we can just edit the reply to indicate cancellation
-                // or delete the followup if it's not ephemeral. Since it's from a command, it's safer to edit.
                 await interaction.update({ content: "Opération annulée.", embeds: [], components: [] });
             } catch (error: any) {
-                // If the interaction has expired, it might fail. Ignore "Unknown interaction" errors.
                 if (error.code !== 10062) {
                      console.error("Error updating 'cancel_content' interaction:", error);
                 }

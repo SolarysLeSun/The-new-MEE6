@@ -1191,6 +1191,7 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
         level: user.level,
         requiredXpForLevel: requiredXpForNextLevel, // Total XP required for this level
         totalXp: user.xp,
+        requiredXpForNextLevel: requiredXpForNextLevel, // Alias for consistency with card
     };
 }
 
@@ -1280,6 +1281,7 @@ export function getGuildLeaderboard(guildId: string, limit: number = 10): (UserL
             level: row.level,
             requiredXpForLevel: requiredXpForNextLevel,
             totalXp: row.xp,
+            requiredXpForNextLevel: requiredXpForNextLevel,
         };
     });
 }
@@ -1288,4 +1290,5 @@ export function resetGuildXP(guildId: string): void {
     const stmt = db.prepare('DELETE FROM user_levels WHERE guild_id = ?');
     stmt.run(guildId);
 }
+
 
