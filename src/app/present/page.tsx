@@ -85,7 +85,7 @@ export default function PresentationScreenPage() {
          <PageTransitionWrapper>
             <div className="text-center mb-16">
                  <h1 className="text-6xl sm:text-8xl md:text-9xl font-extrabold tracking-tight text-white">
-                    <ShinyText text="MARCUS" />
+                    <ShinyText text="MARCUS" className="text-primary"/>
                 </h1>
                 <p className="mt-4 text-xl md:text-2xl text-muted-foreground">
                     Une nouvelle ère pour la gestion de communautés Discord.
