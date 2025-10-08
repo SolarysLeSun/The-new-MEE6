@@ -35,6 +35,7 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
             const background = await loadImage(backgroundUrl);
             ctx.drawImage(background, 0, 0, width, height);
         } catch (e) {
+            console.warn(`[Welcome Card] Could not load background image: ${backgroundUrl}. Using solid color.`);
             ctx.fillStyle = '#23272A';
             ctx.fillRect(0, 0, width, height);
         }
@@ -96,4 +97,3 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     return new Response('Erreur interne du serveur', { status: 500 })
   }
 }
-
