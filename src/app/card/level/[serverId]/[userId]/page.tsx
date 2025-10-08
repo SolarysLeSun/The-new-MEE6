@@ -1,7 +1,6 @@
+
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Progress } from '@/components/ui/progress';
 
 export const runtime = 'edge';
 
@@ -83,7 +82,8 @@ export async function GET(req: NextRequest) {
                     flexShrink: 0,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    overflow: 'hidden'
                 }}>
                     {avatarUrl ? (
                          <img src={avatarUrl} alt={displayName} width="150" height="150" style={{ borderRadius: '9999px' }} />
