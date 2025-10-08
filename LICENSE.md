@@ -4,4 +4,4 @@ This software and its documentation are provided for educational and community c
 
 Any unauthorized use, reproduction, or deployment of this software — including derivative works — is strictly prohibited.
 
-For licensing inquiries, contact: legal@forgenet.fr
+For licensing inquiries, contact: contact@forgenet.fr
