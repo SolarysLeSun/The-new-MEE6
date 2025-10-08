@@ -1196,21 +1196,31 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
     return {
         xp: xpInCurrentLevel,
         level: user.level,
-        requiredXpForLevel: requiredXpForNextLevel, // Renamed for clarity
+        requiredXp: requiredXpForNextLevel, 
         totalXp: user.xp,
-        totalRequiredXp: cumulativeXpForPreviousLevels + requiredXpForNextLevel // Total XP needed to reach next level
+        totalRequiredXp: cumulativeXpForPreviousLevels + requiredXpForNextLevel 
     };
 }
 
 export const updateUserXP = db.transaction((userId: string, guildId: string, xpToModify: number) => {
-    
-    const stmt = db.prepare(`
+    const getStmt = db.prepare('SELECT xp FROM user_levels WHERE user_id = ? AND guild_id = ?');
+    let user = getStmt.get(userId, guildId) as { xp: number } | undefined;
+
+    let currentXp = user ? user.xp : 0;
+    let newXp = currentXp + xpToModify;
+
+    // Ensure XP doesn't go below 0
+    if (newXp < 0) {
+        newXp = 0;
+    }
+
+    const upsertStmt = db.prepare(`
         INSERT INTO user_levels (user_id, guild_id, xp, level)
         VALUES (?, ?, ?, 0)
         ON CONFLICT(user_id, guild_id) DO UPDATE SET
-        xp = xp + excluded.xp;
+        xp = ?;
     `);
-    stmt.run(userId, guildId, xpToModify);
+    upsertStmt.run(userId, guildId, newXp, newXp);
 
     const levelingConfig = getServerConfig(guildId, 'leveling') as LevelingConfig | null;
     const difficulty = levelingConfig?.difficulty || 'medium';
@@ -1219,35 +1229,41 @@ export const updateUserXP = db.transaction((userId: string, guildId: string, xpT
     let { xp: totalXp, level } = (db.prepare('SELECT xp, level FROM user_levels WHERE user_id = ? AND guild_id = ?').get(userId, guildId) as { xp: number, level: number });
     
     let requiredXpForNextLevel = calculateRequiredXp(level, difficulty);
-    let cumulativeXpForCurrentLevel = 0;
-     for(let i = 0; i < level; i++) {
-        cumulativeXpForCurrentLevel += calculateRequiredXp(i, difficulty);
-    }
     
     // Check for level up
-    if (totalXp >= cumulativeXpForCurrentLevel + requiredXpForNextLevel) {
-        let newLevel = level;
-        while(totalXp >= cumulativeXpForCurrentLevel + calculateRequiredXp(newLevel, difficulty)) {
-            cumulativeXpForCurrentLevel += calculateRequiredXp(newLevel, difficulty);
-            newLevel++;
-        }
+    while (totalXp >= requiredXpForNextLevel) {
+        totalXp -= requiredXpForNextLevel;
+        level++;
+        requiredXpForNextLevel = calculateRequiredXp(level, difficulty);
+    }
+
+    // Check for level down (though less common with the XP floor at 0)
+    let xpForCurrentLevel = calculateRequiredXp(level - 1, difficulty);
+    while (level > 0 && totalXp < 0) {
+        level--;
+        xpForCurrentLevel = calculateRequiredXp(level - 1, difficulty);
+        totalXp += xpForCurrentLevel;
+    }
+
+
+    const { level: oldLevel } = (db.prepare('SELECT level FROM user_levels WHERE user_id = ? AND guild_id = ?').get(userId, guildId) as {level: number});
+
+    if (level !== oldLevel) {
+        const updateLevelStmt = db.prepare('UPDATE user_levels SET level = ? WHERE user_id = ? AND guild_id = ?');
+        updateLevelStmt.run(level, userId, guildId);
         
-        if (newLevel > level) {
-            const updateLevelStmt = db.prepare('UPDATE user_levels SET level = ? WHERE user_id = ? AND guild_id = ?');
-            updateLevelStmt.run(newLevel, userId, guildId);
-            
-            console.log(`[Leveling] ${userId} has leveled up to level ${newLevel} in guild ${guildId}!`);
-            
-            if (clientInstance) {
-                clientInstance.users.fetch(userId).then(user => {
-                    clientInstance!.guilds.fetch(guildId).then(guild => {
-                        clientInstance!.emit('levelUp', user, guild, newLevel);
-                    });
-                }).catch(console.error);
-            }
+        console.log(`[Leveling] ${userId} has changed to level ${level} in guild ${guildId}!`);
+        
+        if (level > oldLevel && clientInstance) {
+            clientInstance.users.fetch(userId).then(user => {
+                clientInstance!.guilds.fetch(guildId).then(guild => {
+                    clientInstance!.emit('levelUp', user, guild, level);
+                });
+            }).catch(console.error);
         }
     }
 });
+
 
 
 export function getUserRank(userId: string, guildId: string): number {
