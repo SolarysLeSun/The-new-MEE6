@@ -478,6 +478,13 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         console.log(`[Interaction] Button clicked: ${interaction.customId}`);
         const { customId } = interaction;
 
+        if (customId === 'confirm_normalize_all' || customId === 'cancel_normalize_all') {
+            // This is handled in the command file's collector.
+            // Acknowledging here can prevent 'unknown interaction' errors if the collector is slow.
+            // await interaction.deferUpdate();
+            return;
+        }
+
         if (customId.startsWith('reschedule_reminder::')) {
             await handleReminderButton(interaction);
             return;
