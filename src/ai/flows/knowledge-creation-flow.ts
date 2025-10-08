@@ -5,7 +5,7 @@
  * @fileOverview An AI agent that analyzes a conversation to create a new knowledge base item.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, textModelCascade } from '@/ai/genkit';
 import { z } from 'genkit';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -22,7 +22,8 @@ const KnowledgeCreationOutputSchema = z.object({
 
 
 export async function knowledgeCreationFlow(input: z.infer<typeof KnowledgeCreationInputSchema>): Promise<z.infer<typeof KnowledgeCreationOutputSchema>> {
-  const { output } = await knowledgeCreationPrompt(input);
+  // Pass the model explicitly to prevent resolution errors.
+  const { output } = await knowledgeCreationPrompt(input, { model: textModelCascade[0] });
   return {
     id: uuidv4(),
     question: output!.question,
