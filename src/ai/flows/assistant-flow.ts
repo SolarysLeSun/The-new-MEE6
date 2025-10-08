@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -54,7 +55,7 @@ export const assistantFlow = ai.defineFlow(
         return output!;
       } catch (error: any) {
         lastError = error;
-        if (error.status === 429 || error.message.includes('quota')) {
+        if (error.status === 429 || error.status === 503 || error.message.includes('quota')) {
           continue;
         }
         break;

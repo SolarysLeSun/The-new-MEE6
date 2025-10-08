@@ -155,9 +155,10 @@ export const conversationalAgentFlow = ai.defineFlow(
       } catch (error: any) {
         lastError = error;
         console.warn(`[Agent] Model ${model} failed with error:`, error.message);
-        if (error.status === 429 || error.message.includes('quota')) {
-          console.error(`[CRITICAL_AI_ERROR] Quota error on model ${model}.`);
-          continue; // Try the next model in the cascade
+        // If it's a quota or overload error, try the next model in the cascade
+        if (error.status === 429 || error.status === 503 || error.message.includes('quota')) {
+          console.error(`[CRITICAL_AI_ERROR] Quota/Overload error on model ${model}. Trying next model...`);
+          continue;
         }
         // For other types of errors, we might not want to retry.
         break;

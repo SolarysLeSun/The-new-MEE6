@@ -66,7 +66,7 @@ export const truthOrDareFlow = ai.defineFlow(
         return output;
       } catch (error: any) {
         lastError = error;
-        if (error.status === 429 || error.message.includes('quota')) {
+        if (error.status === 429 || error.status === 503 || error.message.includes('quota')) {
           continue;
         }
         // If it's a safety block, don't retry, just fail.
