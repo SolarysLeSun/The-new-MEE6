@@ -177,8 +177,8 @@ export interface LevelingConfig {
     cooldown_seconds: number;
     mention_user_on_levelup: boolean;
     level_up_frequency: number;
-    level_up_channel_id: string | null;
     level_up_message: string;
+    level_up_channel_id: string | null;
     level_card_background_url: string | null;
     level_card_bar_color: string | null;
     level_card_text_color: string | null;
@@ -210,5 +210,5 @@ export interface ConversationalAgentConfig {
     dedicated_channel_id: string | null;
     allow_imagination: boolean;
     allow_freewheeling: boolean;
-    allow_image_generation?: boolean; // Optional, so existing configs don't break
+    allow_image_generation: boolean;
 }

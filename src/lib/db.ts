@@ -309,6 +309,7 @@ const defaultConfigs: DefaultConfigs = {
         exempt_roles: [],
         exempt_channels: [],
         actions: {
+            none: 'warn',
             low: 'warn',
             medium: 'mute_5m',
             high: 'mute_1h',

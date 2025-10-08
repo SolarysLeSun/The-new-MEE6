@@ -37,7 +37,7 @@ interface AgentConfig {
     dedicated_channel_id: string | null;
     allow_imagination: boolean;
     allow_freewheeling: boolean;
-    allow_image_generation?: boolean;
+    allow_image_generation: boolean;
 }
 
 interface DiscordChannel {
