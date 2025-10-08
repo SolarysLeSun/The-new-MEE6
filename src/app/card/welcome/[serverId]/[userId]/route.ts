@@ -20,6 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     const memberCount = parseInt(searchParams.get('memberCount') || '0', 10);
     const textColor = searchParams.get('textColor') || '#ffffff'
     const backgroundUrl = searchParams.get('backgroundUrl') || 'https://nightproject.nationquest.fr/levelbw.jpg';
+    const welcomeText = searchParams.get('welcomeText')?.replace('{user}', displayName) || `Bienvenue sur ${serverName}`;
     
     const nameToDisplay = hasSpecialChars(displayName) ? username : displayName;
 
