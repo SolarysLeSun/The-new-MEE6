@@ -57,7 +57,7 @@ interface DiscordRole {
 }
 
 const severityLevels = [
-    { key: 'none', label: 'Aucune (Log seulement)' },
+    { key: 'none', label: 'Aucune (Log interne seulement)' },
     { key: 'low', label: 'Basse' },
     { key: 'medium', label: 'Moyenne' },
     { key: 'high', label: 'Haute' },
@@ -66,7 +66,7 @@ const severityLevels = [
 
 const actionOptions = [
     { value: 'none', label: 'Ne rien faire' },
-    { value: 'warn', label: 'Avertir (silencieux si sévérité "Aucune")' },
+    { value: 'warn', label: 'Avertir (silencieux)' },
     { value: 'delete', label: 'Supprimer le message' },
     { value: 'mute_5m', label: 'Rendre muet 5 minutes' },
     { value: 'mute_10m', label: 'Rendre muet 10 minutes' },
@@ -192,7 +192,7 @@ function ModAssistantPageContent({ isPremium }: { isPremium: boolean }) {
                                  <div>
                                     <Label htmlFor="alert-channel" className="font-bold text-sm uppercase text-muted-foreground">Salon d'alertes</Label>
                                     <p className="text-sm text-muted-foreground/80">
-                                       Le salon où l'IA enverra ses rapports et recommandations.
+                                       Le salon où l'IA enverra ses rapports et recommandations (sauf pour la sévérité "Aucune").
                                     </p>
                                 </div>
                                 <Combobox
@@ -248,7 +248,11 @@ function ModAssistantPageContent({ isPremium }: { isPremium: boolean }) {
                             {severityLevels.map(({ key, label }) => (
                                 <div key={key} className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
                                     <Label className="font-medium">{label}</Label>
-                                     <Select value={config.actions[key as keyof typeof config.actions]} onValueChange={(val) => handleActionChange(key as any, val)}>
+                                     <Select 
+                                         value={config.actions[key as keyof typeof config.actions]}
+                                         onValueChange={(val) => handleActionChange(key as any, val)}
+                                         disabled={key === 'none'}
+                                     >
                                         <SelectTrigger className="w-full md:w-[280px]">
                                             <SelectValue placeholder="Choisir une action" />
                                         </SelectTrigger>
@@ -256,8 +260,7 @@ function ModAssistantPageContent({ isPremium }: { isPremium: boolean }) {
                                             {actionOptions.map(opt => (
                                                 <SelectItem 
                                                     key={opt.value} 
-                                                    value={opt.value} 
-                                                    disabled={key === 'none' && !['none', 'warn'].includes(opt.value)}
+                                                    value={opt.value}
                                                 >
                                                     {opt.label}
                                                 </SelectItem>

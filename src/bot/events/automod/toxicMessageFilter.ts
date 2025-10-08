@@ -58,6 +58,12 @@ export async function execute(message: Message) {
         });
 
         if (result.isToxic) {
+            // If severity is 'none', do absolutely nothing. It's just for the AI's internal context.
+            if (result.severity === 'none') {
+                console.log(`[Mod-AI] 'none' severity message detected from ${message.author.tag}. No action taken as per design.`);
+                return;
+            }
+
             console.log(`[Mod-AI] Toxic message detected from ${message.author.tag} in ${message.guild.name}. Reason: ${result.reason}, Severity: ${result.severity}`);
             
             const actionKey = result.severity as keyof typeof modAiConfig.actions;
@@ -68,9 +74,9 @@ export async function execute(message: Message) {
                 const alertChannel = await message.guild.channels.fetch(modAiConfig.alert_channel_id).catch(() => null) as TextChannel;
                 if (alertChannel) {
                      const alertEmbed = new EmbedBuilder()
-                        .setColor(result.severity === 'none' ? 0x3498DB : 0xFF0000)
-                        .setTitle(result.severity === 'none' ? '📝 Log Modération IA' : '🚨 Alerte Modération IA 🚨')
-                        .setDescription(`L'IA a détecté un message de ${message.author.toString()} dans ${message.channel.toString()}.`)
+                        .setColor(0xFF0000)
+                        .setTitle('🚨 Alerte Modération IA 🚨')
+                        .setDescription(`L'IA a détecté un message potentiellement problématique de ${message.author.toString()} dans ${message.channel.toString()}.`)
                         .addFields(
                             { name: 'Contenu du Message', value: `\`\`\`${message.content}\`\`\`` },
                             { name: 'Raison Détectée', value: result.reason, inline: true },
@@ -89,16 +95,14 @@ export async function execute(message: Message) {
             }
             
             // --- Take Action based on configuration for the detected severity ---
-            // If severity is 'none', do not delete the message unless the action is explicitly 'delete'.
-            if (result.severity !== 'none') {
-                try {
-                    await message.delete();
-                } catch(e: any) {
-                    if (e.code === 10008) { // Unknown Message
-                        console.log(`[Mod-AI] Tried to delete a message that was already deleted: ${message.id}`);
-                    } else {
-                        console.error(`[Mod-AI] Failed to delete message:`, e);
-                    }
+            // Delete the toxic message
+            try {
+                await message.delete();
+            } catch(e: any) {
+                if (e.code === 10008) { // Unknown Message
+                    console.log(`[Mod-AI] Tried to delete a message that was already deleted: ${message.id}`);
+                } else {
+                    console.error(`[Mod-AI] Failed to delete message:`, e);
                 }
             }
             
@@ -110,20 +114,17 @@ export async function execute(message: Message) {
 
             switch (action) {
                 case 'warn':
-                    const sanctionReason = `[IA] ${result.reason}`;
+                    const warnMsg = await message.channel.send(`> **${message.author.toString()}, attention.** Votre message a été jugé inapproprié. Raison : ${result.reason}.`);
+                    addBotSentMessage(warnMsg.id);
+                    setTimeout(() => warnMsg.delete().catch(console.error), 10000);
+                    
                     recordSanction({
                         guild_id: message.guild.id,
                         user_id: member.id,
                         moderator_id: 'AUTOMOD_IA',
                         action_type: 'warn',
-                        reason: sanctionReason
+                        reason: `[IA] ${result.reason}`
                     });
-                     // Only send public warning if severity is not 'none'
-                    if (result.severity !== 'none') {
-                         const warnMsg = await message.channel.send(`> **${message.author.toString()}, attention.** Votre message a été jugé inapproprié. Raison : ${result.reason}.`);
-                         addBotSentMessage(warnMsg.id);
-                         setTimeout(() => warnMsg.delete().catch(console.error), 10000);
-                    }
                     break;
                 case 'mute_5m':
                 case 'mute_10m':
