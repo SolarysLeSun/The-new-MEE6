@@ -36,7 +36,7 @@ export async function execute(user: User, guild: Guild, newLevel: number) {
                 const levelInfo = getUserLevel(user.id, guild.id);
                 const rank = getUserRank(user.id, guild.id);
 
-                const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/card/level/${guild.id}/${user.id}`);
+                const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/api/card/level/${guild.id}/${user.id}`);
                 cardUrl.searchParams.append('displayName', member.displayName);
                 cardUrl.searchParams.append('avatarUrl', user.displayAvatarURL({ extension: 'png', size: 256 }));
                 cardUrl.searchParams.append('level', levelInfo.level.toString());
