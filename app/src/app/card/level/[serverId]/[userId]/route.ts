@@ -86,7 +86,8 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     ctx.textAlign = 'left';
     ctx.font = 'normal 20px "Inter", sans-serif'
     const xpText = `${xp.toLocaleString()} / ${requiredXp.toLocaleString()} XP`;
-    ctx.fillText(xpText, width - 40 - ctx.measureText(xpText).width, 182);
+    const xpTextWidth = ctx.measureText(xpText).width;
+    ctx.fillText(xpText, width - 40 - xpTextWidth, 182);
 
 
     // Barre XP
