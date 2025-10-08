@@ -386,6 +386,7 @@ const defaultConfigs: DefaultConfigs = {
         enabled: false,
         welcome_channel_id: null,
         mention_user_on_levelup: true,
+        welcome_message: "Bienvenue sur le serveur, {user} ! 🎉",
     },
     'tester-commands': {
         enabled: true,
@@ -1082,6 +1083,15 @@ export function getUserSanctionHistory(guildId: string, userId: string): Sanctio
     return stmt.all(guildId, userId) as SanctionHistoryEntry[];
 }
 
+export function getGuildWarnHistory(guildId: string): SanctionHistoryEntry[] {
+    const stmt = db.prepare(`
+        SELECT * FROM sanction_history
+        WHERE guild_id = ? AND action_type = 'warn'
+        ORDER BY timestamp DESC
+    `);
+    return stmt.all(guildId) as SanctionHistoryEntry[];
+}
+
 export function clearUserWarns(guildId: string, userId: string): number {
     const stmt = db.prepare(`
         DELETE FROM sanction_history 
@@ -1152,6 +1162,7 @@ const difficultyMultipliers = {
 
 const calculateRequiredXp = (level: number, difficulty: 'easy' | 'medium' | 'hard' = 'medium') => {
     const multiplier = difficultyMultipliers[difficulty] || 1.0;
+    // This is the total XP needed to *complete* a level (i.e., to get from level X to X+1)
     return Math.floor((5 * (level ** 2) + 50 * level + 100) * multiplier);
 };
 
@@ -1166,20 +1177,20 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
         user = { xp: 0, level: 0 };
     }
 
-    let totalXpForCurrentLevel = 0;
-    for (let i = 0; i < user.level; i++) {
-        totalXpForCurrentLevel += calculateRequiredXp(i, difficulty);
+    let xpForCurrentLevel = user.xp;
+    let tempLevel = 0;
+    while(tempLevel < user.level) {
+        xpForCurrentLevel -= calculateRequiredXp(tempLevel, difficulty);
+        tempLevel++;
     }
-    
-    const requiredXpForNextLevel = calculateRequiredXp(user.level, difficulty);
-    const currentLevelXp = user.xp - totalXpForCurrentLevel;
 
+    const requiredXpForNextLevel = calculateRequiredXp(user.level, difficulty);
+    
     return {
-        xp: currentLevelXp,
+        xp: xpForCurrentLevel, // XP within the current level
         level: user.level,
-        requiredXpForLevel: requiredXpForNextLevel,
+        requiredXpForLevel: requiredXpForNextLevel, // Total XP required for this level
         totalXp: user.xp,
-        requiredXpForNextLevel: totalXpForCurrentLevel + requiredXpForNextLevel,
     };
 }
 
@@ -1200,11 +1211,16 @@ export const updateUserXP = db.transaction((userId: string, guildId: string, xpT
     let { xp: totalXp, level } = (db.prepare('SELECT xp, level FROM user_levels WHERE user_id = ? AND guild_id = ?').get(userId, guildId) as { xp: number, level: number });
     
     let requiredXp = calculateRequiredXp(level, difficulty);
+    let cumulativeXpForCurrentLevel = 0;
+    for(let i = 0; i < level; i++) {
+        cumulativeXpForCurrentLevel += calculateRequiredXp(i, difficulty);
+    }
     
-    if (totalXp >= requiredXp) {
+    // Check for level up
+    if (totalXp >= cumulativeXpForCurrentLevel + requiredXp) {
         let newLevel = level;
-        while (totalXp >= calculateRequiredXp(newLevel, difficulty)) {
-            totalXp -= calculateRequiredXp(newLevel, difficulty);
+        while(totalXp >= cumulativeXpForCurrentLevel + calculateRequiredXp(newLevel, difficulty)) {
+            cumulativeXpForCurrentLevel += calculateRequiredXp(newLevel, difficulty);
             newLevel++;
         }
         
@@ -1250,20 +1266,20 @@ export function getGuildLeaderboard(guildId: string, limit: number = 10): (UserL
     const rows = stmt.all(guildId, limit) as { user_id: string; xp: number; level: number }[];
     
     return rows.map(row => {
-        let totalXpForCurrentLevel = 0;
-        for (let i = 0; i < row.level; i++) {
-            totalXpForCurrentLevel += calculateRequiredXp(i, difficulty);
+        let xpForCurrentLevel = row.xp;
+        let tempLevel = 0;
+        while(tempLevel < row.level) {
+            xpForCurrentLevel -= calculateRequiredXp(tempLevel, difficulty);
+            tempLevel++;
         }
         const requiredXpForNextLevel = calculateRequiredXp(row.level, difficulty);
-        const currentLevelXp = row.xp - totalXpForCurrentLevel;
 
         return {
             user_id: row.user_id,
-            xp: currentLevelXp,
+            xp: xpForCurrentLevel,
             level: row.level,
             requiredXpForLevel: requiredXpForNextLevel,
             totalXp: row.xp,
-            requiredXpForNextLevel: totalXpForCurrentLevel + requiredXpForNextLevel
         };
     });
 }
@@ -1272,3 +1288,4 @@ export function resetGuildXP(guildId: string): void {
     const stmt = db.prepare('DELETE FROM user_levels WHERE guild_id = ?');
     stmt.run(guildId);
 }
+

@@ -21,3 +21,6 @@
 - Use clear, outlined icons from 'lucide-react' to represent different modules and actions within the panel.
 - Adopt a three-column layout, as seen in DraftBot, with a server sidebar, navigation sidebar, and main content area for efficient use of screen space.
 - Employ subtle transition animations to indicate state changes, such as expanding accordions and loading content.
+
+
+Note : Dans la VM, le dossier du bot c'est /mnt/marcus mais du coup faut pas recréer le dossier ou quoi hein.

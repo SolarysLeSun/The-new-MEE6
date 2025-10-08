@@ -1,12 +1,12 @@
 
 
-import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction } from 'discord.js';
+import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction, ButtonStyle } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
 import type { Command, CustomField } from '@/types';
-import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds } from '@/lib/db';
+import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds, getGuildWarnHistory } from '@/lib/db';
 import { startApi } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
@@ -200,7 +200,7 @@ async function handleBotSuggestionModal(interaction: ModalSubmitInteraction) {
 async function handleContentModificationModal(interaction: ModalSubmitInteraction) {
     if (!interaction.message || !interaction.message.embeds[0]) return;
     
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferUpdate();
 
     const modificationRequest = interaction.fields.getTextInputValue('modification_request');
     const originalEmbed = interaction.message.embeds[0];
@@ -208,16 +208,14 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
 
     let newEmbed: EmbedBuilder;
 
-    if (footerText.includes('admin_announce') || footerText.includes('dev_admin_announce')) {
-        // --- Handle Announcement Modification ---
-        // The original raw text is stored in the author.name field of the embed.
-        const rawText = originalEmbed.author?.name;
-        if (!rawText) {
-            await interaction.editReply({ content: 'Erreur : Impossible de trouver le texte original de l\'annonce à modifier.', ephemeral: true });
-            return;
-        }
+    try {
+        if (footerText.includes('admin_announce') || footerText.includes('dev_admin_announce')) {
+            const rawText = originalEmbed.author?.name;
+            if (!rawText) {
+                await interaction.followUp({ content: 'Erreur : Impossible de trouver le texte original de l\'annonce à modifier.', ephemeral: true });
+                return;
+            }
 
-        try {
             const result = await announcementFlow({
                 rawText: rawText,
                 authorName: interaction.user.username,
@@ -227,46 +225,36 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
             newEmbed = EmbedBuilder.from(originalEmbed)
                 .setTitle(result.title)
                 .setDescription(result.description);
-                
-        } catch (error) {
-            console.error('[AnnounceModify] Error:', error);
-            await interaction.editReply({ content: 'Une erreur est survenue lors de la modification de l\'annonce.', ephemeral: true });
-            return;
-        }
 
-    } else {
-         // --- Handle IA Content (Rule/Announcement) Modification ---
-         if (!interaction.guild) {
-             await interaction.editReply({ content: 'Cette action ne peut pas être effectuée en messages privés.', ephemeral: true });
-             return;
-         }
-        const title = originalEmbed.title || '';
-        const type = title.includes('Règle') ? 'rule' : 'announcement';
-        const topic = title.replace(/^(📝 Règle : |📢 Annonce : )/i, '').replace(/"/g, '');
+        } else {
+            if (!interaction.guild) {
+                await interaction.followUp({ content: 'Cette action ne peut pas être effectuée en messages privés.', ephemeral: true });
+                return;
+            }
+            const title = originalEmbed.title || '';
+            const type = title.includes('Règle') ? 'rule' : 'announcement';
+            const topic = title.replace(/^(📝 Règle : |📢 Annonce : )/i, '').replace(/"/g, '');
 
-        const config = await getServerConfig(interaction.guild.id, 'content-ai');
+            const config = await getServerConfig(interaction.guild.id, 'content-ai');
 
-        try {
             const result = await generateTextContent({
                 type: type as 'rule' | 'announcement',
                 topic: topic,
                 tone: config.default_tone,
-                customInstructions: originalEmbed.description || '', // Use the old description as context
-                modificationRequest: modificationRequest // Pass the new modification request
+                customInstructions: originalEmbed.description || '',
+                modificationRequest: modificationRequest
             });
 
             newEmbed = EmbedBuilder.from(originalEmbed)
                 .setDescription(result.generatedText.substring(0, 4096));
-
-        } catch (error) {
-            console.error('[ContentModify] Error:', error);
-            await interaction.editReply({ content: 'Une erreur est survenue lors de la modification du contenu.', ephemeral: true });
-            return;
         }
-    }
 
-    await interaction.message.edit({ embeds: [newEmbed] });
-    await interaction.editReply({ content: '<:Oui:1421563353888723084> Le contenu a été modifié. Vous pouvez le modifier à nouveau ou le publier.', ephemeral: true });
+        await interaction.editReply({ embeds: [newEmbed], components: interaction.message.components });
+
+    } catch (error) {
+        console.error('[ContentModify] Error:', error);
+        await interaction.followUp({ content: 'Une erreur est survenue lors de la modification du contenu.', ephemeral: true });
+    }
 }
 
 async function handleTranslationSelect(interaction: StringSelectMenuInteraction) {
@@ -391,17 +379,11 @@ async function handleReminderButton(interaction: ButtonInteraction) {
     const creationTimestamp = Math.floor(Date.now() / 1000);
     
     setTimeout(async () => {
-        const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/card/rappel`);
-        cardUrl.searchParams.append('authorName', interaction.user.username);
-        cardUrl.searchParams.append('authorAvatar', interaction.user.displayAvatarURL({ extension: 'png', size: 128 }));
-        cardUrl.searchParams.append('message', message);
-        cardUrl.searchParams.append('timestamp', creationTimestamp.toString());
-        
         const embed = new EmbedBuilder()
             .setColor(0x3498DB)
-            .setTitle('⏰ C\'est l\'heure ! (Relance)')
-            .setImage(cardUrl.toString())
-            .setDescription(`Rappel demandé <t:${creationTimestamp}:R>`);
+            .setTitle('⏰ Rappel (Relance)')
+            .setDescription(`${interaction.user}, vous m'avez demandé de vous rappeler ceci <t:${creationTimestamp}:R> :\n\n> ${message}`)
+            .setTimestamp();
 
         const row = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
@@ -479,14 +461,80 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         const { customId } = interaction;
 
         if (customId === 'confirm_normalize_all' || customId === 'cancel_normalize_all') {
-            // This is handled in the command file's collector.
-            // Acknowledging here can prevent 'unknown interaction' errors if the collector is slow.
-            // await interaction.deferUpdate();
             return;
         }
 
         if (customId.startsWith('reschedule_reminder::')) {
             await handleReminderButton(interaction);
+            return;
+        }
+        
+        if (customId.startsWith('lastwarns_')) {
+            await interaction.deferUpdate();
+            const [ , direction, pageStr ] = customId.split('_');
+            const currentPage = parseInt(pageStr, 10);
+            
+            const history = getGuildWarnHistory(interaction.guild!.id);
+            const totalPages = Math.ceil(history.length / 6);
+            
+            let newPage = currentPage;
+            if (direction === 'next') newPage++;
+            if (direction === 'prev') newPage--;
+
+            const generateEmbed = async (page: number) => {
+                const WARNS_PER_PAGE = 6;
+                const start = page * WARNS_PER_PAGE;
+                const end = start + WARNS_PER_PAGE;
+                const currentPageWarns = history.slice(start, end);
+    
+                const embed = new EmbedBuilder()
+                    .setColor(0x00BFFF)
+                    .setTitle(`Historique des Avertissements du Serveur`)
+                    .setFooter({ text: `Page ${page + 1} sur ${totalPages} • Total : ${history.length} warns` });
+                
+                if(currentPageWarns.length === 0) {
+                    embed.setDescription("Aucun avertissement sur cette page.");
+                }
+    
+                for (const warn of currentPageWarns) {
+                     let userTag = warn.user_id;
+                     try {
+                         const user = await client.users.fetch(warn.user_id);
+                         userTag = user.tag;
+                     } catch (e) { console.warn(`[LastWarns] Impossible de fetch l'utilisateur ${warn.user_id}`); }
+                    
+                     let moderatorTag = warn.moderator_id;
+                     try {
+                        if (warn.moderator_id !== 'AUTOMOD_IA') {
+                            const moderator = await client.users.fetch(warn.moderator_id);
+                            moderatorTag = moderator.tag;
+                        }
+                     } catch (e) { console.warn(`[LastWarns] Impossible de fetch le modérateur ${warn.moderator_id}`);}
+    
+                    embed.addFields({
+                        name: `Cas #${warn.id} | ${userTag} | <t:${Math.floor(new Date(warn.timestamp).getTime() / 1000)}:R>`,
+                        value: `> **Raison :** ${warn.reason || 'Non spécifiée'}\n> **Modérateur :** ${moderatorTag}`
+                    });
+                }
+                return embed;
+            }
+
+            const newEmbed = await generateEmbed(newPage);
+            const newRow = new ActionRowBuilder<ButtonBuilder>()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`lastwarns_prev_${newPage}`)
+                        .setLabel('Précédent')
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(newPage <= 0),
+                    new ButtonBuilder()
+                        .setCustomId(`lastwarns_next_${newPage}`)
+                        .setLabel('Suivant')
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(newPage >= totalPages - 1)
+                );
+            
+            await interaction.editReply({ embeds: [newEmbed], components: [newRow] });
             return;
         }
 
@@ -645,8 +693,14 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         }
 
         if (customId === 'cancel_content') {
-             await interaction.message.delete();
-             return;
+             try {
+                await interaction.update({ content: "Opération annulée.", embeds: [], components: [] });
+            } catch (error: any) {
+                if (error.code !== 10062) {
+                     console.error("Error updating 'cancel_content' interaction:", error);
+                }
+            }
+            return;
         }
         
         if (customId === 'modify_content') {
