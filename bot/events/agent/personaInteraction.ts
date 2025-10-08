@@ -46,24 +46,24 @@ export async function execute(message: Message) {
         // Find if this user is interacting with any persona across all guilds the bot is in.
         // This is a simplified approach. A real implementation might need a way for the user
         // to specify which persona they want to talk to. For now, we'll find the first one.
-        const allGuilds = Array.from(message.client.guilds.cache.keys());
+        const allGuilds = Array.from(message.client.guilds.cache.values());
         let personaToTalkTo: Persona | undefined;
-        let guildId: string | undefined;
+        let guild: {id: string, name: string} | undefined;
 
-        for (const id of allGuilds) {
-            const personas = getPersonasForGuild(id);
+        for (const g of allGuilds) {
+            const personas = getPersonasForGuild(g.id);
             if (personas.length > 0) {
                 // Heuristic: maybe the user shares a server with one of the personas.
                 // A better approach would be to let the user select a persona to DM.
                 personaToTalkTo = personas[0];
-                guildId = id;
+                guild = { id: g.id, name: g.name };
                 break;
             }
         }
         
-        if (personaToTalkTo && guildId) {
+        if (personaToTalkTo && guild) {
             console.log(`[Persona DM] Triggered: Persona "${personaToTalkTo.name}" is processing a DM from ${message.author.tag}.`);
-            await handlePersonaInteraction(message, personaToTalkTo, guildId, 'Message Privé');
+            await handlePersonaInteraction(message, personaToTalkTo, guild, 'Message Privé');
         } else {
              console.log(`[Persona DM] Received DM from ${message.author.tag}, but no persona could be assigned.`);
         }
@@ -111,11 +111,11 @@ export async function execute(message: Message) {
     
     const interactionContext = activePersona ? 'Salon dédié actif' : 'Mention dans un groupe';
     console.log(`[Persona] Triggered: Persona "${triggeredPersona.name}" is processing a message from ${message.author.tag} in #${(message.channel as TextChannel).name}. Context: ${interactionContext}`);
-    await handlePersonaInteraction(message, triggeredPersona, message.guild.id, interactionContext);
+    await handlePersonaInteraction(message, triggeredPersona, {id: message.guild.id, name: message.guild.name}, interactionContext);
 }
 
 
-async function handlePersonaInteraction(message: Message, persona: Persona, guildId: string, interactionContext: string) {
+async function handlePersonaInteraction(message: Message, persona: Persona, guild: {id: string, name: string}, interactionContext: string) {
      if (message.channel.isTextBased()) {
          await message.channel.sendTyping();
     }
@@ -153,6 +153,7 @@ async function handlePersonaInteraction(message: Message, persona: Persona, guil
         try {
             console.log(`[Persona] Trying model ${model} for persona interaction...`);
              result = await personaInteractionFlow({
+                serverName: guild.name,
                 personaPrompt: persona.persona_prompt,
                 conversationHistory: currentHistory, 
                 memories: relevantMemories.map(m => ({ content: m.content, salience_score: m.salience_score })),
@@ -241,7 +242,7 @@ async function handlePersonaInteraction(message: Message, persona: Persona, guil
          // All models failed, handle the final error
         console.error(`[Persona] All models in cascade failed. Last error:`, lastError);
         const ownerIds = ['556529963877138442', '760977578839506985', '800041004400902145'];
-        const errorMessage = `🚨 **Erreur Critique de l'API Gemini** 🚨\n\nTous les modèles de la cascade ont échoué sur le serveur **${message.guild?.name || 'DM'}**. Les fonctionnalités IA sont probablement indisponibles.\n\n**Détails de la dernière erreur :**\n\`\`\`json\n${JSON.stringify(lastError.errorDetails || { message: lastError.message }, null, 2)}\n\`\`\``;
+        const errorMessage = `🚨 **Erreur Critique de l'API Gemini** 🚨\n\nTous les modèles de la cascade ont échoué sur le serveur **${guild.name || 'DM'}**. Les fonctionnalités IA sont probablement indisponibles.\n\n**Détails de la dernière erreur :**\n\`\`\`json\n${JSON.stringify(lastError.errorDetails || { message: lastError.message }, null, 2)}\n\`\`\``;
         
         for (const id of ownerIds) {
             try {

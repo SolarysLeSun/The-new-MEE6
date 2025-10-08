@@ -114,6 +114,7 @@ async function handleConversationalAgent(message: Message) {
         }
 
         const result = await conversationalAgentFlow({
+            serverName: message.guild.name,
             userMessage: userMessage,
             userName: message.member.displayName,
             agentName: config.agent_name,
