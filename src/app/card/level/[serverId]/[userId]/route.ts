@@ -32,7 +32,6 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     const xp = parseInt(searchParams.get('xp') || '0', 10)
     const requiredXp = parseInt(searchParams.get('requiredXp') || '100', 10)
     const totalXp = parseInt(searchParams.get('totalXp') || '0', 10)
-    const totalNeededXp = parseInt(searchParams.get('totalNeededXp') || '100', 10)
     const rank = parseInt(searchParams.get('rank') || '0', 10);
     const barColor = searchParams.get('barColor') || '#e597c4'
     const textColor = searchParams.get('textColor') || '#e597c4'

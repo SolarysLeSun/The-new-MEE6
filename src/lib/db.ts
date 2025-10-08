@@ -1180,7 +1180,7 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
 
     let userStmt = db.prepare('SELECT xp, level FROM user_levels WHERE user_id = ? AND guild_id = ?');
     let user = userStmt.get(userId, guildId) as { xp: number, level: number } | undefined;
-    
+
     if (!user) {
         user = { xp: 0, level: 0 };
     }
@@ -1189,22 +1189,21 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
     for (let i = 0; i < user.level; i++) {
         cumulativeXpForPreviousLevels += calculateRequiredXp(i, difficulty);
     }
-    
+
     const xpInCurrentLevel = user.xp - cumulativeXpForPreviousLevels;
     const requiredXpForNextLevel = calculateRequiredXp(user.level, difficulty);
-    
+
     return {
         xp: xpInCurrentLevel,
         level: user.level,
-        requiredXp: requiredXpForNextLevel, 
+        requiredXp: requiredXpForNextLevel,
         totalXp: user.xp,
-        totalRequiredXp: cumulativeXpForPreviousLevels + requiredXpForNextLevel 
     };
 }
 
 export const updateUserXP = db.transaction((userId: string, guildId: string, xpToModify: number) => {
-    const getStmt = db.prepare('SELECT xp FROM user_levels WHERE user_id = ? AND guild_id = ?');
-    let user = getStmt.get(userId, guildId) as { xp: number } | undefined;
+    const getStmt = db.prepare('SELECT xp, level FROM user_levels WHERE user_id = ? AND guild_id = ?');
+    let user = getStmt.get(userId, guildId) as { xp: number; level: number } | undefined;
 
     let currentXp = user ? user.xp : 0;
     let newXp = currentXp + xpToModify;
@@ -1231,20 +1230,22 @@ export const updateUserXP = db.transaction((userId: string, guildId: string, xpT
     let requiredXpForNextLevel = calculateRequiredXp(level, difficulty);
     
     // Check for level up
-    while (totalXp >= requiredXpForNextLevel) {
-        totalXp -= requiredXpForNextLevel;
+    let cumulativeXpForCurrentLevel = 0;
+    for (let i = 0; i < level; i++) {
+        cumulativeXpForCurrentLevel += calculateRequiredXp(i, difficulty);
+    }
+
+    while (totalXp >= cumulativeXpForCurrentLevel + requiredXpForNextLevel) {
+        cumulativeXpForCurrentLevel += requiredXpForNextLevel;
         level++;
         requiredXpForNextLevel = calculateRequiredXp(level, difficulty);
     }
 
     // Check for level down (though less common with the XP floor at 0)
-    let xpForCurrentLevel = calculateRequiredXp(level - 1, difficulty);
-    while (level > 0 && totalXp < 0) {
+    while (level > 0 && totalXp < cumulativeXpForCurrentLevel) {
         level--;
-        xpForCurrentLevel = calculateRequiredXp(level - 1, difficulty);
-        totalXp += xpForCurrentLevel;
+        cumulativeXpForCurrentLevel -= calculateRequiredXp(level, difficulty);
     }
-
 
     const { level: oldLevel } = (db.prepare('SELECT level FROM user_levels WHERE user_id = ? AND guild_id = ?').get(userId, guildId) as {level: number});
 
@@ -1269,7 +1270,7 @@ export const updateUserXP = db.transaction((userId: string, guildId: string, xpT
 export function getUserRank(userId: string, guildId: string): number {
     const stmt = db.prepare(`
         SELECT rank FROM (
-            SELECT user_id, RANK() OVER (ORDER BY xp DESC) as rank 
+            SELECT user_id, RANK() OVER (ORDER BY xp DESC, user_id) as rank 
             FROM user_levels WHERE guild_id = ?
         ) WHERE user_id = ?
     `);
@@ -1295,4 +1296,8 @@ export function getGuildLeaderboard(guildId: string, limit: number = 10): UserLe
 export function resetGuildXP(guildId: string): void {
     const stmt = db.prepare('DELETE FROM user_levels WHERE guild_id = ?');
     stmt.run(guildId);
+}
+export function resetUserXP(guildId: string, userId: string): void {
+    const stmt = db.prepare('UPDATE user_levels SET xp = 0, level = 0 WHERE guild_id = ? AND user_id = ?');
+    stmt.run(guildId, userId);
 }
