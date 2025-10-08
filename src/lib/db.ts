@@ -438,6 +438,7 @@ const defaultConfigs: DefaultConfigs = {
     },
     'ai-assistant': {
         enabled: true,
+        premium: true,
         command_permissions: {
             ia: null
         },
@@ -1169,7 +1170,7 @@ const difficultyMultipliers = {
 
 const calculateRequiredXp = (level: number, difficulty: 'easy' | 'medium' | 'hard' = 'medium') => {
     const multiplier = difficultyMultipliers[difficulty] || 1.0;
-    // This is the total XP needed to *complete* a level (i.e., to get from level X to X+1)
+    // XP needed to get FROM level X TO level X+1
     return Math.floor((5 * (level ** 2) + 50 * level + 100) * multiplier);
 };
 
@@ -1184,22 +1185,20 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
         user = { xp: 0, level: 0 };
     }
 
-    let xpForCurrentLevel = user.xp;
     let cumulativeXpForPreviousLevels = 0;
     for (let i = 0; i < user.level; i++) {
         cumulativeXpForPreviousLevels += calculateRequiredXp(i, difficulty);
     }
-    xpForCurrentLevel -= cumulativeXpForPreviousLevels;
-
-
+    
+    const xpInCurrentLevel = user.xp - cumulativeXpForPreviousLevels;
     const requiredXpForNextLevel = calculateRequiredXp(user.level, difficulty);
     
     return {
-        xp: xpForCurrentLevel,
+        xp: xpInCurrentLevel,
         level: user.level,
-        requiredXpForLevel: requiredXpForNextLevel,
+        requiredXpForLevel: requiredXpForNextLevel, // Renamed for clarity
         totalXp: user.xp,
-        requiredXpForNextLevel: requiredXpForNextLevel,
+        totalRequiredXp: cumulativeXpForPreviousLevels + requiredXpForNextLevel // Total XP needed to reach next level
     };
 }
 
@@ -1219,14 +1218,14 @@ export const updateUserXP = db.transaction((userId: string, guildId: string, xpT
     // After updating, check for level up/down
     let { xp: totalXp, level } = (db.prepare('SELECT xp, level FROM user_levels WHERE user_id = ? AND guild_id = ?').get(userId, guildId) as { xp: number, level: number });
     
-    let requiredXp = calculateRequiredXp(level, difficulty);
+    let requiredXpForNextLevel = calculateRequiredXp(level, difficulty);
     let cumulativeXpForCurrentLevel = 0;
-    for(let i = 0; i < level; i++) {
+     for(let i = 0; i < level; i++) {
         cumulativeXpForCurrentLevel += calculateRequiredXp(i, difficulty);
     }
     
     // Check for level up
-    if (totalXp >= cumulativeXpForCurrentLevel + requiredXp) {
+    if (totalXp >= cumulativeXpForCurrentLevel + requiredXpForNextLevel) {
         let newLevel = level;
         while(totalXp >= cumulativeXpForCurrentLevel + calculateRequiredXp(newLevel, difficulty)) {
             cumulativeXpForCurrentLevel += calculateRequiredXp(newLevel, difficulty);
@@ -1262,10 +1261,7 @@ export function getUserRank(userId: string, guildId: string): number {
     return result?.rank || 1;
 }
 
-export function getGuildLeaderboard(guildId: string, limit: number = 10): (UserLevel & { user_id: string })[] {
-    const levelingConfig = getServerConfig(guildId, 'leveling') as LevelingConfig | null;
-    const difficulty = levelingConfig?.difficulty || 'medium';
-
+export function getGuildLeaderboard(guildId: string, limit: number = 10): UserLevel[] {
     const stmt = db.prepare(`
         SELECT user_id, xp, level FROM user_levels
         WHERE guild_id = ?
@@ -1275,23 +1271,8 @@ export function getGuildLeaderboard(guildId: string, limit: number = 10): (UserL
     const rows = stmt.all(guildId, limit) as { user_id: string; xp: number; level: number }[];
     
     return rows.map(row => {
-        let xpForCurrentLevel = row.xp;
-        let cumulativeXpForPreviousLevels = 0;
-        for (let i = 0; i < row.level; i++) {
-            cumulativeXpForPreviousLevels += calculateRequiredXp(i, difficulty);
-        }
-        xpForCurrentLevel -= cumulativeXpForPreviousLevels;
-        
-        const requiredXpForNextLevel = calculateRequiredXp(row.level, difficulty);
-
-        return {
-            user_id: row.user_id,
-            xp: xpForCurrentLevel,
-            level: row.level,
-            requiredXpForLevel: requiredXpForNextLevel,
-            totalXp: row.xp,
-            requiredXpForNextLevel: requiredXpForNextLevel,
-        };
+        const userLevel = getUserLevel(row.user_id, guildId);
+        return { ...userLevel, user_id: row.user_id };
     });
 }
 

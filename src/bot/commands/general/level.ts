@@ -47,7 +47,7 @@ const LevelCommand: Command = {
             cardUrl.searchParams.append('xp', levelInfo.xp.toString());
             cardUrl.searchParams.append('requiredXp', levelInfo.requiredXpForLevel.toString());
             cardUrl.searchParams.append('totalXp', levelInfo.totalXp.toString());
-            cardUrl.searchParams.append('totalNeededXp', levelInfo.requiredXpForNextLevel.toString());
+            cardUrl.searchParams.append('totalNeededXp', levelInfo.totalRequiredXp.toString());
             cardUrl.searchParams.append('rank', rank.toString());
             if (config.level_card_background_url) {
                  cardUrl.searchParams.append('backgroundUrl', config.level_card_background_url);

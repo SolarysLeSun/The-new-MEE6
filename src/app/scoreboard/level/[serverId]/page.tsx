@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -26,7 +27,7 @@ interface LeaderboardEntry {
     };
     level: number;
     xp: number;
-    requiredXp: number;
+    requiredXp: number; // Corrected this based on expected data
 }
 interface ServerInfo {
     name: string;

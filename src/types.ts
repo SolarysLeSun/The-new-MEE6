@@ -136,11 +136,12 @@ export interface XPBoost {
 }
 
 export interface UserLevel {
-    xp: number;
+    xp: number; // XP in current level
     level: number;
     requiredXpForLevel: number; // XP to complete current level
     totalXp: number; // Total XP accumulated by the user
-    requiredXpForNextLevel: number;
+    totalRequiredXp: number; // Total XP needed to reach next level
+    user_id?: string; // Optional user_id for leaderboards
 }
 
 export interface CustomField {

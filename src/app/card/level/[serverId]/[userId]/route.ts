@@ -112,11 +112,14 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
       ctx.roundRect(barX, barY, barWidth * progress, barHeight, barHeight/2);
       ctx.fill();
     }
+    
+    // Texte XP / Total
+    const xpText = `${formatXP(xp)} / ${formatXP(requiredXp)} XP`;
+    ctx.font = 'bold 24px "Inter", sans-serif';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textAlign = 'center';
+    ctx.fillText(xpText, barX + barWidth / 2, barY + barHeight / 2 + 8);
 
-    // Texte XP Total
-    ctx.font = 'bold 28px "Inter", sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(`${formatXP(totalXp)} / ${formatXP(totalNeededXp)} XP`, width - 50, 120);
 
     // Texte Rang
     ctx.font = '32px "Inter", sans-serif';
@@ -139,7 +142,7 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     return new Response(buffer, {
       headers: {
         'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=60', // Cache for 1 minute
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
     })
   } catch (err) {
