@@ -1,18 +1,22 @@
 
+
 import { createCanvas, loadImage } from 'canvas'
 import type { NextRequest } from 'next/server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-function normalizeUsername(name: string): string {
-    return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+function normalizeUsername(name: string): { normalized: string, isSimple: boolean } {
+    const normalized = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const isSimple = /^[a-zA-Z0-9_.\s-]*$/.test(normalized);
+    return { normalized, isSimple };
 }
 
 export async function GET(req: NextRequest, { params }: { params: { serverId: string, userId: string } }) {
   try {
     const { searchParams } = new URL(req.url)
     const displayName = searchParams.get('displayName') || 'User'
+    const username = searchParams.get('username') || 'User' // Fallback username
     const avatarUrl = searchParams.get('avatarUrl')
     const level = parseInt(searchParams.get('level') || '1', 10)
     const rank = parseInt(searchParams.get('rank') || '0', 10);
@@ -20,6 +24,9 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     const textColor = searchParams.get('textColor') || '#e597c4'
     const backgroundUrl = searchParams.get('backgroundUrl') || 'https://nightproject.nationquest.fr/levelbw.jpg';
 
+    // Decide which name to display
+    const { normalized: normalizedDisplayName, isSimple } = normalizeUsername(displayName);
+    const finalDisplayName = isSimple ? displayName : username;
 
     const width = 600
     const height = 300
@@ -74,7 +81,7 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     // --- User Name ---
     ctx.font = 'bold 24px "Inter", sans-serif';
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(normalizeUsername(displayName), width / 2, 35);
+    ctx.fillText(finalDisplayName, width / 2, 35);
     
     // --- Level and Rank ---
     ctx.font = '20px "Inter", sans-serif';
@@ -102,4 +109,3 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     return new Response('Erreur interne du serveur', { status: 500 })
   }
 }
-

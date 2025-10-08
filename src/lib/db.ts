@@ -1132,12 +1132,13 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
         user = { xp: 0, level: 0 };
     }
     
-    const xpForCurrentLevel = calculateRequiredXp(user.level - 1);
+    const xpForCurrentLevelStart = user.level > 0 ? calculateRequiredXp(user.level - 1) : 0;
+    const xpForNextLevel = calculateRequiredXp(user.level);
 
     return {
         ...user,
-        requiredXp: calculateRequiredXp(user.level) - xpForCurrentLevel,
-        levelXp: user.xp - xpForCurrentLevel,
+        requiredXp: xpForNextLevel - xpForCurrentLevelStart,
+        levelXp: user.xp - xpForCurrentLevelStart,
     };
 }
 
@@ -1199,11 +1200,11 @@ export function getGuildLeaderboard(guildId: string, limit: number = 10): (UserL
     `);
     const rows = stmt.all(guildId, limit) as { user_id: string; xp: number; level: number }[];
     return rows.map(row => {
-        const xpForCurrentLevel = calculateRequiredXp(row.level - 1);
+        const xpForCurrentLevelStart = row.level > 0 ? calculateRequiredXp(row.level - 1) : 0;
         return {
             ...row,
-            requiredXp: calculateRequiredXp(row.level) - xpForCurrentLevel,
-            levelXp: row.xp - xpForCurrentLevel,
+            requiredXp: calculateRequiredXp(row.level) - xpForCurrentLevelStart,
+            levelXp: row.xp - xpForCurrentLevelStart,
         }
     });
 }

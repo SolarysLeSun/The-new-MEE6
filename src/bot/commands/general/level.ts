@@ -41,10 +41,11 @@ const LevelCommand: Command = {
             
             const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/card/level/${interaction.guild.id}/${targetUser.id}`);
             cardUrl.searchParams.append('displayName', member.displayName);
+            cardUrl.searchParams.append('username', targetUser.username); // Fallback for normalization
             cardUrl.searchParams.append('avatarUrl', targetUser.displayAvatarURL({ extension: 'png', size: 256 }));
             cardUrl.searchParams.append('level', levelInfo.level.toString());
-            cardUrl.searchParams.append('xp', levelInfo.levelXp.toString());
-            cardUrl.searchParams.append('requiredXp', levelInfo.requiredXp.toString());
+            cardUrl.searchParams.append('xp', levelInfo.levelXp.toString()); // Use levelXp
+            cardUrl.searchParams.append('requiredXp', levelInfo.requiredXp.toString()); // Use requiredXp for the level
             cardUrl.searchParams.append('rank', rank.toString());
             if (config.level_card_background_url) {
                  cardUrl.searchParams.append('backgroundUrl', config.level_card_background_url);

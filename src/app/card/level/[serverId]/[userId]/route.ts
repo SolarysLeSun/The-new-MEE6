@@ -16,23 +16,30 @@ const formatXP = (num: number): string => {
 };
 
 // Helper function to normalize fancy unicode characters to standard latin characters
-function normalizeUsername(name: string): string {
-    return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+// Also checks if the name consists only of simple characters.
+function normalizeUsername(name: string): { normalized: string, isSimple: boolean } {
+    const normalized = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const isSimple = /^[a-zA-Z0-9_.\s-]*$/.test(normalized);
+    return { normalized, isSimple };
 }
 
 export async function GET(req: NextRequest, { params }: { params: { serverId: string, userId: string } }) {
   try {
     const { searchParams } = new URL(req.url)
     const displayName = searchParams.get('displayName') || 'User'
+    const username = searchParams.get('username') || 'User' // Fallback username
     const avatarUrl = searchParams.get('avatarUrl')
     const level = parseInt(searchParams.get('level') || '1', 10)
-    const xp = parseInt(searchParams.get('xp') || '0', 10) // This is now levelXp
-    const requiredXp = parseInt(searchParams.get('requiredXp') || '100', 10) // This is now xp for next level from current
+    const xp = parseInt(searchParams.get('xp') || '0', 10)
+    const requiredXp = parseInt(searchParams.get('requiredXp') || '100', 10)
     const rank = parseInt(searchParams.get('rank') || '0', 10);
     const barColor = searchParams.get('barColor') || '#e597c4'
     const textColor = searchParams.get('textColor') || '#e597c4'
     const backgroundUrl = searchParams.get('backgroundUrl') || 'https://nightproject.nationquest.fr/levelbw.jpg';
 
+    // Decide which name to display
+    const { normalized: normalizedDisplayName, isSimple } = normalizeUsername(displayName);
+    const finalDisplayName = isSimple ? displayName : username;
 
     // 1. Création du canvas
     const width = 1000
@@ -79,11 +86,10 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     // 4. Textes et Barre de progression
     const startingX = 300;
 
-    // Nom de l'utilisateur (normalisé)
-    const normalizedDisplayName = normalizeUsername(displayName);
+    // Nom de l'utilisateur
     ctx.fillStyle = textColor
     ctx.font = 'bold 52px "Inter", sans-serif'
-    ctx.fillText(normalizedDisplayName, startingX, 120, 650) 
+    ctx.fillText(finalDisplayName, startingX, 120, 650) 
 
     // Barre XP
     const barX = startingX;
