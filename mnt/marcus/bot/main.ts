@@ -1,12 +1,11 @@
 
-
-import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction, ButtonStyle } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
 import type { Command, CustomField } from '@/types';
-import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds, resetGuildXP } from '@/lib/db';
+import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds } from '@/lib/db';
 import { startApi } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
@@ -391,17 +390,11 @@ async function handleReminderButton(interaction: ButtonInteraction) {
     const creationTimestamp = Math.floor(Date.now() / 1000);
     
     setTimeout(async () => {
-        const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/card/rappel`);
-        cardUrl.searchParams.append('authorName', interaction.user.username);
-        cardUrl.searchParams.append('authorAvatar', interaction.user.displayAvatarURL({ extension: 'png', size: 128 }));
-        cardUrl.searchParams.append('message', message);
-        cardUrl.searchParams.append('timestamp', creationTimestamp.toString());
-        
         const embed = new EmbedBuilder()
             .setColor(0x3498DB)
-            .setTitle('⏰ C\'est l\'heure ! (Relance)')
-            .setImage(cardUrl.toString())
-            .setDescription(`Rappel demandé <t:${creationTimestamp}:R>`);
+            .setTitle('⏰ Rappel (Relance)')
+            .setDescription(`${interaction.user}, vous m'avez demandé de vous rappeler ceci <t:${creationTimestamp}:R> :\n\n> ${message}`)
+            .setTimestamp();
 
         const row = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
@@ -480,23 +473,8 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
         if (customId === 'confirm_normalize_all' || customId === 'cancel_normalize_all') {
             // This is handled in the command file's collector.
-            return;
-        }
-
-        if (customId === 'confirm_reset_xp' || customId === 'cancel_reset_xp') {
-            const guildId = interaction.guildId;
-            if (!guildId) return;
-            if (!(interaction.member?.permissions as any).has(PermissionFlagsBits.Administrator)) {
-                 await interaction.reply({ content: 'Vous n\'avez pas la permission d\'effectuer cette action.', ephemeral: true });
-                 return;
-            }
-            if (customId === 'confirm_reset_xp') {
-                await interaction.update({ content: 'Réinitialisation de l\'XP en cours...', components: [], embeds: [] });
-                resetGuildXP(guildId);
-                await interaction.followUp({ content: '✅ L\'XP de tous les membres a été réinitialisée avec succès.', ephemeral: true });
-            } else {
-                 await interaction.update({ content: 'Opération annulée.', components: [], embeds: [] });
-            }
+            // Acknowledging here can prevent 'unknown interaction' errors if the collector is slow.
+            // await interaction.deferUpdate();
             return;
         }
 
