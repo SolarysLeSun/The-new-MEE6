@@ -1,40 +1,44 @@
-
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
-// This function now acts as an API route that generates an image
-export async function GET(req: NextRequest) {
-    const { searchParams } = new URL(req.url);
-
-    // Safely get parameters with fallbacks
-    const displayName = searchParams.get('displayName') || 'Utilisateur';
-    const avatarUrl = searchParams.get('avatarUrl');
-    const level = parseInt(searchParams.get('level') || '0', 10);
-    const rank = parseInt(searchParams.get('rank') || '0', 10);
-    const xp = parseInt(searchParams.get('xp') || '0', 10);
-    const requiredXp = parseInt(searchParams.get('requiredXp') || '100', 10);
-    
-    // Customization parameters
-    const backgroundUrl = searchParams.get('backgroundUrl');
-    const barColor = searchParams.get('barColor') || '#FFFFFF';
-    const textColor = searchParams.get('textColor') || '#FFFFFF';
-    
+// We create a separate component for the card's JSX.
+// This prevents ImageResponse from trying to serialize the GET function itself.
+function CardComponent({
+    displayName,
+    avatarUrl,
+    level,
+    rank,
+    xp,
+    requiredXp,
+    backgroundUrl,
+    barColor,
+    textColor
+}: {
+    displayName: string,
+    avatarUrl: string | null,
+    level: number,
+    rank: number,
+    xp: number,
+    requiredXp: number,
+    backgroundUrl: string | null,
+    barColor: string,
+    textColor: string
+}) {
     const progress = requiredXp > 0 ? (xp / requiredXp) * 100 : 0;
 
-  return new ImageResponse(
-    (
+    return (
         <div style={{
             width: 900,
             height: 250,
             display: 'flex',
-            fontFamily: 'sans-serif', // Use default system font
+            fontFamily: '"Inter", sans-serif',
             color: textColor,
             position: 'relative',
             overflow: 'hidden',
         }}>
-             {/* Background */}
+            {/* Background */}
             <div style={{
                 position: 'absolute',
                 top: 0,
@@ -139,10 +143,28 @@ export async function GET(req: NextRequest) {
                 </div>
             </div>
         </div>
-    ),
-    {
+    );
+}
+
+
+// The GET function is now only responsible for fetching data and rendering the component.
+export async function GET(req: NextRequest) {
+    const { searchParams } = new URL(req.url);
+
+    const props = {
+        displayName: searchParams.get('displayName') || 'Utilisateur',
+        avatarUrl: searchParams.get('avatarUrl'),
+        level: parseInt(searchParams.get('level') || '0', 10),
+        rank: parseInt(searchParams.get('rank') || '0', 10),
+        xp: parseInt(searchParams.get('xp') || '0', 10),
+        requiredXp: parseInt(searchParams.get('requiredXp') || '100', 10),
+        backgroundUrl: searchParams.get('backgroundUrl'),
+        barColor: searchParams.get('barColor') || '#FFFFFF',
+        textColor: searchParams.get('textColor') || '#FFFFFF',
+    };
+
+    return new ImageResponse(<CardComponent {...props} />, {
       width: 900,
       height: 250,
-    }
-  );
+    });
 }
