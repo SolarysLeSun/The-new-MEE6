@@ -477,7 +477,7 @@ export function startApi(client: Client) {
     });
 
     app.post('/api/send-webhook-embed', async (req, res) => {
-        const { channelId, embedData } = req.body;
+        const { channelId, embedData, webhookName, webhookAvatarUrl } = req.body;
         if (!channelId || !embedData) {
             return res.status(400).json({ error: 'channelId and embedData are required.' });
         }
@@ -492,20 +492,20 @@ export function startApi(client: Client) {
             const identityConfig = await getServerConfig(guild.id, 'server-identity');
 
             const webhooks = await channel.fetchWebhooks();
-            let webhook = webhooks.find(wh => wh.name === WEBHOOK_NAME && wh.token !== null);
+            let webhook = webhooks.find(wh => wh.name === (webhookName || WEBHOOK_NAME) && wh.token !== null);
 
             if (!webhook) {
                 webhook = await channel.createWebhook({
-                    name: WEBHOOK_NAME,
-                    avatar: client.user?.displayAvatarURL(),
+                    name: webhookName || WEBHOOK_NAME,
+                    avatar: webhookAvatarUrl || identityConfig?.avatar_url || client.user?.displayAvatarURL(),
                     reason: 'Webhook pour le constructeur d\'embeds'
                 });
             }
 
             await webhook.send({
                 content: embedData.content,
-                username: identityConfig?.enabled ? identityConfig.nickname : client.user?.username,
-                avatarURL: identityConfig?.enabled ? identityConfig.avatar_url : client.user?.displayAvatarURL(),
+                username: webhookName || (identityConfig?.enabled ? identityConfig.nickname : client.user?.username),
+                avatarURL: webhookAvatarUrl || (identityConfig?.enabled ? identityConfig.avatar_url : client.user?.displayAvatarURL()),
                 embeds: embedData.embeds
             });
 

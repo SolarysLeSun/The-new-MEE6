@@ -111,6 +111,8 @@ export default function EmbedBuilderPage() {
     const [jsonContent, setJsonContent] = useState(exampleJson);
     const [channels, setChannels] = useState<DiscordChannel[]>([]);
     const [selectedChannel, setSelectedChannel] = useState<string>('');
+    const [webhookName, setWebhookName] = useState('');
+    const [webhookAvatarUrl, setWebhookAvatarUrl] = useState('');
     const [loadingChannels, setLoadingChannels] = useState(true);
     const [isSending, setIsSending] = useState(false);
 
@@ -154,6 +156,8 @@ export default function EmbedBuilderPage() {
                 body: JSON.stringify({
                     channelId: selectedChannel,
                     embedData: parsedJson,
+                    webhookName: webhookName || undefined,
+                    webhookAvatarUrl: webhookAvatarUrl || undefined,
                 }),
             });
             if (!response.ok) {
@@ -248,24 +252,37 @@ export default function EmbedBuilderPage() {
            </div>
            <Card>
                 <CardHeader>
-                    <CardTitle>Destination</CardTitle>
+                    <CardTitle>Destination & Identité</CardTitle>
+                    <CardDescription>Choisissez où et comment envoyer votre embed.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="w-full sm:w-72">
-                        <Label>Salon d'envoi</Label>
-                        {loadingChannels ? <Skeleton className="h-10 w-full" /> : (
-                            <Combobox
-                                options={channelOptions}
-                                value={selectedChannel}
-                                onChange={setSelectedChannel}
-                                placeholder="Sélectionner un salon..."
-                            />
-                        )}
+                <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="space-y-2 lg:col-span-1">
+                            <Label>Salon d'envoi</Label>
+                            {loadingChannels ? <Skeleton className="h-10 w-full" /> : (
+                                <Combobox
+                                    options={channelOptions}
+                                    value={selectedChannel}
+                                    onChange={setSelectedChannel}
+                                    placeholder="Sélectionner un salon..."
+                                />
+                            )}
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Nom du Webhook (Optionnel)</Label>
+                            <Input placeholder="Nom personnalisé" value={webhookName} onChange={(e) => setWebhookName(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Avatar du Webhook (Optionnel)</Label>
+                            <Input placeholder="URL de l'image" value={webhookAvatarUrl} onChange={(e) => setWebhookAvatarUrl(e.target.value)} />
+                        </div>
                     </div>
-                    <Button size="lg" onClick={handleSend} disabled={isSending || !selectedChannel} className="w-full sm:w-auto mt-4 sm:mt-0 self-end">
-                        {isSending ? <Loader2 className="animate-spin" /> : <Send />}
-                        Envoyer l'Embed
-                    </Button>
+                     <div className="flex justify-end pt-4">
+                        <Button size="lg" onClick={handleSend} disabled={isSending || !selectedChannel}>
+                            {isSending ? <Loader2 className="animate-spin" /> : <Send />}
+                            Envoyer l'Embed
+                        </Button>
+                    </div>
                 </CardContent>
            </Card>
       </div>
