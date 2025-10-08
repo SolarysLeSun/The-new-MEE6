@@ -22,7 +22,6 @@ interface LeaderboardEntry {
     user: {
         id: string;
         username: string;
-        displayName: string;
         tag: string;
         avatar: string | null;
     };
@@ -58,9 +57,6 @@ const LeaderboardSkeleton = () => (
     </div>
 );
 
-function hasSpecialChars(name: string): boolean {
-    return /[^\w\s\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(name);
-}
 
 export default function LevelScoreboardPage() {
     const params = useParams();
@@ -147,7 +143,6 @@ export default function LevelScoreboardPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {leaderboard.map((entry) => {
-                                            const nameToDisplay = hasSpecialChars(entry.user.displayName) ? entry.user.username : entry.user.displayName;
                                             return (
                                                 <TableRow key={entry.user.id}>
                                                     <TableCell className="text-center font-bold text-lg">
@@ -161,7 +156,7 @@ export default function LevelScoreboardPage() {
                                                                 <AvatarImage src={entry.user.avatar || ''} alt={entry.user.username} />
                                                                 <AvatarFallback>{entry.user.username.charAt(0)}</AvatarFallback>
                                                             </Avatar>
-                                                            <span className="font-medium">{nameToDisplay}</span>
+                                                            <span className="font-medium">{entry.user.username}</span>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="text-center font-bold text-lg">{entry.level}</TableCell>
