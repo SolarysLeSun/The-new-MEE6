@@ -226,7 +226,7 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
                 .setTitle(result.title)
                 .setDescription(result.description);
 
-        } else { 
+        } else {
             if (!interaction.guild) {
                 await interaction.followUp({ content: 'Cette action ne peut pas être effectuée en messages privés.', ephemeral: true });
                 return;
@@ -505,7 +505,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                     
                      let moderatorTag = warn.moderator_id;
                      try {
-                        if (warn.moderator_id !== 'AUTOMOD_IA' && warn.moderator_id !== 'AUTOMOD') {
+                        if (warn.moderator_id !== 'AUTOMOD_IA') {
                             const moderator = await client.users.fetch(warn.moderator_id);
                             moderatorTag = moderator.tag;
                         }
