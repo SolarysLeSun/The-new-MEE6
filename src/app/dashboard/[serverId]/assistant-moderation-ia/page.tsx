@@ -25,6 +25,7 @@ import { Switch } from '@/components/ui/switch';
 import { GlobalAiStatusAlert } from '@/components/global-ai-status-alert';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { Combobox } from '@/components/ui/combobox';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
@@ -50,8 +51,8 @@ interface DiscordChannel {
     type: number;
 }
 interface DiscordRole {
-    id: string;
-    name: string;
+  id: string;
+  name: string;
 }
 
 const severityLevels = [
@@ -135,6 +136,15 @@ function ModAssistantPageContent({ isPremium }: { isPremium: boolean }) {
         return <Skeleton className="h-96 w-full" />;
     }
 
+    const channelOptions = [
+        { value: 'none', label: 'Aucun' },
+        ...channels.map(c => ({ value: c.id, label: `# ${c.name}` }))
+    ];
+    const roleOptions = [
+        { value: 'none', label: 'Aucun' },
+        ...roles.map(r => ({ value: r.id, label: `@${r.name}` }))
+    ];
+
     return (
         <PremiumFeatureWrapper isPremium={isPremium}>
             <PageTransitionWrapper className="space-y-4">
@@ -183,18 +193,14 @@ function ModAssistantPageContent({ isPremium }: { isPremium: boolean }) {
                                        Le salon où l'IA enverra ses rapports et recommandations.
                                     </p>
                                 </div>
-                                <Select value={config.alert_channel_id || 'none'} onValueChange={(val) => handleValueChange('alert_channel_id', val === 'none' ? null : val)}>
-                                    <SelectTrigger id="alert-channel" className="w-full md:w-[280px]">
-                                        <SelectValue placeholder="Sélectionner un salon" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectGroup>
-                                            <SelectLabel>Salons Textuels</SelectLabel>
-                                            <SelectItem value="none">Aucun</SelectItem>
-                                            {channels.map(channel => <SelectItem key={channel.id} value={channel.id}># {channel.name}</SelectItem>)}
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
+                                <Combobox
+                                    options={channelOptions}
+                                    value={config.alert_channel_id || 'none'}
+                                    onChange={(value) => handleValueChange('alert_channel_id', value === 'none' ? null : value)}
+                                    placeholder="Sélectionner un salon..."
+                                    searchPlaceholder="Rechercher un salon..."
+                                    className="w-full md:w-[280px]"
+                                />
                             </div>
                              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
                                  <div>
@@ -203,18 +209,14 @@ function ModAssistantPageContent({ isPremium }: { isPremium: boolean }) {
                                        Ce rôle sera mentionné dans les alertes.
                                     </p>
                                 </div>
-                                <Select value={config.alert_role_id || 'none'} onValueChange={(val) => handleValueChange('alert_role_id', val === 'none' ? null : val)}>
-                                    <SelectTrigger id="alert-role" className="w-full md:w-[280px]">
-                                        <SelectValue placeholder="Sélectionner un rôle" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectGroup>
-                                            <SelectLabel>Rôles</SelectLabel>
-                                            <SelectItem value="none">Aucun</SelectItem>
-                                            {roles.map(role => <SelectItem key={role.id} value={role.id}>@ {role.name}</SelectItem>)}
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
+                                <Combobox
+                                    options={roleOptions}
+                                    value={config.alert_role_id || 'none'}
+                                    onChange={(value) => handleValueChange('alert_role_id', value === 'none' ? null : value)}
+                                    placeholder="Sélectionner un rôle..."
+                                    searchPlaceholder="Rechercher un rôle..."
+                                    className="w-full md:w-[280px]"
+                                />
                             </div>
                             <div className="grid md:grid-cols-2 gap-4 pt-2">
                                 <div className="space-y-2">
