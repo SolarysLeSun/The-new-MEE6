@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -21,6 +20,7 @@ const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/ap
 interface LockConfig {
     enabled: boolean;
     exempt_roles: string[];
+    roles_to_lock: string[];
     command_permissions: { [key: string]: string | null };
 }
 
@@ -30,7 +30,7 @@ interface DiscordRole {
 }
 
 const lockCommands = [
-    { name: '/lock', key: 'lock', description: 'Verrouille un salon pour le rôle @everyone.' },
+    { name: '/lock', key: 'lock', description: 'Verrouille un salon pour les rôles sélectionnés.' },
     { name: '/unlock', key: 'unlock', description: 'Déverrouille un salon précédemment verrouillé.' },
 ];
 
@@ -157,14 +157,27 @@ export default function LockPage() {
                 <CardHeader>
                     <h2 className="text-xl font-bold">Options de Verrouillage</h2>
                     <p className="text-muted-foreground">
-                        Configurez les rôles qui ne seront pas affectés par la commande /lock.
+                        Configurez les rôles qui seront affectés par la commande /lock ou exemptés.
                     </p>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="roles-to-lock" className="font-bold text-sm uppercase text-muted-foreground">Rôles à verrouiller</Label>
+                        <p className="text-sm text-muted-foreground/80">
+                            La permission d'envoyer des messages sera retirée pour ces rôles lors d'un `/lock`.
+                        </p>
+                        <MultiSelectCombobox
+                            options={roles.map(r => ({ value: r.id, label: r.name }))}
+                            selected={config.roles_to_lock || []}
+                            onSelectedChange={(selected) => handleValueChange('roles_to_lock', selected)}
+                            placeholder="Sélectionner les rôles à verrouiller..."
+                        />
+                    </div>
+                    <Separator/>
                     <div className="space-y-2">
                         <Label htmlFor="exempt-roles" className="font-bold text-sm uppercase text-muted-foreground">Rôles exemptés du verrouillage</Label>
                         <p className="text-sm text-muted-foreground/80">
-                            Les utilisateurs avec ces rôles pourront toujours parler dans les salons verrouillés.
+                            Les utilisateurs avec ces rôles pourront toujours parler dans les salons verrouillés (typiquement les modérateurs).
                         </p>
                         <MultiSelectCombobox
                             options={roles.map(r => ({ value: r.id, label: r.name }))}

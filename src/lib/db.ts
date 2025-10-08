@@ -263,6 +263,7 @@ const defaultConfigs: DefaultConfigs = {
      'lock': {
         enabled: true,
         exempt_roles: [],
+        roles_to_lock: [],
         command_permissions: {
             lock: null,
             unlock: null,
@@ -1290,5 +1291,6 @@ export function resetGuildXP(guildId: string): void {
     const stmt = db.prepare('DELETE FROM user_levels WHERE guild_id = ?');
     stmt.run(guildId);
 }
+
 
 
