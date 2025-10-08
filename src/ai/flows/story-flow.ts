@@ -24,9 +24,14 @@ const StoryOutputSchema = z.object({
 export type StoryInput = z.infer<typeof StoryInputSchema>;
 export type StoryOutput = z.infer<typeof StoryOutputSchema>;
 
+// The prompt input schema is now different from the flow's input schema
+const StoryPromptInputSchema = StoryInputSchema.extend({
+    usersString: z.string().optional().describe("A comma-separated string of user names."),
+});
+
 const storyPrompt = ai.definePrompt({
   name: 'storyPrompt',
-  input: { schema: StoryInputSchema },
+  input: { schema: StoryPromptInputSchema }, // Use the modified schema
   output: { schema: StoryOutputSchema },
   prompt: `You are a talented storyteller and creative writer. Your task is to write a short, engaging story based on the user's request.
 
@@ -38,8 +43,8 @@ Story Request from {{{authorName}}}:
 {{#if tags}}
 - Mood/Tags: {{{tags}}}
 {{/if}}
-{{#if users.length}}
-- Characters to include: {{{users.join(', ')}}}
+{{#if usersString}}
+- Characters to include: {{{usersString}}}
 {{/if}}
 
 Please write a creative title and the story now. Use Discord markdown (like *italics* for emphasis or thoughts, and **bold** for important actions) to enhance the reading experience.
@@ -54,9 +59,14 @@ export const storyFlow = ai.defineFlow(
   },
   async (input) => {
     let lastError: any;
+    
+    // Prepare data for the prompt: convert array to string
+    const usersString = input.users && input.users.length > 0 ? input.users.join(', ') : undefined;
+    const promptInput = { ...input, usersString };
+
     for (const model of textModelCascade) {
       try {
-        const { output } = await storyPrompt(input, { model });
+        const { output } = await storyPrompt(promptInput, { model });
         return output!;
       } catch (error: any) {
         lastError = error;
