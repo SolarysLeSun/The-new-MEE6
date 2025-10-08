@@ -390,11 +390,17 @@ async function handleReminderButton(interaction: ButtonInteraction) {
     const creationTimestamp = Math.floor(Date.now() / 1000);
     
     setTimeout(async () => {
+        const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/card/rappel`);
+        cardUrl.searchParams.append('authorName', interaction.user.username);
+        cardUrl.searchParams.append('authorAvatar', interaction.user.displayAvatarURL({ extension: 'png', size: 128 }));
+        cardUrl.searchParams.append('message', message);
+        cardUrl.searchParams.append('timestamp', creationTimestamp.toString());
+        
         const embed = new EmbedBuilder()
             .setColor(0x3498DB)
             .setTitle('⏰ C\'est l\'heure ! (Relance)')
-            .setDescription(`Il y a <t:${creationTimestamp}:R>, vous m'avez demandé de vous rappeler ceci :`)
-            .addFields({ name: 'Votre message', value: message });
+            .setImage(cardUrl.toString())
+            .setDescription(`Rappel demandé <t:${creationTimestamp}:R>`);
 
         const row = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
