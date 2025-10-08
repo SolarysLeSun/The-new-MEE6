@@ -22,6 +22,7 @@ import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
 import { useServerInfo } from '@/hooks/use-server-info';
 import { Badge } from '@/components/ui/badge';
 import { GlobalAiStatusAlert } from '@/components/global-ai-status-alert';
+import { Combobox } from '@/components/ui/combobox';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -162,6 +163,10 @@ function WelcomePageContent({ isPremium, serverId }: { isPremium: boolean, serve
     }
 
     const roleOptions = roles.map(r => ({ value: r.id, label: r.name }));
+    const channelOptions = [
+        { value: 'none', label: 'Désactivé' },
+        ...channels.map(channel => ({ value: channel.id, label: `# ${channel.name}` }))
+    ];
 
     return (
         <PageTransitionWrapper className="space-y-8 max-w-4xl">
@@ -179,17 +184,14 @@ function WelcomePageContent({ isPremium, serverId }: { isPremium: boolean, serve
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                            <Label htmlFor="welcome-channel">Salon de bienvenue</Label>
-                            <Select value={welcomeConfig.welcome_channel_id || 'none'} onValueChange={(val) => handleWelcomeChange('welcome_channel_id', val === 'none' ? null : val)}>
-                                <SelectTrigger id="welcome-channel">
-                                    <SelectValue placeholder="Sélectionner un salon" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="none">Désactivé</SelectItem>
-                                    {channels.map(channel => (
-                                        <SelectItem key={channel.id} value={channel.id}># {channel.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                           <Combobox
+                                options={channelOptions}
+                                value={welcomeConfig.welcome_channel_id || 'none'}
+                                onChange={(value) => handleWelcomeChange('welcome_channel_id', value === 'none' ? null : value)}
+                                placeholder="Sélectionner un salon"
+                                searchPlaceholder='Rechercher un salon...'
+                                emptyPlaceholder='Aucun salon trouvé.'
+                            />
                         </div>
                         <div className="space-y-2 flex flex-col justify-end">
                              <div className="flex items-center space-x-2">
@@ -283,16 +285,17 @@ function WelcomePageContent({ isPremium, serverId }: { isPremium: boolean, serve
                              <div className="space-y-4 mt-2">
                                 { (autorolesConfig.ai_onboarding_roles || []).map((mapping, index) => (
                                     <div key={mapping.id} className="grid grid-cols-1 md:grid-cols-3 gap-2 items-center p-4 border rounded-lg bg-card-foreground/5">
-                                        <Select value={mapping.role_id} onValueChange={(val) => {
-                                            const newMappings = [...autorolesConfig.ai_onboarding_roles];
-                                            newMappings[index].role_id = val;
-                                            handleAutorolesChange('ai_onboarding_roles', newMappings);
-                                        }}>
-                                            <SelectTrigger><SelectValue placeholder="Choisir un rôle..." /></SelectTrigger>
-                                            <SelectContent>
-                                                {roles.map(r => <SelectItem key={r.id} value={r.id}>@{r.name}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
+                                        <Combobox
+                                            options={roleOptions.map(r => ({ value: r.id, label: `@${r.name}`}))}
+                                            value={mapping.role_id}
+                                            onChange={(val) => {
+                                                const newMappings = [...autorolesConfig.ai_onboarding_roles];
+                                                newMappings[index].role_id = val;
+                                                handleAutorolesChange('ai_onboarding_roles', newMappings);
+                                            }}
+                                            placeholder="Choisir un rôle..."
+                                            searchPlaceholder="Rechercher un rôle..."
+                                        />
                                         <div className="md:col-span-2 flex items-center gap-2">
                                             <Input
                                                 placeholder="Mots-clés séparés par des virgules"
