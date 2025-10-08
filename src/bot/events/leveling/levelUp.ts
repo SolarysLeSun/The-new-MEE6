@@ -33,15 +33,12 @@ export async function execute(user: User, guild: Guild, newLevel: number) {
             if (!member) return;
             
             try {
-                const levelInfo = getUserLevel(user.id, guild.id);
                 const rank = getUserRank(user.id, guild.id);
 
-                const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/card/level/${guild.id}/${user.id}`);
+                const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/card/levelup/${guild.id}/${user.id}`);
                 cardUrl.searchParams.append('displayName', member.displayName);
                 cardUrl.searchParams.append('avatarUrl', user.displayAvatarURL({ extension: 'png', size: 256 }));
-                cardUrl.searchParams.append('level', levelInfo.level.toString());
-                cardUrl.searchParams.append('xp', levelInfo.xp.toString());
-                cardUrl.searchParams.append('requiredXp', levelInfo.requiredXp.toString());
+                cardUrl.searchParams.append('level', newLevel.toString());
                 cardUrl.searchParams.append('rank', rank.toString());
                 if (config.level_card_background_url) {
                     cardUrl.searchParams.append('backgroundUrl', config.level_card_background_url);
