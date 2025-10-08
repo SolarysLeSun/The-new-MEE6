@@ -508,6 +508,7 @@ const defaultConfigs: DefaultConfigs = {
         enabled: true,
         command_permissions: {
             restart: null,
+            resetxp: null,
         },
     },
     'utils': {
@@ -1108,6 +1109,17 @@ export function getAndClearUserRoles(guildId: string, userId: string): string[] 
 let clientInstance: Client | null = null;
 export function setClientInstance(client: Client) {
     clientInstance = client;
+}
+
+export function resetGuildXP(guildId: string): void {
+    try {
+        const stmt = db.prepare('DELETE FROM user_levels WHERE guild_id = ?');
+        stmt.run(guildId);
+        console.log(`[Database] All XP and levels have been reset for guild ${guildId}.`);
+    } catch (error) {
+        console.error(`[Database] Failed to reset XP for guild ${guildId}:`, error);
+        throw error;
+    }
 }
 
 const calculateRequiredXp = (level: number): number => 5 * (level ** 2) + 50 * level + 100;

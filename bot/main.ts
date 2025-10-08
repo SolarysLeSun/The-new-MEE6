@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
 import type { Command, CustomField } from '@/types';
-import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds } from '@/lib/db';
+import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds, resetGuildXP } from '@/lib/db';
 import { startApi } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
@@ -477,6 +477,23 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     if (interaction.isButton()) {
         console.log(`[Interaction] Button clicked: ${interaction.customId}`);
         const { customId } = interaction;
+
+        if (customId === 'cancel_reset_xp') {
+            await interaction.update({ content: 'Opération annulée.', embeds: [], components: [] });
+            return;
+        }
+
+        if (customId === 'confirm_reset_xp') {
+            if (!interaction.guild) return;
+            try {
+                resetGuildXP(interaction.guild.id);
+                await interaction.update({ content: '✅ Tous les niveaux et l\'XP du serveur ont été réinitialisés.', embeds: [], components: [] });
+            } catch (error) {
+                console.error("Error resetting XP:", error);
+                await interaction.update({ content: 'Une erreur est survenue lors de la réinitialisation.', embeds: [], components: [] });
+            }
+            return;
+        }
 
         if (customId === 'confirm_normalize_all' || customId === 'cancel_normalize_all') {
             // This is handled in the command file's collector.
