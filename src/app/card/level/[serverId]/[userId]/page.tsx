@@ -4,7 +4,6 @@
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Progress } from '@/components/ui/progress';
 
 function LevelCardContent() {
     const searchParams = useSearchParams();
@@ -13,7 +12,7 @@ function LevelCardContent() {
     const displayName = searchParams.get('displayName') || 'Utilisateur';
     const avatarUrl = searchParams.get('avatarUrl');
     const level = parseInt(searchParams.get('level') || '0', 10);
-    const rank = parseInt(search_params.get('rank') || '0', 10);
+    const rank = parseInt(searchParams.get('rank') || '0', 10);
     const xp = parseInt(searchParams.get('xp') || '0', 10);
     const requiredXp = parseInt(searchParams.get('requiredXp') || '100', 10);
     
