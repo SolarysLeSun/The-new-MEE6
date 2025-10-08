@@ -39,7 +39,7 @@ const LevelCommand: Command = {
             const levelInfo = getUserLevel(targetUser.id, interaction.guild.id);
             const rank = getUserRank(targetUser.id, interaction.guild.id);
             
-            const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/card/level/${interaction.guild.id}/${targetUser.id}`);
+            const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/api/card/level/${interaction.guild.id}/${targetUser.id}`);
             cardUrl.searchParams.append('displayName', member.displayName);
             cardUrl.searchParams.append('avatarUrl', targetUser.displayAvatarURL({ extension: 'png', size: 256 }));
             cardUrl.searchParams.append('level', levelInfo.level.toString());
