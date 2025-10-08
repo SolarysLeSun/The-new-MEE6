@@ -22,7 +22,7 @@ export async function execute(user: User, guild: Guild, newLevel: number) {
         const channel = await guild.channels.fetch(config.level_up_channel_id).catch(() => null) as TextChannel;
         if (channel && channel.isTextBased()) {
             
-            const userDisplay = (config.mention_user_on_levelup ?? true) ? user.toString() : user.username;
+            const userDisplay = user.toString();
             const message = (config.level_up_message || 'Félicitations {user}, vous avez atteint le niveau {level} !')
                 .replace('{user}', userDisplay)
                 .replace('{username}', user.username) // Also support {username} for non-mention cases

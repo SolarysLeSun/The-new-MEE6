@@ -13,14 +13,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Trash2, Settings, MessageSquare, Mic, MousePointerClick, Video, Award } from 'lucide-react';
+import { PlusCircle, Trash2, Settings, MessageSquare, Mic, MousePointerClick, Video, Award, Gem, Shield } from 'lucide-react';
 import type { RoleReward, XPBoost, LevelingConfig } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
-import { Gem, Shield } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -177,7 +176,7 @@ export default function LevelingPage() {
         <Tabs defaultValue="gains">
             <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
                 <TabsTrigger value="gains">Gains d'XP</TabsTrigger>
-                <TabsTrigger value="recompenses">Récompenses</TabsTrigger>
+                <TabsTrigger value="recompenses">Récompenses & Boosts</TabsTrigger>
                 <TabsTrigger value="personnalisation">Personnalisation</TabsTrigger>
                 <TabsTrigger value="commandes">Commandes</TabsTrigger>
             </TabsList>
@@ -307,17 +306,6 @@ export default function LevelingPage() {
                             <Label>Message de montée de niveau</Label>
                             <p className="text-sm text-muted-foreground">Variables: {'{user}'} (mentionne l'utilisateur), {'{username}'} (nom), {'{level}'} (niveau)</p>
                             <Textarea defaultValue={config.level_up_message} onBlur={(e) => handleValueChange('level_up_message', e.target.value)} />
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                                <Label htmlFor="mention-user">Mentionner l'utilisateur dans l'annonce</Label>
-                                <p className="text-sm text-muted-foreground">Si désactivé, utilise le nom au lieu de la mention.</p>
-                            </div>
-                            <Switch
-                                id="mention-user"
-                                checked={config.mention_user_on_levelup ?? true}
-                                onCheckedChange={(val) => handleValueChange('mention_user_on_levelup', val)}
-                            />
                         </div>
                         <div className="space-y-2">
                             <Label>Fréquence des annonces</Label>

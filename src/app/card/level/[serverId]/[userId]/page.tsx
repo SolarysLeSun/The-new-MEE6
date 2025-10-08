@@ -1,39 +1,46 @@
+import { ImageResponse } from 'next/og';
+import { NextRequest } from 'next/server';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 
-interface LevelCardPageProps {
-    searchParams: { [key: string]: string | string[] | undefined };
-}
+export const runtime = 'edge';
 
-// This is now a Server Component
-export default function LevelCardPage({ searchParams }: LevelCardPageProps) {
-    // Safely get parameters with fallbacks, now from searchParams prop
-    const displayName = searchParams.displayName as string || 'Utilisateur';
-    const avatarUrl = searchParams.avatarUrl as string | undefined;
-    const level = parseInt(searchParams.level as string || '0', 10);
-    const rank = parseInt(searchParams.rank as string || '0', 10);
-    const xp = parseInt(searchParams.xp as string || '0', 10);
-    const requiredXp = parseInt(searchParams.requiredXp as string || '100', 10);
+// This function now acts as an API route that generates an image
+export async function GET(req: NextRequest) {
+    const { searchParams } = new URL(req.url);
+
+    // Safely get parameters with fallbacks
+    const displayName = searchParams.get('displayName') || 'Utilisateur';
+    const avatarUrl = searchParams.get('avatarUrl');
+    const level = parseInt(searchParams.get('level') || '0', 10);
+    const rank = parseInt(searchParams.get('rank') || '0', 10);
+    const xp = parseInt(searchParams.get('xp') || '0', 10);
+    const requiredXp = parseInt(searchParams.get('requiredXp') || '100', 10);
     
     // Customization parameters
-    const backgroundUrl = searchParams.backgroundUrl as string | undefined;
-    const barColor = searchParams.barColor as string || '#FFFFFF';
-    const textColor = searchParams.textColor as string || '#FFFFFF';
+    const backgroundUrl = searchParams.get('backgroundUrl');
+    const barColor = searchParams.get('barColor') || '#FFFFFF';
+    const textColor = searchParams.get('textColor') || '#FFFFFF';
     
     const progress = requiredXp > 0 ? (xp / requiredXp) * 100 : 0;
 
-    return (
+    // Load fonts
+    const interRegular = await fetch(new URL('https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.woff2')).then(res => res.arrayBuffer());
+    const interBold = await fetch(new URL('https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa7ZL7.woff2')).then(res => res.arrayBuffer());
+    const interExtraBold = await fetch(new URL('https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa2pL7.woff2')).then(res => res.arrayBuffer());
+
+  return new ImageResponse(
+    (
         <div style={{
             width: 900,
             height: 250,
             display: 'flex',
-            fontFamily: 'Inter, sans-serif',
+            fontFamily: '"Inter"',
             color: textColor,
             position: 'relative',
             overflow: 'hidden',
-            borderRadius: '1rem',
         }}>
-            {/* Background */}
+             {/* Background */}
             <div style={{
                 position: 'absolute',
                 top: 0,
@@ -45,6 +52,7 @@ export default function LevelCardPage({ searchParams }: LevelCardPageProps) {
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 zIndex: 1,
+                display: 'flex',
             }}></div>
             <div style={{
                 position: 'absolute',
@@ -54,14 +62,15 @@ export default function LevelCardPage({ searchParams }: LevelCardPageProps) {
                 bottom: 0,
                 backgroundColor: 'rgba(0,0,0,0.6)',
                 zIndex: 2,
+                display: 'flex',
             }}></div>
 
             {/* Content */}
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                padding: '2.5rem',
-                gap: '1.5rem',
+                padding: '40px',
+                gap: '24px',
                 zIndex: 3,
                 width: '100%',
             }}>
@@ -69,14 +78,18 @@ export default function LevelCardPage({ searchParams }: LevelCardPageProps) {
                 <div style={{
                     width: 150,
                     height: 150,
-                    borderRadius: '50%',
+                    borderRadius: '9999px',
                     border: '4px solid #fff',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                 }}>
-                     <Avatar style={{ width: '100%', height: '100%' }}>
-                        {avatarUrl && <AvatarImage src={avatarUrl} alt={displayName} />}
-                        <AvatarFallback style={{ fontSize: '4rem' }}>{displayName.charAt(0)}</AvatarFallback>
-                    </Avatar>
+                    {avatarUrl ? (
+                         <img src={avatarUrl} alt={displayName} width="150" height="150" style={{ borderRadius: '9999px' }} />
+                    ) : (
+                        <div style={{ fontSize: '4rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{displayName.charAt(0)}</div>
+                    )}
                 </div>
                
                 {/* Info Section */}
@@ -85,7 +98,8 @@ export default function LevelCardPage({ searchParams }: LevelCardPageProps) {
                     flexDirection: 'column',
                     flexGrow: 1,
                     height: '100%',
-                    justifyContent: 'space-between'
+                    justifyContent: 'space-between',
+                    width: 'calc(100% - 174px)'
                 }}>
                     {/* Top part: Name and Rank/Level */}
                     <div style={{
@@ -94,7 +108,7 @@ export default function LevelCardPage({ searchParams }: LevelCardPageProps) {
                         alignItems: 'flex-start',
                     }}>
                         <h1 style={{
-                            fontSize: '2.25rem',
+                            fontSize: '36px',
                             fontWeight: 700,
                             textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
                             whiteSpace: 'nowrap',
@@ -102,26 +116,26 @@ export default function LevelCardPage({ searchParams }: LevelCardPageProps) {
                             textOverflow: 'ellipsis',
                             maxWidth: 400
                         }}>{displayName}</h1>
-                        <div style={{ display: 'flex', gap: '1rem', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '16px', textAlign: 'right' }}>
                             <div>
-                                <p style={{ fontSize: '0.875rem', fontWeight: 600, opacity: 0.8, textTransform: 'uppercase' }}>Rang</p>
-                                <p style={{ fontSize: '2rem', fontWeight: 800, lineHeight: 1 }}>#{rank}</p>
+                                <p style={{ fontSize: '14px', fontWeight: 600, opacity: 0.8, textTransform: 'uppercase' }}>Rang</p>
+                                <p style={{ fontSize: '32px', fontWeight: 800, lineHeight: 1 }}>#{rank}</p>
                             </div>
                             <div>
-                                <p style={{ fontSize: '0.875rem', fontWeight: 600, opacity: 0.8, textTransform: 'uppercase' }}>Niveau</p>
-                                <p style={{ fontSize: '2rem', fontWeight: 800, lineHeight: 1 }}>{level}</p>
+                                <p style={{ fontSize: '14px', fontWeight: 600, opacity: 0.8, textTransform: 'uppercase' }}>Niveau</p>
+                                <p style={{ fontSize: '32px', fontWeight: 800, lineHeight: 1 }}>{level}</p>
                             </div>
                         </div>
                     </div>
                     {/* Bottom part: Progress bar and XP */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <div style={{ flexGrow: 1 }}>
-                            <div style={{ height: '1.25rem', width: '100%', borderRadius: '9999px', backgroundColor: 'rgba(255,255,255,0.2)' }}>
-                                <div style={{ width: `${progress}%`, height: '100%', backgroundColor: barColor, borderRadius: '9999px', transition: 'width 0.5s ease-in-out' }}></div>
+                            <div style={{ height: '20px', width: '100%', borderRadius: '9999px', backgroundColor: 'rgba(255,255,255,0.2)' }}>
+                                <div style={{ width: `${progress}%`, height: '100%', backgroundColor: barColor, borderRadius: '9999px' }}></div>
                             </div>
                         </div>
                         <p style={{
-                            fontSize: '1.125rem',
+                            fontSize: '18px',
                             fontWeight: 500,
                             whiteSpace: 'nowrap',
                             textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
@@ -130,5 +144,27 @@ export default function LevelCardPage({ searchParams }: LevelCardPageProps) {
                 </div>
             </div>
         </div>
-    );
+    ),
+    {
+      width: 900,
+      height: 250,
+      fonts: [
+        {
+          name: 'Inter',
+          data: interRegular,
+          weight: 400,
+        },
+        {
+          name: 'Inter',
+          data: interBold,
+          weight: 700,
+        },
+        {
+          name: 'Inter',
+          data: interExtraBold,
+          weight: 800,
+        },
+      ],
+    }
+  );
 }
