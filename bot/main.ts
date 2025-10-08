@@ -1,5 +1,6 @@
 
-import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction } from 'discord.js';
+
+import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -207,7 +208,7 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
 
     let newEmbed: EmbedBuilder;
 
-    if (footerText.includes('admin_announce') || footerText.includes('announce_channel')) {
+    if (footerText.includes('admin_announce') || footerText.includes('dev_admin_announce')) {
         // --- Handle Announcement Modification ---
         // The original raw text is stored in the author.name field of the embed.
         const rawText = originalEmbed.author?.name;
@@ -453,7 +454,6 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         return;
     }
     
-    // Handle Modals
     if (interaction.isModalSubmit()) {
         if (interaction.customId === 'suggestion_modal_server') {
             await handleSuggestionModal(interaction);
@@ -478,13 +478,11 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         console.log(`[Interaction] Button clicked: ${interaction.customId}`);
         const { customId } = interaction;
 
-        // --- Reminder Button Handler ---
         if (customId.startsWith('reschedule_reminder::')) {
             await handleReminderButton(interaction);
             return;
         }
 
-        // --- Handler for Anti-Bot Buttons ---
         if (customId.startsWith('approve_bot_') || customId.startsWith('deny_bot_')) {
             await interaction.deferUpdate();
             const isApproval = customId.startsWith('approve_bot_');
@@ -492,7 +490,6 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
             if (!interaction.guild || !interaction.member) return;
             
-            // Permission check: only members with Administrator permissions can approve/deny.
             if (!(interaction.member.permissions as any).has(PermissionFlagsBits.Administrator)) {
                  await interaction.followUp({ content: 'Vous n\'avez pas la permission d\'effectuer cette action.', flags: MessageFlags.Ephemeral });
                  return;
@@ -519,12 +516,10 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                     newEmbed.setColor(0xFF0000).setFooter({ text: `Refusé par ${interaction.user.tag} (expulsion échouée)` });
                 }
             }
-            // Disable buttons after action
             await interaction.message.edit({ embeds: [newEmbed], components: [] });
             return;
         }
 
-        // --- Handler for Suggestion Button ---
         if (customId === 'create_suggestion') {
             if (!interaction.guild) return;
             const config = await getServerConfig(interaction.guild.id, 'suggestions');
@@ -557,7 +552,6 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
             return;
         }
 
-        // --- Handler for Content Creator Buttons ---
         if (customId === 'publish_content' || customId === 'publish_dev_content') {
             if (!interaction.guild || !interaction.channel || !interaction.message.embeds[0]) return;
             
@@ -667,7 +661,6 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
             return;
         }
         
-        // --- Handler for Private Room Button ---
         if (customId === 'create_private_room') {
             if (!interaction.guild) return;
             const config = await getServerConfig(interaction.guild.id, 'private-rooms');
@@ -717,7 +710,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     }
 
     try {
-        await command.execute(interaction as ChatInputCommandInteraction);
+        await command.execute(interaction as any);
     } catch (error) {
         console.error(error);
         if (interaction.replied || interaction.deferred) {
