@@ -19,6 +19,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
+        vfont: ['VFont', 'sans-serif'],
       },
       colors: {
         background: 'hsl(var(--background))',

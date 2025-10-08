@@ -54,7 +54,7 @@ export function AppHeader() {
         <div className="container mx-auto flex h-20 items-center justify-between px-4">
             <div onClick={handleLogoClick} className="flex items-center gap-3 cursor-pointer">
                 <MarcusLogo />
-                <h1 className="text-xl font-bold text-white">MARCUS</h1>
+                <h1 className="text-xl font-bold text-white font-vfont">MARCUS</h1>
             </div>
             <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
                 <Link href={supportServerUrl} target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-white">
