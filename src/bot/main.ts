@@ -226,7 +226,7 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
                 .setTitle(result.title)
                 .setDescription(result.description);
 
-        } else {
+        } else { 
             if (!interaction.guild) {
                 await interaction.followUp({ content: 'Cette action ne peut pas être effectuée en messages privés.', ephemeral: true });
                 return;

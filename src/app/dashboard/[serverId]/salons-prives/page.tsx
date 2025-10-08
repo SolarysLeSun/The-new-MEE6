@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -150,7 +151,7 @@ export default function PrivateRoomsPage() {
     const handleCustomFieldChange = (index: number, field: 'label' | 'placeholder', value: string) => {
         if (!config || !config.custom_fields) return;
         const newFields = [...config.custom_fields];
-        newFields[index][field] = value;
+        newFields[index] = { ...newFields[index], [field]: value };
         handleValueChange('custom_fields', newFields);
     };
 
@@ -196,7 +197,7 @@ export default function PrivateRoomsPage() {
   return (
     <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Salons Privés</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Salons Privés / Tickets</h1>
         <p className="text-muted-foreground mt-2">
           Configurez le système de création de salons privés pour les tickets ou
           les groupes.
@@ -208,10 +209,10 @@ export default function PrivateRoomsPage() {
       {/* Section Options */}
       <Card>
         <CardHeader>
-          <h2 className="text-xl font-bold">Options des Salons Privés</h2>
-          <p className="text-muted-foreground">
+          <CardTitle>Options des Salons Privés</CardTitle>
+          <CardDescription>
             Personnalisez le fonctionnement de la création de salons.
-          </p>
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between">
@@ -221,59 +222,35 @@ export default function PrivateRoomsPage() {
               <Switch id="enable-module" checked={config.enabled} onCheckedChange={(val) => handleValueChange('enabled', val)} />
           </div>
           <Separator />
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
-            <div>
-              <Label
-                htmlFor="creation-channel"
-                className="font-bold text-sm uppercase text-muted-foreground"
-              >
-                Salon de création
-              </Label>
-              <p className="text-sm text-muted-foreground/80">
-                Salon où poster le message permettant de créer un salon privé.
-              </p>
-            </div>
-            <Combobox
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="creation-channel">Salon de création</Label>
+               <Combobox
                 options={channelOptions}
                 value={config.creation_channel || 'none'}
                 onChange={(value) => handleValueChange('creation_channel', value === 'none' ? null : value)}
                 placeholder="Sélectionner un salon"
                 searchPlaceholder="Rechercher un salon..."
                 emptyPlaceholder="Aucun salon trouvé."
-                className="w-full md:w-[280px]"
-            />
-          </div>
-          <Separator />
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
-            <div>
-              <Label
-                htmlFor="private-category"
-                className="font-bold text-sm uppercase text-muted-foreground"
-              >
-                Catégorie des salons
-              </Label>
-              <p className="text-sm text-muted-foreground/80">
-                Catégorie où les nouveaux salons privés seront créés.
-              </p>
+              />
             </div>
-            <Combobox
+             <div className="space-y-2">
+              <Label htmlFor="private-category">Catégorie des salons</Label>
+              <Combobox
                 options={categoryOptions}
                 value={config.category_id || 'none'}
                 onChange={(value) => handleValueChange('category_id', value === 'none' ? null : value)}
                 placeholder="Sélectionner une catégorie"
                 searchPlaceholder="Rechercher une catégorie..."
                 emptyPlaceholder="Aucune catégorie trouvée."
-                className="w-full md:w-[280px]"
-            />
+              />
+            </div>
           </div>
+          
           <Separator />
+
           <div className="space-y-2">
-            <Label
-              htmlFor="channel-name-format"
-              className="font-bold text-sm uppercase text-muted-foreground"
-            >
-              Format du nom du salon
-            </Label>
+            <Label htmlFor="channel-name-format">Format du nom du salon</Label>
             <p className="text-sm text-muted-foreground/80">
               Variables: {'{user}'}, {'{id}'}, {'{random}'}, {'{champ1}'}, {'{champ2}'}, {'{champ3}'}.
             </p>
@@ -284,32 +261,24 @@ export default function PrivateRoomsPage() {
               placeholder="ticket-{user}-{champ1}"
             />
           </div>
-          <Separator />
+
           <div className="space-y-2">
-            <Label
-              htmlFor="embed-message"
-              className="font-bold text-sm uppercase text-muted-foreground"
-            >
-              Message de l'embed
-            </Label>
-            <p className="text-sm text-muted-foreground/80">
-              Le texte à afficher dans l'embed de création de ticket.
-            </p>
+            <Label htmlFor="embed-message">Message de l'embed</Label>
             <Textarea
               id="embed-message"
               placeholder="Cliquez sur le bouton pour créer un nouveau ticket..."
-              rows={4}
+              rows={3}
               defaultValue={config.embed_message}
               onBlur={(e) => handleValueChange('embed_message', e.target.value)}
             />
           </div>
-           <Separator />
+          <Separator />
            <div className="space-y-2">
-                <Label htmlFor="modal-title" className="font-bold text-sm uppercase text-muted-foreground">Titre de la fenêtre de création</Label>
+                <Label htmlFor="modal-title">Titre du formulaire de création</Label>
                 <Input id="modal-title" value={config.modal_title || ''} onBlur={(e) => handleValueChange('modal_title', e.target.value)} placeholder="Créer un nouveau ticket" />
            </div>
             <div className="space-y-4">
-                 <Label className="font-bold text-sm uppercase text-muted-foreground">Champs personnalisés (Max 3)</Label>
+                 <Label className="font-bold">Champs du formulaire (Max 3)</Label>
                  {config.custom_fields && config.custom_fields.map((field, index) => (
                     <div key={field.id} className="p-4 border rounded-lg bg-card-foreground/5 space-y-2">
                         <div className="flex justify-between items-center">
@@ -330,18 +299,13 @@ export default function PrivateRoomsPage() {
                 ))}
                 <Button variant="outline" className="w-full" onClick={addCustomField} disabled={(config.custom_fields?.length || 0) >= 3}>
                     <PlusCircle className="mr-2" />
-                    Ajouter un champ personnalisé
+                    Ajouter un champ
                 </Button>
             </div>
           <Separator />
           <div className="flex items-center justify-between">
             <div>
-              <Label
-                htmlFor="enable-ai-summary"
-                className="font-bold text-sm uppercase text-muted-foreground"
-              >
-                Résumé IA pour l'archivage (Bientôt)
-              </Label>
+              <Label htmlFor="enable-ai-summary" className="font-bold">Résumé IA (Bientôt)</Label>
               <p className="text-sm text-muted-foreground/80">
                 Générer un résumé par l'IA lors de l'archivage d'un salon.
               </p>
@@ -358,45 +322,31 @@ export default function PrivateRoomsPage() {
       <Separator />
 
       {/* Section Commandes */}
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-xl font-bold">Commandes</h2>
-          <p className="text-muted-foreground">
-            Gérez les permissions pour chaque commande de ce module.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Card>
+        <CardHeader><CardTitle>Commandes du Module</CardTitle></CardHeader>
+        <CardContent className="space-y-6">
           {privateRoomCommands.map((command) => (
-            <Card key={command.key}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Ticket className="w-5 h-5 text-primary" />
-                  <span>{command.name}</span>
-                </CardTitle>
-                <CardDescription>{command.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor={`role-select-${command.key}`}
-                    className="text-sm font-medium"
-                  >
-                    Rôle minimum requis
-                  </Label>
-                  <Combobox
+            <div key={command.key} className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
+                <div className="flex-1">
+                    <h3 className="font-semibold flex items-center gap-2">
+                    <Ticket className="w-5 h-5 text-primary" />
+                    <span>{command.name}</span>
+                    </h3>
+                    <p className="text-sm text-muted-foreground">{command.description}</p>
+              </div>
+                <div className="w-full md:w-60">
+                     <Label className="text-xs font-medium">Rôle minimum requis</Label>
+                    <Combobox
                         options={roleOptions}
                         value={config.command_permissions?.[command.key] || 'none'}
                         onChange={(value) => handlePermissionChange(command.key, value)}
                         placeholder="Sélectionner un rôle"
-                        searchPlaceholder="Rechercher un rôle..."
-                        emptyPlaceholder="Aucun rôle trouvé."
-                     />
+                    />
                 </div>
-              </CardContent>
-            </Card>
+            </div>
           ))}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </PageTransitionWrapper>
   );
 }
