@@ -98,6 +98,14 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     const barHeight = 40;
     const progress = requiredXp > 0 ? Math.min(xp / requiredXp, 1) : 0;
 
+    // Texte XP / Total - Positioned above the bar
+    const xpText = `${formatXP(xp)} / ${formatXP(requiredXp)} XP`;
+    ctx.font = 'bold 24px "Inter", sans-serif';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textAlign = 'right';
+    ctx.fillText(xpText, barX + barWidth, barY - 15);
+
+
     // Fond de la barre
     ctx.fillStyle = '#4f4f4f';
     ctx.beginPath();
@@ -112,14 +120,6 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
       ctx.fill();
     }
     
-    // Texte XP / Total
-    const xpText = `${formatXP(xp)} / ${formatXP(requiredXp)} XP`;
-    ctx.font = 'bold 24px "Inter", sans-serif';
-    ctx.fillStyle = '#FFFFFF';
-    ctx.textAlign = 'center';
-    ctx.fillText(xpText, barX + barWidth / 2, barY + barHeight / 2 + 8);
-
-
     // Texte Rang
     ctx.font = '32px "Inter", sans-serif';
     ctx.fillStyle = '#FFFFFF';
