@@ -26,7 +26,7 @@ const ModerationAiInputSchema = z.object({
 const ModerationAiOutputSchema = z.object({
   isToxic: z.boolean().describe('Whether the message is considered toxic or not.'),
   reason: z.string().describe('A brief, user-friendly reason for the moderation decision (e.g., "Insultant", "Discours haineux"). Empty if not toxic.'),
-  severity: z.enum(['low', 'medium', 'high', 'critical']).describe('The severity of the toxicity. Default to "low" if not applicable.'),
+  severity: z.enum(['none', 'low', 'medium', 'high', 'critical']).describe('The severity of the toxicity. Default to "none" if not applicable.'),
   suggestedAction: z.enum(['none', 'warn', 'delete', 'mute', 'kick', 'ban']).describe("The suggested moderation action."),
   suggestedDuration: z.string().optional().describe("The suggested duration for a mute action (e.g., '5m', '1h', '24h'). Empty if not applicable.")
 });
@@ -37,7 +37,7 @@ export type ModerationAiOutput = z.infer<typeof ModerationAiOutputSchema>;
 export async function moderationAiFlow(input: ModerationAiInput): Promise<ModerationAiOutput> {
     // Prevent analyzing very short, non-toxic messages
     if (input.messageContent.length < 3 && !/[*@_~`|]/.test(input.messageContent)) {
-        return { isToxic: false, reason: '', severity: 'low', suggestedAction: 'none', suggestedDuration: undefined };
+        return { isToxic: false, reason: '', severity: 'none', suggestedAction: 'none', suggestedDuration: undefined };
     }
   return flow(input);
 }
@@ -54,7 +54,7 @@ Always explain your reasoning in French.
 
 ---
 
-### 🎯 Core Principles
+### 🎯 Core Principles & Severity Levels
 
 1.  **Common Sense First:**  
     Prioritize the *actual meaning and tone* of the message.  
@@ -66,61 +66,36 @@ Always explain your reasoning in French.
     Only consider past behavior as an *aggravating factor* if the message is **already borderline toxic on its own**.  
     Do **not** reinterpret neutral phrases as harassment solely because of user history.
 
-3.  **Bot Commands:**  
-    Messages starting with prefixes like "!", "§", "%%", "?", "p!", "k!", or "^^" are likely bot commands.  
-    If it looks like a real command (e.g., "^^play song"), ignore it.  
-    If it’s an insult disguised as a command (e.g., "!va te faire"), flag it as toxic.
+3.  **Bot Commands & Benign Content:** Ignore harmless expressions, bot commands, or roleplay actions unless they contain actual insults.
 
-4.  **Benign Content (never flag):**  
-    Ignore harmless expressions, including:
-    - Polite or neutral messages (“bonjour”, “ça va”, “merci”, “lol”, “wtf”, etc.)
-    - Roleplay actions (*sort une arme*, *donne un coup*) unless they describe explicit real violence.
-    - Messages to bots (like “salut marcus”) unless they contain actual insults.
-    - Frustration toward the game or situation (“j’en ai marre de ce bug”) — not a person.
-
-5.  **Mentions and @everyone:**  
-    Treat **@everyone** as a real ping that can annoy users.  
-    But **"everyone" (without @)** is just text — not a ping — and should never be treated as a toxic mention.
-
-6.  **Severity Based on Sensitivity:**  
-    - **low** → flag only extreme hate, threats, or clear insults.  
-    - **medium** → balanced: flag direct insults and harassment, but ignore mild sarcasm or jokes.  
-    - **high** → be stricter, but *still require explicit negativity*. Do not flag ambiguity.
-
-7.  **When in doubt → not toxic.**  
-    It’s better to miss a borderline case than punish someone unfairly.
+4.  **When in doubt → 'none' or 'low' severity.** It’s better to under-react than to punish someone unfairly.
 
 ---
 
-### 🧠 Your Analysis Process
+### 🧠 Your Analysis Process & Severity Guide
 
 1. Read the message from user '{{{userName}}}': "{{{messageContent}}}"  
-2. Analyze the conversation context (if any):  
-   {{#if conversationContext}}
-     {{#each conversationContext}}
-     - {{{this}}}
-     {{/each}}
-   {{else}}
-     No context provided.
-   {{/if}}
-3. Review user sanction history (if available):  
-   {{#if userSanctionHistory.length}}
-     User has a past sanctions:
-     {{#each userSanctionHistory}}
-     - Action: {{this.action_type}} on {{this.timestamp}} for "{{this.reason}}"
-     {{/each}}
-   {{else}}
-     User has a clean record.
-   {{/if}}
-4. Decide if the message is *clearly* toxic.
-   If and only if it contains explicit hostility, harassment, or hate, set 'isToxic' to true.
-   Otherwise, set 'isToxic' to false.
+2. Analyze context and user history.
+3. Classify the message into one of the following severities:
+    - **none:** Ambiguous, very mild, or not clearly directed at someone. Worth noting for moderators, but does **not** require immediate action against the user. (e.g., "p*tain de jeu", a vague complaint). Set 'isToxic' to **true** but 'suggestedAction' to 'none'.
+    - **low:** A clear but minor insult or provocation. (e.g., "t'es nul", "ferme la"). 'isToxic' is true. Suggested action: 'warn'.
+    - **medium:** Targeted harassment, repeated insults, or stronger offensive language. 'isToxic' is true. Suggested action: 'mute'.
+    - **high:** Serious insults, threats, or hate speech. 'isToxic' is true. Suggested action: 'mute' for a long duration or 'kick'.
+    - **critical:** Extreme hate speech, credible threats of violence, or severe spam. 'isToxic' is true. Suggested action: 'ban'.
 
-5. If toxic:
-   - Explain the reason briefly in French (“Insulte directe”, “Propos haineux”, “Harcèlement ciblé”, etc.)
-   - Suggest an action and, if needed, a duration.
-6. If not toxic:
-   - Set 'isToxic' to false and 'suggestedAction' to 'none'.
+4. If the message is **not toxic at all**, set 'isToxic' to **false** and 'severity' to 'none'.
+
+---
+ANALYSIS DETAILS:
+- Message Content: "{{{messageContent}}}"
+- User: '{{{userName}}}'
+- Sensitivity Setting: {{{sensitivity}}}
+- User History: {{#if userSanctionHistory.length}}User has prior sanctions.{{else}}Clean record.{{/if}}
+- Conversation Context:
+{{#each conversationContext}}
+- {{{this}}}
+{{/each}}
+---
 `
 });
 
@@ -136,7 +111,7 @@ const flow = ai.defineFlow(
     
     // Final check: if the AI still flags a non-toxic message, override it.
     if (output && !output.isToxic) {
-        return { isToxic: false, reason: '', severity: 'low', suggestedAction: 'none' };
+        return { isToxic: false, reason: '', severity: 'none', suggestedAction: 'none' };
     }
     
     return output!;

@@ -39,6 +39,7 @@ interface ModAssistantConfig {
     exempt_roles: string[];
     exempt_channels: string[];
     actions: {
+        none: string;
         low: string;
         medium: string;
         high: string;
@@ -56,6 +57,7 @@ interface DiscordRole {
 }
 
 const severityLevels = [
+    { key: 'none', label: 'Aucune (Log seulement)' },
     { key: 'low', label: 'Basse' },
     { key: 'medium', label: 'Moyenne' },
     { key: 'high', label: 'Haute' },
@@ -64,7 +66,7 @@ const severityLevels = [
 
 const actionOptions = [
     { value: 'none', label: 'Ne rien faire' },
-    { value: 'warn', label: 'Avertir' },
+    { value: 'warn', label: 'Avertir (silencieux si sévérité "Aucune")' },
     { value: 'delete', label: 'Supprimer le message' },
     { value: 'mute_5m', label: 'Rendre muet 5 minutes' },
     { value: 'mute_10m', label: 'Rendre muet 10 minutes' },
@@ -126,7 +128,7 @@ function ModAssistantPageContent({ isPremium }: { isPremium: boolean }) {
         saveConfig({ ...config, [key]: value });
     };
 
-    const handleActionChange = (severity: 'low' | 'medium' | 'high' | 'critical', action: string) => {
+    const handleActionChange = (severity: 'none' | 'low' | 'medium' | 'high' | 'critical', action: string) => {
         if (!config) return;
         const newActions = { ...config.actions, [severity]: action };
         handleValueChange('actions', newActions);
@@ -242,7 +244,7 @@ function ModAssistantPageContent({ isPremium }: { isPremium: boolean }) {
                          <Separator/>
                          <div className="space-y-4">
                             <h3 className="font-semibold text-lg">Sanctions Automatiques</h3>
-                            <p className="text-sm text-muted-foreground">Définissez l'action à entreprendre pour chaque niveau de sévérité. Le message problématique est toujours supprimé.</p>
+                            <p className="text-sm text-muted-foreground">Définissez l'action à entreprendre pour chaque niveau de sévérité. Pour les sévérités autres que "Aucune", le message est toujours supprimé.</p>
                             {severityLevels.map(({ key, label }) => (
                                 <div key={key} className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
                                     <Label className="font-medium">{label}</Label>
@@ -251,7 +253,15 @@ function ModAssistantPageContent({ isPremium }: { isPremium: boolean }) {
                                             <SelectValue placeholder="Choisir une action" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {actionOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                                            {actionOptions.map(opt => (
+                                                <SelectItem 
+                                                    key={opt.value} 
+                                                    value={opt.value} 
+                                                    disabled={key === 'none' && !['none', 'warn'].includes(opt.value)}
+                                                >
+                                                    {opt.label}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
