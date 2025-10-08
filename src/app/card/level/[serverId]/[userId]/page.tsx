@@ -23,18 +23,13 @@ export async function GET(req: NextRequest) {
     
     const progress = requiredXp > 0 ? (xp / requiredXp) * 100 : 0;
 
-    // Load fonts
-    const interRegular = await fetch(new URL('https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.woff2')).then(res => res.arrayBuffer());
-    const interBold = await fetch(new URL('https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa7ZL7.woff2')).then(res => res.arrayBuffer());
-    const interExtraBold = await fetch(new URL('https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa2pL7.woff2')).then(res => res.arrayBuffer());
-
   return new ImageResponse(
     (
         <div style={{
             width: 900,
             height: 250,
             display: 'flex',
-            fontFamily: '"Inter"',
+            fontFamily: 'sans-serif', // Use default system font
             color: textColor,
             position: 'relative',
             overflow: 'hidden',
@@ -86,7 +81,7 @@ export async function GET(req: NextRequest) {
                     overflow: 'hidden'
                 }}>
                     {avatarUrl ? (
-                         <img src={avatarUrl} alt={displayName} width="150" height="150" style={{ borderRadius: '9999px' }} />
+                         <img src={avatarUrl} alt="" width="150" height="150" style={{ borderRadius: '9999px' }} />
                     ) : (
                         <div style={{ fontSize: '4rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{displayName.charAt(0)}</div>
                     )}
@@ -148,23 +143,6 @@ export async function GET(req: NextRequest) {
     {
       width: 900,
       height: 250,
-      fonts: [
-        {
-          name: 'Inter',
-          data: interRegular,
-          weight: 400,
-        },
-        {
-          name: 'Inter',
-          data: interBold,
-          weight: 700,
-        },
-        {
-          name: 'Inter',
-          data: interExtraBold,
-          weight: 800,
-        },
-      ],
     }
   );
 }
