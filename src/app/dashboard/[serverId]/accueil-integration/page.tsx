@@ -201,8 +201,8 @@ function WelcomePageContent({ isPremium, serverId }: { isPremium: boolean, serve
                         </div>
                     </div>
                     <div>
-                        <Label htmlFor="welcome-message">Texte de la carte de bienvenue</Label>
-                        <p className="text-sm text-muted-foreground">Utilisez {"{user}"} pour mentionner le nouveau membre.</p>
+                        <Label htmlFor="welcome-message">Message d'accompagnement</Label>
+                        <p className="text-sm text-muted-foreground">Utilisez {"{user}"} pour mentionner le nouveau membre. Sera affiché avec la carte.</p>
                         <Textarea id="welcome-message" defaultValue={welcomeConfig.welcome_message} onBlur={(e) => handleWelcomeChange('welcome_message', e.target.value)} />
                     </div>
                     <Separator/>

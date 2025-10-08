@@ -18,7 +18,6 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     const avatarUrl = searchParams.get('avatarUrl')
     const serverName = searchParams.get('serverName') || 'le serveur'
     const memberCount = parseInt(searchParams.get('memberCount') || '0', 10);
-    const welcomeText = searchParams.get('welcomeText') || 'Bienvenue !';
     const textColor = searchParams.get('textColor') || '#ffffff'
     const backgroundUrl = searchParams.get('backgroundUrl');
     
@@ -49,10 +48,10 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     ctx.fillRect(0, 0, width, height);
 
     // --- Welcome Text ---
-    ctx.font = 'bold 48px "Inter", sans-serif'
+    ctx.font = 'bold 60px "Inter", sans-serif'
     ctx.fillStyle = textColor
     ctx.textAlign = 'center'
-    ctx.fillText(welcomeText.replace('{user}', nameToDisplay), width / 2, 80)
+    ctx.fillText("Bienvenue !", width / 2, 80)
     
     // --- Avatar ---
     if (avatarUrl) {
