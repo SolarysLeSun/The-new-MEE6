@@ -64,7 +64,7 @@ export const roleAssignmentFlow = ai.defineFlow(
         return { rolesToAssign: [] };
     }
 
-    const { output } = await roleAssignmentPrompt(input);
+    const { output } = await roleAssignmentPrompt(input, { model: 'googleai/gemini-2.0-flash' });
     
     // Ensure uniqueness of roles
     if (output?.rolesToAssign) {
