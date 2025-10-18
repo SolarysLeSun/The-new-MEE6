@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -11,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Trash2, Settings, MessageSquare, Mic, MousePointerClick, Video, Award, Gem, Shield } from 'lucide-react';
+import { PlusCircle, Trash2, Settings, MessageSquare, Mic, MousePointerClick, Video, Award, Gem, Shield, Handshake } from 'lucide-react';
 import type { RoleReward, XPBoost, LevelingConfig } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
@@ -201,7 +202,7 @@ export default function LevelingPage() {
                         <CardDescription>Définissez comment les membres gagnent de l'expérience sur votre serveur.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2"><MessageSquare/>XP par message</Label>
                                 <Input type="number" defaultValue={config.xp_per_message} onBlur={(e) => handleValueChange('xp_per_message', parseInt(e.target.value))} />
@@ -213,6 +214,10 @@ export default function LevelingPage() {
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2"><MousePointerClick/>XP par réaction</Label>
                                 <Input type="number" defaultValue={config.xp_per_reaction} onBlur={(e) => handleValueChange('xp_per_reaction', parseInt(e.target.value))} />
+                            </div>
+                             <div className="space-y-2">
+                                <Label className="flex items-center gap-2"><Handshake/>XP par réaction bienvenue</Label>
+                                <Input type="number" defaultValue={config.xp_per_welcome_reaction} onBlur={(e) => handleValueChange('xp_per_welcome_reaction', parseInt(e.target.value))} />
                             </div>
                          </div>
                          <Separator/>

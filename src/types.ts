@@ -172,6 +172,7 @@ export interface LevelingConfig {
     difficulty: 'easy' | 'medium' | 'hard';
     xp_per_message: number;
     xp_per_reaction: number;
+    xp_per_welcome_reaction: number;
     xp_per_minute_in_voice: number;
     xp_boost_webcam_multiplier: number;
     cooldown_seconds: number;
