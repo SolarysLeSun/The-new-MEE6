@@ -662,7 +662,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
             } else { 
                 // Handles /announce and /iacontent publication
                 const identityConfig = await getServerConfig(interaction.guild.id, 'server-identity');
-                const targetChannelId = footerText.includes('announce_channel') ? footerText.split(':')[1] : interaction.channelId;
+                const targetChannelId = footerText.includes('announce_channel:') ? footerText.split(':')[1] : interaction.channelId;
                 const targetChannel = await client.channels.fetch(targetChannelId).catch(() => null) as TextChannel;
 
                 if (targetChannel) {
