@@ -96,7 +96,7 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     return new Response(buffer, {
       headers: {
         'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=60',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
     })
   } catch (err) {
