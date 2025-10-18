@@ -53,9 +53,9 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from './ui/badge';
+import { Badge } from '@/components/ui/badge';
 import { useEffect, useState } from 'react';
-import { Skeleton } from './ui/skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useServerInfo } from '@/hooks/use-server-info';
 import GradientText from './ui/gradient-text';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
