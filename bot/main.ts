@@ -773,19 +773,23 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     try {
         await command.execute(interaction as any);
     } catch (error) {
-        if (error instanceof DiscordAPIError && error.code === 10062) {
-            console.error(`[Interaction Error] Failed to respond to an expired interaction for command: ${interaction.commandName}`);
-            // We don't try to reply here as it will fail again.
+        if (error instanceof DiscordAPIError && error.code === 10062) { // Unknown Interaction
+            console.warn(`[Interaction Error] Initial reply to '${interaction.commandName}' failed (took too long). Attempting to follow up.`);
+            try {
+                await interaction.followUp({ content: 'Désolé, l\'action a pris trop de temps pour une réponse directe, mais elle est en cours de traitement.', flags: MessageFlags.Ephemeral });
+            } catch (followUpError) {
+                console.error(`[Interaction Error] Follow-up failed for '${interaction.commandName}'. The interaction is likely lost.`, followUpError);
+            }
         } else {
-            console.error(error);
+            console.error(`[Interaction Error] Error executing command '${interaction.commandName}':`, error);
             try {
                 if (interaction.replied || interaction.deferred) {
-                    await interaction.followUp({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
+                    await interaction.followUp({ content: 'Une erreur est survenue lors de l\'exécution de cette commande.', flags: MessageFlags.Ephemeral });
                 } else {
-                    await interaction.reply({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
+                    await interaction.reply({ content: 'Une erreur est survenue lors de l\'exécution de cette commande.', flags: MessageFlags.Ephemeral });
                 }
             } catch (replyError) {
-                console.error('[Interaction Error] Failed to send error follow-up:', replyError);
+                console.error('[Interaction Error] Failed to send error follow-up message:', replyError);
             }
         }
     }
