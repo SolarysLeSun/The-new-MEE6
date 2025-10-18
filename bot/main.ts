@@ -1,6 +1,6 @@
 
 
-import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction, ButtonStyle } from 'discord.js';
+import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction, ButtonStyle, DiscordAPIError } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -773,11 +773,20 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     try {
         await command.execute(interaction as any);
     } catch (error) {
-        console.error(error);
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
+        if (error instanceof DiscordAPIError && error.code === 10062) {
+            console.error(`[Interaction Error] Failed to respond to an expired interaction for command: ${interaction.commandName}`);
+            // We don't try to reply here as it will fail again.
         } else {
-            await interaction.reply({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
+            console.error(error);
+            try {
+                if (interaction.replied || interaction.deferred) {
+                    await interaction.followUp({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
+                } else {
+                    await interaction.reply({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
+                }
+            } catch (replyError) {
+                console.error('[Interaction Error] Failed to send error follow-up:', replyError);
+            }
         }
     }
 });
