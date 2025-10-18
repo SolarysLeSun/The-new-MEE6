@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Trash2, PlusCircle, Sparkles, Loader2, BotMessageSquare } from 'lucide-react';
+import { Trash2, PlusCircle, Sparkles, Loader2, BotMessageSquare, FileVideo } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -42,6 +42,11 @@ interface AutoModConfig {
     rules: AutoModRule[];
     log_channel_id: string | null;
 }
+interface GifFilterConfig {
+    enabled: boolean;
+    exempt_roles: string[];
+    exempt_channels: string[];
+}
 interface DiscordRole {
   id: string;
   name: string;
@@ -66,6 +71,7 @@ function AutoModerationPageSkeleton() {
             <div className="space-y-4">
                 <Skeleton className="h-48 w-full" />
                 <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-48 w-full" />
             </div>
         </div>
     );
@@ -77,25 +83,29 @@ export default function AutoModerationPage() {
     const serverId = params.serverId as string;
     const { toast } = useToast();
 
-    const [config, setConfig] = useState<AutoModConfig | null>(null);
+    const [autoModConfig, setAutoModConfig] = useState<AutoModConfig | null>(null);
+    const [gifFilterConfig, setGifFilterConfig] = useState<GifFilterConfig | null>(null);
     const [roles, setRoles] = useState<DiscordRole[]>([]);
     const [channels, setChannels] = useState<DiscordChannel[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchConfig = async () => {
+    const fetchConfigs = async () => {
         if (!serverId) return;
         setLoading(true);
         try {
-            const [configRes, serverDetailsRes] = await Promise.all([
+            const [autoModRes, gifFilterRes, serverDetailsRes] = await Promise.all([
                 fetch(`${API_URL}/get-config/${serverId}/auto-moderation`),
+                fetch(`${API_URL}/get-config/${serverId}/gif-filter`),
                 fetch(`${API_URL}/get-server-details/${serverId}`),
             ]);
-            if (!configRes.ok || !serverDetailsRes.ok) throw new Error("Impossible de récupérer les données.");
+            if (!autoModRes.ok || !gifFilterRes.ok || !serverDetailsRes.ok) throw new Error("Impossible de récupérer les données.");
             
-            const configData = await configRes.json();
+            const autoModData = await autoModRes.json();
+            const gifFilterData = await gifFilterRes.json();
             const serverDetailsData = await serverDetailsRes.json();
 
-            setConfig(configData);
+            setAutoModConfig(autoModData);
+            setGifFilterConfig(gifFilterData);
             setRoles(serverDetailsData.roles);
             setChannels(serverDetailsData.channels);
         } catch (error: any) {
@@ -106,13 +116,15 @@ export default function AutoModerationPage() {
     };
     
     useEffect(() => {
-        fetchConfig();
+        fetchConfigs();
     }, [serverId]);
 
-    const saveConfig = async (newConfig: AutoModConfig) => {
-        setConfig(newConfig); // Optimistic update
-         try {
-            await fetch(`${API_URL}/update-config/${serverId}/auto-moderation`, {
+    const saveConfig = async (module: 'auto-moderation' | 'gif-filter', newConfig: any) => {
+        if (module === 'auto-moderation') setAutoModConfig(newConfig);
+        if (module === 'gif-filter') setGifFilterConfig(newConfig);
+
+        try {
+            await fetch(`${API_URL}/update-config/${serverId}/${module}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newConfig),
@@ -121,89 +133,128 @@ export default function AutoModerationPage() {
             toast({ title: "Erreur de sauvegarde", variant: "destructive" });
         }
     };
-
-    const handleAddRule = () => {
-        if (!config) return;
-        const newRule: AutoModRule = {
-            id: uuidv4(),
-            name: 'Nouvelle Règle',
-            keywords: [],
-            action: 'delete',
-            exempt_roles: [],
-            exempt_channels: [],
-        };
-        saveConfig({ ...config, rules: [...config.rules, newRule] });
-    };
-
-    const handleUpdateRule = (updatedRule: AutoModRule) => {
-        if (!config) return;
-        const newRules = config.rules.map(rule => rule.id === updatedRule.id ? updatedRule : rule);
-        saveConfig({ ...config, rules: newRules });
-    };
-
-    const handleDeleteRule = (ruleId: string) => {
-        if (!config) return;
-        saveConfig({ ...config, rules: config.rules.filter(rule => rule.id !== ruleId) });
-    };
-
-    const handleToggleModule = (enabled: boolean) => {
-        if (!config) return;
-        saveConfig({ ...config, enabled });
-    };
-
-    if (loading || !config) {
+    
+    if (loading || !autoModConfig || !gifFilterConfig) {
         return <AutoModerationPageSkeleton />;
     }
 
-  return (
-    <PageTransitionWrapper className="space-y-8 text-white max-w-5xl">
-        <div className="flex items-start justify-between">
+    return (
+        <PageTransitionWrapper className="space-y-8 text-white max-w-5xl">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Auto-Modération Personnalisée</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Auto-Modération</h1>
                 <p className="text-muted-foreground mt-2">
-                    Créez vos propres filtres de mots-clés. Les messages correspondants seront supprimés et un avertissement sera enregistré pour l'utilisateur.
+                    Créez des filtres de mots-clés ou bloquez les GIFs pour garder le contrôle de votre communauté.
                 </p>
             </div>
-             <div className="flex items-center space-x-4">
-                 <Switch id="enable-module" checked={config.enabled} onCheckedChange={handleToggleModule} />
-                 <Button onClick={handleAddRule}>
-                    <PlusCircle className="mr-2"/>
-                    Créer une règle
-                </Button>
+            
+            <Separator />
+            
+            <GifFilterCard 
+                config={gifFilterConfig}
+                roles={roles}
+                channels={channels}
+                onUpdate={(newConfig) => saveConfig('gif-filter', newConfig)}
+            />
+
+            <Separator />
+
+            <div className="flex items-start justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight">Filtres de Mots-Clés</h2>
+                     <p className="text-muted-foreground mt-1">
+                        Les messages contenant ces mots seront supprimés et un avertissement sera enregistré pour l'utilisateur.
+                    </p>
+                </div>
+                <div className="flex items-center space-x-4">
+                    <Switch id="enable-automod" checked={autoModConfig.enabled} onCheckedChange={(val) => saveConfig('auto-moderation', {...autoModConfig, enabled: val})} />
+                    <Button onClick={() => {
+                        const newRule: AutoModRule = {
+                            id: uuidv4(), name: 'Nouvelle Règle', keywords: [], action: 'delete', exempt_roles: [], exempt_channels: [],
+                        };
+                        saveConfig('auto-moderation', { ...autoModConfig, rules: [...autoModConfig.rules, newRule] });
+                    }}>
+                        <PlusCircle className="mr-2"/> Créer une règle
+                    </Button>
+                </div>
             </div>
-        </div>
-        
-        <Separator />
-        
-        {config.rules.length === 0 ? (
-            <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                <BotMessageSquare className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-semibold">Aucune règle définie</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                    Utilisez le bouton "Créer une règle" pour commencer à filtrer les messages.
-                </p>
-            </div>
-        ) : (
-            <div className="space-y-4">
-                {config.rules.map(rule => (
-                    <RuleCard 
-                        key={rule.id} 
-                        rule={rule} 
-                        roles={roles}
-                        channels={channels.filter(c => c.type === 0)} // Only text channels
-                        onUpdate={handleUpdateRule}
-                        onDelete={() => handleDeleteRule(rule.id)}
+
+            {autoModConfig.rules.length === 0 ? (
+                <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                    <BotMessageSquare className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-semibold">Aucune règle définie</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Utilisez le bouton "Créer une règle" pour commencer à filtrer les messages.
+                    </p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {autoModConfig.rules.map(rule => (
+                        <RuleCard 
+                            key={rule.id} 
+                            rule={rule} 
+                            roles={roles}
+                            channels={channels.filter(c => c.type === 0)}
+                            onUpdate={(updatedRule) => {
+                                const newRules = autoModConfig.rules.map(r => r.id === updatedRule.id ? updatedRule : r);
+                                saveConfig('auto-moderation', { ...autoModConfig, rules: newRules });
+                            }}
+                            onDelete={() => {
+                                const newRules = autoModConfig.rules.filter(r => r.id !== rule.id);
+                                saveConfig('auto-moderation', { ...autoModConfig, rules: newRules });
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
+        </PageTransitionWrapper>
+    );
+}
+
+// --- GifFilterCard ---
+function GifFilterCard({ config, roles, channels, onUpdate }: { config: GifFilterConfig, roles: DiscordRole[], channels: DiscordChannel[], onUpdate: (config: GifFilterConfig) => void }) {
+    const roleOptions = roles.map(r => ({ value: r.id, label: r.name }));
+    const channelOptions = channels.filter(c => c.type === 0).map(c => ({ value: c.id, label: `# ${c.name}` }));
+
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2"><FileVideo /> Filtre Anti-GIF</CardTitle>
+                    <Switch
+                        checked={config.enabled}
+                        onCheckedChange={(val) => onUpdate({ ...config, enabled: val })}
                     />
-                ))}
-            </div>
-        )}
-    </PageTransitionWrapper>
-  );
+                </div>
+                <CardDescription>Supprime automatiquement les messages contenant des GIFs Tenor.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label>Rôles exemptés</Label>
+                        <MultiSelectCombobox
+                            options={roleOptions}
+                            selected={config.exempt_roles || []}
+                            onSelectedChange={(selected) => onUpdate({ ...config, exempt_roles: selected })}
+                            placeholder="Sélectionner des rôles..."
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Salons exemptés</Label>
+                        <MultiSelectCombobox
+                            options={channelOptions}
+                            selected={config.exempt_channels || []}
+                            onSelectedChange={(selected) => onUpdate({ ...config, exempt_channels: selected })}
+                            placeholder="Sélectionner des salons..."
+                        />
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
 }
 
 // --- RuleCard Component ---
 function RuleCard({ rule, roles, channels, onUpdate, onDelete }: { rule: AutoModRule, roles: DiscordRole[], channels: DiscordChannel[], onUpdate: (rule: AutoModRule) => void, onDelete: () => void }) {
-    
     const [name, setName] = useState(rule.name);
     const [keywords, setKeywords] = useState(rule.keywords.join(', '));
 
@@ -212,12 +263,7 @@ function RuleCard({ rule, roles, channels, onUpdate, onDelete }: { rule: AutoMod
     };
 
     const handleMultiSelectChange = (type: 'exempt_roles' | 'exempt_channels', newSelectedIds: string[]) => {
-        onUpdate({
-            ...rule,
-            name,
-            keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-            [type]: newSelectedIds,
-        });
+        onUpdate({ ...rule, name, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), [type]: newSelectedIds });
     };
 
     return (

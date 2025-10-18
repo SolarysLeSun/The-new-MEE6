@@ -81,16 +81,9 @@ export const navCategories = [
         name: 'Modération',
         items: [
             { href: 'moderation', label: 'Bans & Kicks', icon: Hammer, keywords: ['sanctions', 'avertir', 'warn', 'mute', 'timeout', 'unban', 'kickvoc', 'listwarns'] },
-            { href: 'auto-moderation', label: 'Auto-Modération', icon: Bot, keywords: ['filtres', 'mots-clés', 'automod'] },
-            { href: 'filtre-gif', label: 'Filtre de GIFs', icon: FileVideo, keywords: ['gif', 'tenor', 'giphy', 'image animée'] },
+            { href: 'auto-moderation', label: 'Auto-Modération', icon: Bot, keywords: ['filtres', 'mots-clés', 'automod', 'gif'] },
             { href: 'lock', label: 'Lock/Unlock', icon: Lock, keywords: ['verrouiller', 'déverrouiller', 'salon', 'unlock'] },
             { href: 'logs', label: 'Logs', icon: FileClock, keywords: ['journaux', 'événements', 'audit'] },
-        ]
-    },
-    {
-        name: 'Administration',
-        items: [
-            { href: 'administration', label: 'Outils Admin', icon: Shield, keywords: ['purge', 'purge-roles'] }
         ]
     },
     {
