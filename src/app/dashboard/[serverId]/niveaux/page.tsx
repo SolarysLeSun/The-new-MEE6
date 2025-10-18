@@ -138,7 +138,6 @@ export default function LevelingPage() {
     }
     
     const textChannelOptions = channels.filter(c => c.type === 0).map(c => ({ value: c.id, label: `# ${c.name}` }));
-    const voiceChannelOptions = channels.filter(c => c.type === 2).map(c => ({ value: c.id, label: `🔊 ${c.name}` }));
     const allChannelOptions = channels.map(c => ({ value: c.id, label: `${c.type === 2 ? '🔊' : '#'} ${c.name}` }));
     const roleOptions = roles.filter(r => r.name !== '@everyone').map(r => ({ value: r.id, label: `@${r.name}` }));
 
@@ -284,7 +283,7 @@ export default function LevelingPage() {
                                 <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
                                      <div className="flex-1">
                                          <Label className="text-xs">Salon</Label>
-                                        <Combobox options={voiceChannelOptions} value={boost.channel_id} onChange={val => handleListChange('xp_boost_channels', index, 'channel_id', val)} placeholder="Sélectionner un salon..." />
+                                        <Combobox options={allChannelOptions} value={boost.channel_id} onChange={val => handleListChange('xp_boost_channels', index, 'channel_id', val)} placeholder="Sélectionner un salon..." />
                                     </div>
                                      <div className="w-full sm:w-28">
                                         <Label className="text-xs">Multiplicateur</Label>

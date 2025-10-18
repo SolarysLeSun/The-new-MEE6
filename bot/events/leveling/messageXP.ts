@@ -1,5 +1,6 @@
 
-import { Events, Message, Collection } from 'discord.js';
+
+import { Events, Message, Collection, ChannelType } from 'discord.js';
 import { getServerConfig, updateUserXP } from '@/lib/db';
 
 const userCooldowns = new Collection<string, number>();
@@ -14,7 +15,10 @@ export async function execute(message: Message) {
         return;
     }
 
-    if (config.ignored_channels?.includes(message.channel.id)) {
+    const channelForXpCheck = message.channel.isThread() ? await message.channel.parent?.fetch() : message.channel;
+    if (!channelForXpCheck) return;
+
+    if (config.ignored_channels?.includes(channelForXpCheck.id)) {
         return;
     }
 
@@ -34,7 +38,7 @@ export async function execute(message: Message) {
     let xpToGive = config.xp_per_message || 15;
 
     // --- Check for channel boosts ---
-    const channelBoost = config.xp_boost_channels?.find((c: any) => c.channel_id === message.channel.id);
+    const channelBoost = config.xp_boost_channels?.find((c: any) => c.channel_id === channelForXpCheck.id);
     if (channelBoost) {
         xpToGive *= channelBoost.multiplier;
     }
