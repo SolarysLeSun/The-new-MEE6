@@ -1,5 +1,4 @@
 
-
 import type {
   SlashCommandBuilder,
   CommandInteraction,
@@ -59,7 +58,8 @@ export type Module =
     | 'role-memory'
     | 'embed-builder'
     | 'gif-filter'
-    | 'faq-navigation';
+    | 'faq-navigation'
+    | 'anti-afk';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale
@@ -213,4 +213,10 @@ export interface ConversationalAgentConfig {
     allow_imagination: boolean;
     allow_freewheeling: boolean;
     allow_image_generation: boolean;
+}
+
+export interface AntiAfkConfig {
+    enabled: boolean;
+    timeout_minutes: number;
+    afk_channel_id: string | null;
 }

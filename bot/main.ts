@@ -17,6 +17,7 @@ import { autoTranslateFlow } from '@/ai/flows/auto-translate-flow';
 import { handleOnboardingResponse } from './events/onboarding/aiOnboarding';
 import { patchNoteFlow } from '@/ai/flows/patchnote-flow';
 import ms from 'ms';
+import { startAntiAfkInterval } from './events/moderation/antiAfk';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -124,6 +125,9 @@ client.once(Events.ClientReady, async (readyClient) => {
 
     // Start interval for scheduled suggestions
     startScheduledSuggestions(client);
+    
+    // Start interval for Anti-AFK check
+    startAntiAfkInterval(client);
 
     // Start the API for the web panel
     startApi(client);
@@ -660,9 +664,11 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                     }
                 }
             } else { 
-                // Handles /announce and /iacontent publication
                 const identityConfig = await getServerConfig(interaction.guild.id, 'server-identity');
-                const targetChannelId = footerText.includes('announce_channel:') ? footerText.split(':')[1] : interaction.channelId;
+                const targetChannelId = footerText.includes('announce_channel:') 
+                    ? footerText.split(':')[1] 
+                    : interaction.channelId;
+                
                 const targetChannel = await client.channels.fetch(targetChannelId).catch(() => null) as TextChannel;
 
                 if (targetChannel) {

@@ -12,14 +12,16 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Trash2, Settings, MessageSquare, Mic, MousePointerClick, Video, Award, Gem, Shield, Handshake } from 'lucide-react';
-import type { RoleReward, XPBoost, LevelingConfig } from '@/types';
+import { PlusCircle, Trash2, Settings, MessageSquare, Mic, MousePointerClick, Video, Award, Gem, Shield, Handshake, AlertTriangle } from 'lucide-react';
+import type { RoleReward, XPBoost, LevelingConfig, AntiAfkConfig } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -49,6 +51,7 @@ export default function LevelingPage() {
     const { toast } = useToast();
 
     const [config, setConfig] = useState<LevelingConfig | null>(null);
+    const [antiAfkConfig, setAntiAfkConfig] = useState<AntiAfkConfig | null>(null);
     const [channels, setChannels] = useState<DiscordChannel[]>([]);
     const [roles, setRoles] = useState<DiscordRole[]>([]);
     const [loading, setLoading] = useState(true);
@@ -57,16 +60,19 @@ export default function LevelingPage() {
         if (!serverId) return;
         setLoading(true);
         try {
-            const [configRes, serverDetailsRes] = await Promise.all([
+            const [configRes, serverDetailsRes, antiAfkRes] = await Promise.all([
                 fetch(`${API_URL}/get-config/${serverId}/leveling`),
-                fetch(`${API_URL}/get-server-details/${serverId}`)
+                fetch(`${API_URL}/get-server-details/${serverId}`),
+                fetch(`${API_URL}/get-config/${serverId}/anti-afk`),
             ]);
-            if (!configRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch data');
+            if (!configRes.ok || !serverDetailsRes.ok || !antiAfkRes.ok) throw new Error('Failed to fetch data');
             
             const configData = await configRes.json();
             const serverDetailsData = await serverDetailsRes.json();
+            const antiAfkData = await antiAfkRes.json();
 
             setConfig(configData);
+            setAntiAfkConfig(antiAfkData);
             setChannels(serverDetailsData.channels);
             setRoles(serverDetailsData.roles);
         } catch (error) {
@@ -140,6 +146,8 @@ export default function LevelingPage() {
     const textChannelOptions = channels.filter(c => c.type === 0).map(c => ({ value: c.id, label: `# ${c.name}` }));
     const allChannelOptions = channels.map(c => ({ value: c.id, label: `${c.type === 2 ? '🔊' : '#'} ${c.name}` }));
     const roleOptions = roles.filter(r => r.name !== '@everyone').map(r => ({ value: r.id, label: `@${r.name}` }));
+    
+    const showAntiAfkAlert = (config.xp_per_minute_in_voice > 0) && !antiAfkConfig?.enabled;
 
     return (
     <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
@@ -150,6 +158,19 @@ export default function LevelingPage() {
             </p>
         </div>
         <Separator />
+
+        {showAntiAfkAlert && (
+            <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Recommandation de Sécurité</AlertTitle>
+                <AlertDescription>
+                    Le gain d'XP en vocal est activé, mais le module Anti-AFK est désactivé. Il est fortement recommandé de l'activer pour empêcher les membres de gagner de l'XP sans être actifs.
+                    <Link href={`/dashboard/${serverId}/anti-afk`}>
+                        <Button variant="link" className="p-0 h-auto ml-2">Activer l'Anti-AFK</Button>
+                    </Link>
+                </AlertDescription>
+            </Alert>
+        )}
         
         <Card>
             <CardHeader>

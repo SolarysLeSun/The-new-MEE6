@@ -448,11 +448,6 @@ const defaultConfigs: DefaultConfigs = {
             ia: null
         },
     },
-    'server-identity': {
-        enabled: true,
-        nickname: null,
-        avatar_url: null,
-    },
     'autoroles': {
         enabled: true,
         on_join_roles: [],
@@ -564,6 +559,11 @@ const defaultConfigs: DefaultConfigs = {
     },
     'embed-builder': {
         enabled: true,
+    },
+    'anti-afk': {
+        enabled: false,
+        timeout_minutes: 15,
+        afk_channel_id: null,
     }
 };
 

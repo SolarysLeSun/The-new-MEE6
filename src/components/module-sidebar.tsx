@@ -43,6 +43,7 @@ import {
   Dices,
   Save,
   PencilRuler,
+  UserX,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -76,6 +77,7 @@ export const navCategories = [
         items: [
             { href: 'moderation', label: 'Bans & Kicks', icon: Hammer, keywords: ['sanctions', 'avertir', 'warn', 'mute', 'timeout', 'unban', 'kickvoc', 'listwarns'] },
             { href: 'auto-moderation', label: 'Auto-Modération', icon: Bot, keywords: ['filtres', 'mots-clés', 'automod', 'gif'] },
+            { href: 'anti-afk', label: 'Anti-AFK', icon: UserX, keywords: ['inactif', 'vocal', 'déconnecter'] },
             { href: 'lock', label: 'Lock/Unlock', icon: Lock, keywords: ['verrouiller', 'déverrouiller', 'salon', 'unlock'] },
             { href: 'logs', label: 'Logs', icon: FileClock, keywords: ['journaux', 'événements', 'audit'] },
         ]
