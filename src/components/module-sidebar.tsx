@@ -19,7 +19,6 @@ import {
   Ticket,
   Calendar,
   ToyBrick,
-  GraduationCap,
   Wrench,
   MessageSquare,
   Voicemail,
@@ -29,7 +28,6 @@ import {
   Lightbulb,
   Users,
   UserSquare,
-  BadgePlus,
   ShieldAlert,
   TestTubeDiagonal,
   X,
@@ -39,16 +37,12 @@ import {
   FileText,
   Code,
   Dice5,
-  Shield,
-  Star,
   Award,
   BrainCircuit,
   Gift,
   Dices,
   Save,
   PencilRuler,
-  HelpCircle,
-  FileVideo,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
