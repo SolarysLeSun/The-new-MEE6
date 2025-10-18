@@ -11,10 +11,10 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageCircleQuestion, Trash2, PlusCircle, Gamepad2, BrainCircuit, AlertTriangle, Image } from 'lucide-react';
+import { MessageCircleQuestion, Trash2, PlusCircle, Gamepad2, BrainCircuit, AlertTriangle, Image, FileLock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { KnowledgeBaseItem } from '@/types';
+import type { KnowledgeBaseItem, ConversationalAgentConfig } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { useServerInfo } from '@/hooks/use-server-info';
 import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
@@ -26,19 +26,6 @@ import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { Combobox } from '@/components/ui/combobox';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
-
-interface AgentConfig {
-    enabled: boolean;
-    agent_name: string;
-    agent_role: string;
-    agent_personality: string;
-    custom_prompt: string;
-    knowledge_base: KnowledgeBaseItem[];
-    dedicated_channel_id: string | null;
-    allow_imagination: boolean;
-    allow_freewheeling: boolean;
-    allow_image_generation: boolean;
-}
 
 interface DiscordChannel {
     id: string;
@@ -69,7 +56,7 @@ function PageSkeleton() {
 
 function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverId: string }) {
     const { toast } = useToast();
-    const [config, setConfig] = useState<AgentConfig | null>(null);
+    const [config, setConfig] = useState<ConversationalAgentConfig | null>(null);
     const [channels, setChannels] = useState<DiscordChannel[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -96,7 +83,7 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
         fetchData();
     }, [serverId, toast]);
 
-    const saveConfig = async (newConfig: AgentConfig) => {
+    const saveConfig = async (newConfig: ConversationalAgentConfig) => {
         setConfig(newConfig); // Optimistic update
         try {
             await fetch(`${API_URL}/update-config/${serverId}/conversational-agent`, {
@@ -109,10 +96,16 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
         }
     };
     
-    const handleValueChange = (key: keyof AgentConfig, value: any) => {
+    const handleValueChange = (key: keyof ConversationalAgentConfig, value: any) => {
         if (!config) return;
         saveConfig({ ...config, [key]: value });
     };
+
+    const handleDataSharingChange = (key: keyof ConversationalAgentConfig['data_sharing'], value: boolean) => {
+        if (!config) return;
+        const newDataSharing = { ...config.data_sharing, [key]: value };
+        handleValueChange('data_sharing', newDataSharing);
+    }
 
     const handleKnowledgeBaseChange = (index: number, field: 'question' | 'answer', value: string) => {
         if (!config) return;
@@ -217,6 +210,47 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                             defaultValue={config.custom_prompt}
                             onBlur={(e) => handleValueChange('custom_prompt', e.target.value)}
                         />
+                    </CardContent>
+                </Card>
+
+                {/* Section Partage de Données */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><FileLock /> Partage de Données Utilisateur</CardTitle>
+                        <CardDescription>
+                           Autorisez l'agent à accéder à certaines données des utilisateurs pour des réponses plus contextuelles et personnalisées.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <Label htmlFor="share-sanctions" className="font-semibold">Partager l'historique des sanctions</Label>
+                                <p className="text-sm text-muted-foreground/80">
+                                    Permet à l'IA d'adapter son ton en fonction du comportement passé de l'utilisateur.
+                                </p>
+                            </div>
+                            <Switch id="share-sanctions" checked={config.data_sharing?.share_sanction_history ?? false} onCheckedChange={(val) => handleDataSharingChange('share_sanction_history', val)} />
+                        </div>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <Label htmlFor="share-roles" className="font-semibold">Partager les rôles</Label>
+                                <p className="text-sm text-muted-foreground/80">
+                                    Permet à l'IA de connaître le statut d'un membre (ex: Modérateur, VIP).
+                                </p>
+                            </div>
+                            <Switch id="share-roles" checked={config.data_sharing?.share_roles ?? false} onCheckedChange={(val) => handleDataSharingChange('share_roles', val)} />
+                        </div>
+                        <Separator />
+                         <div className="flex items-center justify-between">
+                            <div>
+                                <Label htmlFor="share-level" className="font-semibold">Partager le niveau et l'XP</Label>
+                                <p className="text-sm text-muted-foreground/80">
+                                    Permet à l'IA de commenter la progression de l'utilisateur.
+                                </p>
+                            </div>
+                            <Switch id="share-level" checked={config.data_sharing?.share_level ?? false} onCheckedChange={(val) => handleDataSharingChange('share_level', val)} />
+                        </div>
                     </CardContent>
                 </Card>
 

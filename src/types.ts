@@ -214,6 +214,11 @@ export interface ConversationalAgentConfig {
     allow_imagination: boolean;
     allow_freewheeling: boolean;
     allow_image_generation: boolean;
+    data_sharing: {
+        share_sanction_history: boolean;
+        share_roles: boolean;
+        share_level: boolean;
+    }
 }
 
 export interface AntiAfkConfig {

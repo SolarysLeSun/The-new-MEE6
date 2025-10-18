@@ -97,11 +97,10 @@ async function handleConversationalAgent(message: Message) {
             photoDataUri = await imageUrlToDataUri(imageAttachment.url);
         }
         
-        // --- Gather user context ---
-        const userSanctionHistory = getUserSanctionHistory(message.guild.id, message.author.id);
-        const userLevel = getUserLevel(message.author.id, message.guild.id);
-        const userRoles = message.member.roles.cache.map(r => r.name).filter(n => n !== '@everyone');
-
+        // --- Gather user context based on config ---
+        const userSanctionHistory = config.data_sharing?.share_sanction_history ? getUserSanctionHistory(message.guild.id, message.author.id) : undefined;
+        const userLevel = config.data_sharing?.share_level ? getUserLevel(message.author.id, message.guild.id) : undefined;
+        const userRoles = config.data_sharing?.share_roles ? message.member.roles.cache.map(r => r.name).filter(n => n !== '@everyone') : undefined;
 
         // Fetch last 5 messages for context, unless it's a dedicated channel (which has its own history)
         let historyForPrompt: { user: string, content: string }[] = [];
