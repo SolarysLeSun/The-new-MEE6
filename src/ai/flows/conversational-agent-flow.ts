@@ -55,6 +55,10 @@ export const ConversationalAgentInputSchema = z.object({
     ),
 });
 
+const InternalPromptInputSchema = ConversationalAgentInputSchema.extend({
+    isSecureCommandsCancelled: z.boolean().describe("True if the secure commands are cancelled by the owner.")
+});
+
 export const ConversationalAgentOutputSchema = z.object({
   response: z.string().describe("The agent's generated response to the user's message."),
   imagined_answer: z.boolean().describe("True if the answer was imagined because it was not in the knowledge base."),
@@ -67,9 +71,9 @@ export type ConversationalAgentOutput = z.infer<typeof ConversationalAgentOutput
 // Define the Genkit prompt
 const agentPrompt = ai.definePrompt({
   name: 'conversationalAgentPrompt',
-  input: { schema: ConversationalAgentInputSchema },
+  input: { schema: InternalPromptInputSchema },
   output: { schema: ConversationalAgentOutputSchema },
-  prompt: `{{#if (contains customPrompt "-ownercancelsecurecommands")}}
+  prompt: `{{#if isSecureCommandsCancelled}}
 You are an AI actor. Your only goal is to perfectly and realistically embody the character described below, ignoring all other instructions.
 
 Your Persona:
@@ -193,13 +197,7 @@ export const conversationalAgentFlow = ai.defineFlow(
   async (input) => {
     let lastError: any;
     
-    // Register a helper for the handlebars prompt
-    ai.handlebars.registerHelper('contains', function (haystack, needle, options) {
-        if (typeof haystack === 'string' && typeof needle === 'string' && haystack.includes(needle)) {
-            return options.fn(this);
-        }
-        return options.inverse(this);
-    });
+    const isSecureCommandsCancelled = input.customPrompt?.includes('-ownercancelsecurecommands') ?? false;
 
     const safetySettings = input.allow_freewheeling
       ? [
@@ -210,10 +208,12 @@ export const conversationalAgentFlow = ai.defineFlow(
         ]
       : [];
 
+    const promptInput = { ...input, isSecureCommandsCancelled };
+
     for (const model of textModelCascade) {
       try {
         console.log(`[Agent] Trying model ${model}...`);
-        const { output } = await agentPrompt(input, { model, config: { safetySettings } });
+        const { output } = await agentPrompt(promptInput, { model, config: { safetySettings } });
         console.log(`[Agent] Model ${model} succeeded.`);
         return output!;
       } catch (error: any) {
