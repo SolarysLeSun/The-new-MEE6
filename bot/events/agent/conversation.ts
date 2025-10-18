@@ -1,7 +1,7 @@
 
 
 import { Events, Message, Collection, EmbedBuilder, TextChannel, AttachmentBuilder } from 'discord.js';
-import { getServerConfig, addKnowledgeBaseItem, getUserSanctionHistory } from '../../../src/lib/db';
+import { getServerConfig, addKnowledgeBaseItem, getUserSanctionHistory, getUserLevel } from '../../../src/lib/db';
 import { conversationalAgentFlow } from '../../../src/ai/flows/conversational-agent-flow';
 import { knowledgeCreationFlow } from '../../../src/ai/flows/knowledge-creation-flow';
 import { faqFlow } from '../../../src/ai/flows/faq-flow';
@@ -97,7 +97,10 @@ async function handleConversationalAgent(message: Message) {
             photoDataUri = await imageUrlToDataUri(imageAttachment.url);
         }
         
+        // --- Gather user context ---
         const userSanctionHistory = getUserSanctionHistory(message.guild.id, message.author.id);
+        const userLevel = getUserLevel(message.author.id, message.guild.id);
+        const userRoles = message.member.roles.cache.map(r => r.name).filter(n => n !== '@everyone');
 
 
         // Fetch last 5 messages for context, unless it's a dedicated channel (which has its own history)
@@ -120,6 +123,8 @@ async function handleConversationalAgent(message: Message) {
             serverName: message.guild.name,
             userMessage: userMessage,
             userName: message.member.displayName,
+            userRoles,
+            userLevel,
             agentName: config.agent_name,
             agentRole: config.agent_role,
             agentPersonality: config.agent_personality,

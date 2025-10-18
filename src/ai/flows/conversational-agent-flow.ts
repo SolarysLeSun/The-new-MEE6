@@ -31,6 +31,12 @@ export const ConversationalAgentInputSchema = z.object({
   serverName: z.string().describe("The name of the Discord server where the conversation is taking place."),
   userMessage: z.string().describe('The message sent by the agent to the user.'),
   userName: z.string().describe("The user's display name (nickname)."),
+  userRoles: z.array(z.string()).optional().describe("A list of the user's roles."),
+  userLevel: z.object({
+      level: z.number(),
+      xp: z.number(),
+      requiredXp: z.number(),
+  }).optional().describe("The user's current level and XP."),
   agentName: z.string().describe("The agent's name."),
   agentRole: z.string().describe("The agent's role or job on the server."),
   agentPersonality: z.string().describe("A description of the agent's personality and tone."),
@@ -83,6 +89,14 @@ Your Instructions:
 - Your responses should be concise and natural, like a real Discord user. Avoid long monologues.
 {{#if customPrompt}}
 - You have been given the following special instructions: {{{customPrompt}}}
+{{/if}}
+
+User Context:
+{{#if userRoles}}
+- User's Roles: [{{#each userRoles}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]. Use this to understand their status on the server.
+{{/if}}
+{{#if userLevel}}
+- User's Level: {{userLevel.level}} (XP: {{userLevel.xp}}/{{userLevel.requiredXp}}). You can congratulate them if they are close to leveling up.
 {{/if}}
 
 Knowledge Base & Imagination:

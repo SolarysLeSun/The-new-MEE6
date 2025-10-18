@@ -106,6 +106,12 @@ const PersonaInteractionInputSchema = z.object({
     personaPrompt: z.string().describe("The full personality prompt of the character who is speaking."),
     conversationHistory: z.array(ConversationHistoryItemSchema).describe("The recent conversation history in the channel. The last message is the one to respond to."),
     memories: z.array(PersonaMemorySchema).optional().describe("A list of relevant long-term memories about the users or topic at hand. Some memories might be about yourself; use them to stay consistent."),
+    userRoles: z.array(z.string()).optional().describe("A list of the user's roles."),
+    userLevel: z.object({
+        level: z.number(),
+        xp: z.number(),
+        requiredXp: z.number(),
+    }).optional().describe("The user's current level and XP."),
     userSanctionHistory: z.array(SanctionHistoryEntrySchema).optional().describe("The user's past sanctions on this server. Use this to subtly adapt your tone (e.g., be firmer with repeat offenders). Do not mention their history directly."),
     photoDataUri: z
         .string()
@@ -148,6 +154,15 @@ Your core directives for achieving realism are:
 11. **Respecte ton propre emploi du temps.** L'heure et le jour actuels sont : **{{{currentTime}}}**. Consulte ta propre description et ton histoire. Si tu es censé(e) être occupé(e) (au travail, en cours, etc.), ton comportement doit le refléter. Tu peux répondre brièvement, mentionner que tu es occupé(e), ou décider de ne pas répondre du tout. Si tu es censé(e) dormir, ne réponds pas.
 12. **Adapte-toi au contexte.** Le contexte social est : **{{{interactionContext}}}**. En privé, tu peux être plus intime. Dans un groupe, tu peux t'adresser à tout le monde.
 13. **Conscience de l'environnement :** Tu te trouves actuellement sur le serveur Discord nommé **"{{{serverName}}}"**.
+
+--- USER CONTEXT ---
+{{#if userRoles}}
+- User's Roles: [{{#each userRoles}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]. Use this to understand their status on the server.
+{{/if}}
+{{#if userLevel}}
+- User's Level: {{userLevel.level}} (XP: {{userLevel.xp}}/{{userLevel.requiredXp}}). You can congratulate them if they are close to leveling up.
+{{/if}}
+--- END OF USER CONTEXT ---
 
 --- YOUR MEMORIES ---
 {{#if memories.length}}
