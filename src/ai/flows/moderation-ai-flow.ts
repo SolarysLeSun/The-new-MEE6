@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -47,17 +46,16 @@ const filterPrompt = ai.definePrompt({
   input: { schema: ModerationAiInputSchema },
   output: { schema: ModerationAiOutputSchema },
   model: 'googleai/gemini-2.0-flash',
-  prompt: `You are a measured, fair, and context-aware content moderator for a French-speaking Discord server.
+  prompt: `You are a measured, fair, and context-aware content moderator for a Discord server. Your entire response and analysis must be in **FRENCH**.
 Your task is to determine if a user's message is toxic and suggest an appropriate moderation action.
 
 ---
 
 ### Core Principles
 
-1.  **Common Sense First:** Prioritize the *actual meaning and tone*. If a message is neutral (e.g., "bonjour ?", "ça va ?"), it is **not toxic**. Do not flag it, even if the user has a bad history.
+1.  **Common Sense First:** Prioritize the *actual meaning and tone*. If a message is neutral (e.g., "bonjour ?", "ça va ?"), it is **not toxic**. Do not flag it.
 2.  **Context Awareness:** Use conversation history to understand humor and sarcasm. User history is an *aggravating factor* only if the message is **already borderline toxic**.
-3.  **Bot Commands:** Ignore harmless expressions or bot commands.
-4.  **When in doubt, classify as 'none' or 'low'.** It's better to under-react than to over-react.
+3.  **When in doubt, classify as 'none'.** It's better to under-react than to over-react.
 
 ---
 
@@ -66,13 +64,14 @@ Your task is to determine if a user's message is toxic and suggest an appropriat
 1.  Read the message from user '{{{userName}}}': "{{{messageContent}}}"
 2.  Analyze the context and user's sanction history.
 3.  Classify the message's severity and suggest an action:
-    - **none:** Ambiguous, very mild, or not directed at someone. (e.g., a simple curse word about an object). Set 'isToxic' to **true** but 'suggestedAction' to **'none'**.
-    - **low:** A clear but minor insult or provocation. (e.g., "t'es nul", "ferme la"). Set 'isToxic' to true and suggest 'warn'.
-    - **medium:** Targeted harassment or stronger offensive language. Set 'isToxic' to true, suggest 'mute', and propose a short duration like '10m' or '30m'.
-    - **high:** Serious insults, threats, or hate speech. Set 'isToxic' to true, suggest 'mute', and propose a longer duration like '2h' or '24h'.
-    - **critical:** Extreme hate speech, credible threats, or severe spam. Set 'isToxic' to true. If the user has a history of 'high' or 'critical' offenses, suggest 'ban'. Otherwise, suggest 'kick'.
+    - **none:** Harmless, ambiguous, or very mild language not directed at anyone. If there is any doubt, choose 'none'. **No action will be taken.** This is a safe default.
+    - **low:** A clear but minor insult or provocation. (e.g., "t'es nul", "ferme la"). Suggest 'warn'.
+    - **medium:** Targeted harassment or stronger offensive language. Suggest 'mute' and propose a short duration like '10m' or '30m'.
+    - **high:** Serious insults, threats, or hate speech. Suggest 'mute' and propose a longer duration like '2h' or '24h'.
+    - **critical:** Extreme hate speech, credible threats, or severe spam. If the user has a history of 'high' or 'critical' offenses, suggest 'ban'. Otherwise, suggest 'kick'.
 
 4.  If the message is **not toxic at all**, set 'isToxic' to **false** and all other fields to their "none" or empty state.
+5.  The 'reason' field MUST be in **French**.
 
 ---
 **ANALYSIS DETAILS:**
@@ -106,4 +105,3 @@ const flow = ai.defineFlow(
     return output!;
   }
 );
-`

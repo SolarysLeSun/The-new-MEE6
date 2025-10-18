@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -55,6 +54,7 @@ interface DiscordRole {
 }
 
 const severityLevels = [
+    { key: 'none', label: 'Aucune (pas de sanction)'},
     { key: 'low', label: 'Basse (ex: insultes légères)' },
     { key: 'medium', label: 'Moyenne (ex: harcèlement ciblé)' },
     { key: 'high', label: 'Haute (ex: menaces, discours haineux)' },
@@ -62,8 +62,9 @@ const severityLevels = [
 ];
 
 const actionOptions = [
-    { value: 'none', label: 'Ne rien faire (log seulement)' },
+    { value: 'none', label: 'Ne rien faire' },
     { value: 'warn', label: 'Avertir l\'utilisateur' },
+    { value: 'delete', label: 'Supprimer le message' },
     { value: 'mute', label: 'Rendre muet (durée suggérée par IA)' },
     { value: 'kick', label: 'Expulser' },
     { value: 'ban', label: 'Bannir' },
@@ -245,6 +246,7 @@ function ModAssistantPageContent({ isPremium }: { isPremium: boolean }) {
                                      <Select 
                                          value={config.actions[key as keyof typeof config.actions]}
                                          onValueChange={(val) => handleActionChange(key as any, val)}
+                                         disabled={key === 'none'}
                                      >
                                         <SelectTrigger className="w-full md:w-[280px]">
                                             <SelectValue placeholder="Choisir une action" />
@@ -295,4 +297,3 @@ export default function ModAssistantPage() {
   );
 }
 
-`

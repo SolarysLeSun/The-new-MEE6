@@ -1,4 +1,3 @@
-
 import { Events, Message, EmbedBuilder, TextChannel } from 'discord.js';
 import { moderationAiFlow } from '../../../src/ai/flows/moderation-ai-flow';
 import { getServerConfig, getUserSanctionHistory, recordSanction, getGlobalAiStatus } from '../../../src/lib/db';
@@ -57,13 +56,13 @@ export async function execute(message: Message) {
             sensitivity: modAiConfig.sensitivity || 'medium',
         });
 
-        if (!result.isToxic || result.suggestedAction === 'none') {
+        if (!result.isToxic || result.severity === 'none' || result.suggestedAction === 'none') {
             return;
         }
 
         console.log(`[Mod-AI] Toxic message detected from ${message.author.tag} in ${message.guild.name}. Reason: ${result.reason}, Severity: ${result.severity}, Action: ${result.suggestedAction}`);
-
-        const actionToTake = result.suggestedAction;
+        
+        const actionToTake = modAiConfig.actions?.[result.severity] || result.suggestedAction;
 
         // --- Alert moderators ---
         if (modAiConfig.alert_channel_id) {
@@ -77,7 +76,7 @@ export async function execute(message: Message) {
                         { name: 'Contenu du Message', value: `\`\`\`${message.content}\`\`\`` },
                         { name: 'Raison Détectée', value: result.reason, inline: true },
                         { name: 'Sévérité', value: result.severity, inline: true },
-                        { name: 'Action suggérée/prise', value: `\`${actionToTake}\``, inline: true }
+                        { name: 'Action prise', value: `\`${actionToTake}\``, inline: true }
                     )
                     .setTimestamp()
                     .setFooter({ text: `ID Utilisateur: ${message.author.id}` });
@@ -94,23 +93,13 @@ export async function execute(message: Message) {
         const member = await message.guild.members.fetch(message.author.id).catch(() => null);
         if (!member) return;
 
-        // Always delete the message if it's not a simple warn
-        if (actionToTake !== 'warn') {
-            try {
-                await message.delete();
-            } catch(e: any) {
-                if (e.code === 10008) { // Unknown Message
-                    console.log(`[Mod-AI] Tried to delete a message that was already deleted: ${message.id}`);
-                } else {
-                    console.error(`[Mod-AI] Failed to delete message:`, e);
-                }
-            }
-        }
-
         let durationMs: number | undefined = undefined;
 
         switch (actionToTake) {
             case 'warn':
+                try {
+                    await message.delete();
+                } catch(e: any) { /* Ignore if already deleted */ }
                 const warnMsg = await message.channel.send(`> **${message.author.toString()}, attention.** Votre message a été jugé inapproprié. Raison : ${result.reason}.`);
                 addBotSentMessage(warnMsg.id);
                 setTimeout(() => warnMsg.delete().catch(console.error), 10000);
@@ -124,6 +113,10 @@ export async function execute(message: Message) {
                 });
                 break;
             case 'mute':
+                try {
+                    await message.delete();
+                } catch(e: any) { /* Ignore if already deleted */ }
+
                 durationMs = result.suggestedDuration ? ms(result.suggestedDuration) : ms('10m');
                 if (member.moderatable) {
                     await member.timeout(durationMs, `AutoMod IA: ${result.reason}`);
@@ -141,6 +134,9 @@ export async function execute(message: Message) {
                 }
                 break;
             case 'kick':
+                try {
+                    await message.delete();
+                } catch(e: any) { /* Ignore if already deleted */ }
                 if (member.kickable) {
                     await member.kick(`AutoMod IA: ${result.reason}`);
                     const kickMsg = await message.channel.send(`> **${message.author.toString()} a été expulsé.** Raison : ${result.reason}.`);
@@ -149,6 +145,9 @@ export async function execute(message: Message) {
                 }
                 break;
             case 'ban':
+                try {
+                    await message.delete();
+                } catch(e: any) { /* Ignore if already deleted */ }
                 if (member.bannable) {
                     await member.ban({ reason: `AutoMod IA: ${result.reason}` });
                     const banMsg = await message.channel.send(`> **${message.author.toString()} a été banni.** Raison : ${result.reason}.`);
@@ -163,10 +162,17 @@ export async function execute(message: Message) {
                     });
                 }
                 break;
+             case 'delete':
+                try {
+                    await message.delete();
+                } catch(e: any) { /* Ignore if already deleted */ }
+                const deleteMsg = await message.channel.send(`> Le message de **${message.author.toString()}** a été supprimé par la modération automatique. Raison : ${result.reason}.`);
+                addBotSentMessage(deleteMsg.id);
+                setTimeout(() => deleteMsg.delete().catch(console.error), 10000);
+                break;
         }
 
     } catch (error) {
         console.error('[Mod-AI] Error during message analysis flow:', error);
     }
 }
-`
