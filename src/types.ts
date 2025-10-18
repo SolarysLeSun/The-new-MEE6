@@ -58,6 +58,7 @@ export type Module =
     | 'fortune-wheel'
     | 'role-memory'
     | 'embed-builder'
+    | 'gif-filter'
     | 'faq-navigation';
 
 export interface ModuleConfig {
@@ -105,7 +106,7 @@ export interface SanctionHistoryEntry {
     guild_id: string;
     user_id: string;
     moderator_id: string; // Can be a user ID or 'AUTOMOD'
-    action_type: 'warn' | 'mute' | 'kick' | 'ban';
+    action_type: 'warn' | 'mute' | 'kick' | 'ban' | 'set';
     reason?: string;
     duration_seconds?: number;
     timestamp: string;

@@ -239,6 +239,11 @@ const defaultConfigs: DefaultConfigs = {
         rules: [],
         log_channel_id: null,
     },
+    'gif-filter': {
+        enabled: false,
+        exempt_roles: [],
+        exempt_channels: [],
+    },
     'logs': {
         enabled: true,
         main_channel_id: null,
@@ -309,11 +314,11 @@ const defaultConfigs: DefaultConfigs = {
         exempt_roles: [],
         exempt_channels: [],
         actions: {
-            none: 'warn',
+            none: 'none',
             low: 'warn',
-            medium: 'mute_5m',
-            high: 'mute_1h',
-            critical: 'ban'
+            medium: 'mute',
+            high: 'mute',
+            critical: 'kick'
         }
     },
     'anti-raid': { 
