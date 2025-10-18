@@ -57,39 +57,45 @@ export async function execute(message: Message) {
             sensitivity: modAiConfig.sensitivity || 'medium',
         });
 
-        if (result.isToxic) {
-            console.log(`[Mod-AI] Toxic message detected from ${message.author.tag} in ${message.guild.name}. Reason: ${result.reason}, Severity: ${result.severity}, Action: ${result.suggestedAction}`);
+        if (!result.isToxic || result.suggestedAction === 'none') {
+            return;
+        }
 
-            const actionKey = result.severity as keyof typeof modAiConfig.actions;
-            const action = modAiConfig.actions[actionKey];
+        console.log(`[Mod-AI] Toxic message detected from ${message.author.tag} in ${message.guild.name}. Reason: ${result.reason}, Severity: ${result.severity}, Action: ${result.suggestedAction}`);
 
-            // --- Alert moderators ---
-            if (modAiConfig.alert_channel_id) {
-                const alertChannel = await message.guild.channels.fetch(modAiConfig.alert_channel_id).catch(() => null) as TextChannel;
-                if (alertChannel) {
-                     const alertEmbed = new EmbedBuilder()
-                        .setColor(0xFF0000)
-                        .setTitle('🚨 Alerte Modération IA 🚨')
-                        .setDescription(`L'IA a détecté un message potentiellement problématique de ${message.author.toString()} dans ${message.channel.toString()}.`)
-                        .addFields(
-                            { name: 'Contenu du Message', value: `\`\`\`${message.content}\`\`\`` },
-                            { name: 'Raison Détectée', value: result.reason, inline: true },
-                            { name: 'Sévérité', value: result.severity, inline: true },
-                            { name: 'Action suggérée/prise', value: `\`${action}\``, inline: true }
-                        )
-                        .setTimestamp()
-                        .setFooter({ text: `ID Utilisateur: ${message.author.id}` });
-                    
-                    let content = '';
-                    if (modAiConfig.alert_role_id) {
-                        content = `<@&${modAiConfig.alert_role_id}>`;
-                    }
-                    await alertChannel.send({ content: content, embeds: [alertEmbed] });
+        const actionToTake = result.suggestedAction;
+
+        // --- Alert moderators ---
+        if (modAiConfig.alert_channel_id) {
+            const alertChannel = await message.guild.channels.fetch(modAiConfig.alert_channel_id).catch(() => null) as TextChannel;
+            if (alertChannel) {
+                 const alertEmbed = new EmbedBuilder()
+                    .setColor(0xFF0000)
+                    .setTitle('🚨 Alerte Modération IA 🚨')
+                    .setDescription(`L'IA a détecté un message potentiellement problématique de ${message.author.toString()} dans ${message.channel.toString()}.`)
+                    .addFields(
+                        { name: 'Contenu du Message', value: `\`\`\`${message.content}\`\`\`` },
+                        { name: 'Raison Détectée', value: result.reason, inline: true },
+                        { name: 'Sévérité', value: result.severity, inline: true },
+                        { name: 'Action suggérée/prise', value: `\`${actionToTake}\``, inline: true }
+                    )
+                    .setTimestamp()
+                    .setFooter({ text: `ID Utilisateur: ${message.author.id}` });
+                
+                let content = '';
+                if (modAiConfig.alert_role_id) {
+                    content = `<@&${modAiConfig.alert_role_id}>`;
                 }
+                await alertChannel.send({ content: content, embeds: [alertEmbed] });
             }
-            
-            // --- Take Action based on configuration for the detected severity ---
-             // Delete the toxic message
+        }
+        
+        // --- Take Action ---
+        const member = await message.guild.members.fetch(message.author.id).catch(() => null);
+        if (!member) return;
+
+        // Always delete the message if it's not a simple warn
+        if (actionToTake !== 'warn') {
             try {
                 await message.delete();
             } catch(e: any) {
@@ -99,69 +105,68 @@ export async function execute(message: Message) {
                     console.error(`[Mod-AI] Failed to delete message:`, e);
                 }
             }
-            
-            // Apply sanction
-            const member = await message.guild.members.fetch(message.author.id).catch(() => null);
-            if (!member) return;
+        }
 
-            let durationMs: number | undefined = undefined;
+        let durationMs: number | undefined = undefined;
 
-            switch (action) {
-                case 'warn':
-                    const warnMsg = await message.channel.send(`> **${message.author.toString()}, attention.** Votre message a été jugé inapproprié. Raison : ${result.reason}.`);
-                    addBotSentMessage(warnMsg.id);
-                    setTimeout(() => warnMsg.delete().catch(console.error), 10000);
-                    
+        switch (actionToTake) {
+            case 'warn':
+                const warnMsg = await message.channel.send(`> **${message.author.toString()}, attention.** Votre message a été jugé inapproprié. Raison : ${result.reason}.`);
+                addBotSentMessage(warnMsg.id);
+                setTimeout(() => warnMsg.delete().catch(console.error), 10000);
+                
+                recordSanction({
+                    guild_id: message.guild.id,
+                    user_id: member.id,
+                    moderator_id: 'AUTOMOD_IA',
+                    action_type: 'warn',
+                    reason: `[IA] ${result.reason}`
+                });
+                break;
+            case 'mute':
+                durationMs = result.suggestedDuration ? ms(result.suggestedDuration) : ms('10m');
+                if (member.moderatable) {
+                    await member.timeout(durationMs, `AutoMod IA: ${result.reason}`);
+                    const muteMsg = await message.channel.send(`> **${message.author.toString()} a été rendu muet.** Raison : ${result.reason}.`);
+                    addBotSentMessage(muteMsg.id);
+                    setTimeout(() => muteMsg.delete().catch(console.error), 10000);
                     recordSanction({
                         guild_id: message.guild.id,
                         user_id: member.id,
                         moderator_id: 'AUTOMOD_IA',
-                        action_type: 'warn',
+                        action_type: 'mute',
+                        reason: `[IA] ${result.reason}`,
+                        duration_seconds: durationMs / 1000
+                    });
+                }
+                break;
+            case 'kick':
+                if (member.kickable) {
+                    await member.kick(`AutoMod IA: ${result.reason}`);
+                    const kickMsg = await message.channel.send(`> **${message.author.toString()} a été expulsé.** Raison : ${result.reason}.`);
+                    addBotSentMessage(kickMsg.id);
+                    setTimeout(() => kickMsg.delete().catch(console.error), 10000);
+                }
+                break;
+            case 'ban':
+                if (member.bannable) {
+                    await member.ban({ reason: `AutoMod IA: ${result.reason}` });
+                    const banMsg = await message.channel.send(`> **${message.author.toString()} a été banni.** Raison : ${result.reason}.`);
+                    addBotSentMessage(banMsg.id);
+                    setTimeout(() => banMsg.delete().catch(console.error), 10000);
+                    recordSanction({
+                        guild_id: message.guild.id,
+                        user_id: member.id,
+                        moderator_id: 'AUTOMOD_IA',
+                        action_type: 'ban',
                         reason: `[IA] ${result.reason}`
                     });
-                    break;
-                case 'mute_5m':
-                case 'mute_10m':
-                case 'mute_1h':
-                case 'mute_24h':
-                    const durationStr = action.split('_')[1];
-                    durationMs = ms(durationStr);
-                    if (member.moderatable) {
-                        await member.timeout(durationMs, `AutoMod IA: ${result.reason}`);
-                        const muteMsg = await message.channel.send(`> **${message.author.toString()} a été rendu muet.** Raison : ${result.reason}.`);
-                        addBotSentMessage(muteMsg.id);
-                        setTimeout(() => muteMsg.delete().catch(console.error), 10000);
-                        recordSanction({
-                            guild_id: message.guild.id,
-                            user_id: member.id,
-                            moderator_id: 'AUTOMOD_IA',
-                            action_type: 'mute',
-                            reason: `[IA] ${result.reason}`,
-                            duration_seconds: durationMs / 1000
-                        });
-                    }
-                    break;
-                case 'ban':
-                    if (member.bannable) {
-                        await member.ban({ reason: `AutoMod IA: ${result.reason}` });
-                        const banMsg = await message.channel.send(`> **${message.author.toString()} a été banni.** Raison : ${result.reason}.`);
-                        addBotSentMessage(banMsg.id);
-                        setTimeout(() => banMsg.delete().catch(console.error), 10000);
-                        recordSanction({
-                            guild_id: message.guild.id,
-                            user_id: member.id,
-                            moderator_id: 'AUTOMOD_IA',
-                            action_type: 'ban',
-                            reason: `[IA] ${result.reason}`
-                        });
-                    }
-                    break;
-            }
+                }
+                break;
         }
 
     } catch (error) {
         console.error('[Mod-AI] Error during message analysis flow:', error);
     }
 }
-
-    
+`

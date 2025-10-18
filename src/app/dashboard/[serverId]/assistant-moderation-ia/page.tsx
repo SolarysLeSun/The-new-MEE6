@@ -13,8 +13,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  SelectGroup,
-  SelectLabel
 } from '@/components/ui/select';
 import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
 import { useServerInfo } from '@/hooks/use-server-info';
@@ -57,21 +55,17 @@ interface DiscordRole {
 }
 
 const severityLevels = [
-    { key: 'none', label: 'Aucune (Log interne seulement)' },
-    { key: 'low', label: 'Basse' },
-    { key: 'medium', label: 'Moyenne' },
-    { key: 'high', label: 'Haute' },
-    { key: 'critical', label: 'Critique' },
+    { key: 'low', label: 'Basse (ex: insultes légères)' },
+    { key: 'medium', label: 'Moyenne (ex: harcèlement ciblé)' },
+    { key: 'high', label: 'Haute (ex: menaces, discours haineux)' },
+    { key: 'critical', label: 'Critique (ex: menaces graves, contenu illégal)' },
 ];
 
 const actionOptions = [
-    { value: 'none', label: 'Ne rien faire' },
-    { value: 'warn', label: 'Avertir (silencieux)' },
-    { value: 'delete', label: 'Supprimer le message' },
-    { value: 'mute_5m', label: 'Rendre muet 5 minutes' },
-    { value: 'mute_10m', label: 'Rendre muet 10 minutes' },
-    { value: 'mute_1h', label: 'Rendre muet 1 heure' },
-    { value: 'mute_24h', label: 'Rendre muet 24 heures' },
+    { value: 'none', label: 'Ne rien faire (log seulement)' },
+    { value: 'warn', label: 'Avertir l\'utilisateur' },
+    { value: 'mute', label: 'Rendre muet (durée suggérée par IA)' },
+    { value: 'kick', label: 'Expulser' },
     { value: 'ban', label: 'Bannir' },
 ]
 
@@ -192,7 +186,7 @@ function ModAssistantPageContent({ isPremium }: { isPremium: boolean }) {
                                  <div>
                                     <Label htmlFor="alert-channel" className="font-bold text-sm uppercase text-muted-foreground">Salon d'alertes</Label>
                                     <p className="text-sm text-muted-foreground/80">
-                                       Le salon où l'IA enverra ses rapports et recommandations (sauf pour la sévérité "Aucune").
+                                       Le salon où l'IA enverra ses rapports et recommandations.
                                     </p>
                                 </div>
                                 <Combobox
@@ -244,14 +238,13 @@ function ModAssistantPageContent({ isPremium }: { isPremium: boolean }) {
                          <Separator/>
                          <div className="space-y-4">
                             <h3 className="font-semibold text-lg">Sanctions Automatiques</h3>
-                            <p className="text-sm text-muted-foreground">Définissez l'action à entreprendre pour chaque niveau de sévérité. Pour les sévérités autres que "Aucune", le message est toujours supprimé.</p>
+                            <p className="text-sm text-muted-foreground">Définissez l'action à entreprendre pour chaque niveau de sévérité détecté par l'IA.</p>
                             {severityLevels.map(({ key, label }) => (
                                 <div key={key} className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-2">
                                     <Label className="font-medium">{label}</Label>
                                      <Select 
                                          value={config.actions[key as keyof typeof config.actions]}
                                          onValueChange={(val) => handleActionChange(key as any, val)}
-                                         disabled={key === 'none'}
                                      >
                                         <SelectTrigger className="w-full md:w-[280px]">
                                             <SelectValue placeholder="Choisir une action" />
@@ -301,3 +294,5 @@ export default function ModAssistantPage() {
     </PageTransitionWrapper>
   );
 }
+
+`
