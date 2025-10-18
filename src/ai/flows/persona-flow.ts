@@ -90,6 +90,12 @@ const ConversationHistoryItemSchema = z.object({
     content: z.string().describe("The content of the message.")
 });
 
+const SanctionHistoryEntrySchema = z.object({
+  action_type: z.string(),
+  reason: z.string().optional(),
+  timestamp: z.string(),
+});
+
 const PersonaMemorySchema = z.object({
     content: z.string().describe("A piece of information remembered about a user or a situation."),
     salience_score: z.number().describe("How important this memory is (1-10).")
@@ -100,6 +106,7 @@ const PersonaInteractionInputSchema = z.object({
     personaPrompt: z.string().describe("The full personality prompt of the character who is speaking."),
     conversationHistory: z.array(ConversationHistoryItemSchema).describe("The recent conversation history in the channel. The last message is the one to respond to."),
     memories: z.array(PersonaMemorySchema).optional().describe("A list of relevant long-term memories about the users or topic at hand. Some memories might be about yourself; use them to stay consistent."),
+    userSanctionHistory: z.array(SanctionHistoryEntrySchema).optional().describe("The user's past sanctions on this server. Use this to subtly adapt your tone (e.g., be firmer with repeat offenders). Do not mention their history directly."),
     photoDataUri: z
         .string()
         .optional()
@@ -152,6 +159,15 @@ Voici des souvenirs pertinents sur les gens, le sujet ou toi-même. Utilise-les 
 Tu n'as aucun souvenir à long terme pertinent pour cette conversation. Repose-toi sur ta personnalité et l'historique récent.
 {{/if}}
 --- END OF MEMORIES ---
+
+--- USER SANCTION HISTORY ---
+{{#if userSanctionHistory}}
+L'utilisateur avec qui tu parles a l'historique de sanctions suivant. Tu peux adapter ton ton en fonction (être plus ferme, plus prudent), mais **ne mentionne jamais directement ces sanctions**.
+{{#each userSanctionHistory}}
+- Action: {{this.action_type}}, Raison: {{this.reason}}, Date: {{this.timestamp}}
+{{/each}}
+{{/if}}
+--- END OF SANCTION HISTORY ---
 
 --- RECENT CONVERSATION HISTORY ---
 Voici l'historique récent de la conversation. Le nom de l'utilisateur est son pseudo sur le serveur.

@@ -1,7 +1,7 @@
 
 
 import { Events, Message, Collection, TextChannel, EmbedBuilder, AttachmentBuilder, DMChannel } from 'discord.js';
-import { getServerConfig, getPersonasForGuild, getMemoriesForPersona, createMultipleMemories } from '@/lib/db';
+import { getServerConfig, getPersonasForGuild, getMemoriesForPersona, createMultipleMemories, getUserSanctionHistory } from '@/lib/db';
 import { personaInteractionFlow, generatePersonaImage } from '@/ai/flows/persona-flow';
 import { memoryFlow } from '@/ai/flows/memory-flow';
 import type { Persona, ConversationHistoryItem } from '@/types';
@@ -147,6 +147,9 @@ async function handlePersonaInteraction(message: Message, persona: Persona, guil
     const relevantMemories = getMemoriesForPersona(persona.id, [message.author.id]);
     console.log(`[Persona] Retrieved ${relevantMemories.length} relevant memories for "${persona.name}".`);
 
+    const userSanctionHistory = getUserSanctionHistory(guild.id, message.author.id);
+
+
     let result;
     let lastError: any;
     try {
@@ -155,6 +158,7 @@ async function handlePersonaInteraction(message: Message, persona: Persona, guil
             personaPrompt: persona.persona_prompt,
             conversationHistory: currentHistory, 
             memories: relevantMemories.map(m => ({ content: m.content, salience_score: m.salience_score })),
+            userSanctionHistory: userSanctionHistory,
             photoDataUri: photoDataUri,
             interactionContext: interactionContext,
         });

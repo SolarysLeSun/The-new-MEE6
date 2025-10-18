@@ -11,6 +11,12 @@ import { z } from 'genkit';
 import type { KnowledgeBaseItem } from '@/types';
 
 // Define schemas for input and output
+const SanctionHistoryEntrySchema = z.object({
+  action_type: z.string(),
+  reason: z.string().optional(),
+  timestamp: z.string(),
+});
+
 const KnowledgeBaseItemSchema = z.object({
   question: z.string().describe('A question or a set of keywords.'),
   answer: z.string().describe('The answer to the corresponding question.'),
@@ -30,6 +36,7 @@ export const ConversationalAgentInputSchema = z.object({
   agentPersonality: z.string().describe("A description of the agent's personality and tone."),
   customPrompt: z.string().optional().describe("Additional custom instructions for the agent."),
   knowledgeBase: z.array(KnowledgeBaseItemSchema).optional().describe('A list of Q&A pairs to provide context.'),
+  userSanctionHistory: z.array(SanctionHistoryEntrySchema).optional().describe("The user's past sanctions on this server. Use this to adapt your tone (e.g., be firmer with repeat offenders)."),
   conversationHistory: z.array(ConversationHistoryItemSchema).optional().describe('The last few messages in the conversation for context.'),
   allow_imagination: z.boolean().optional().describe("If true, the agent can create new information if it doesn't know the answer."),
   allow_freewheeling: z.boolean().optional().describe("If true, the agent can use insults, NSFW language, etc."),
@@ -109,6 +116,14 @@ Freewheeling Mode:
 - **Freewheeling is ON.** The usual rules of politeness are lifted. You are permitted to use strong language, insults, and discuss sensitive (NSFW) topics **if it is consistent with your defined persona**. You must still adhere to your core personality. This mode allows you to be truly unfiltered.
 {{else}}
 - **Freewheeling is OFF.** You must maintain a respectful and appropriate tone at all times. Do not use insults or discuss NSFW topics.
+{{/if}}
+
+User Sanction History:
+{{#if userSanctionHistory}}
+This user has the following past sanctions. Use this information to subtly adapt your tone. For example, be firmer with users who have multiple warnings, but do not explicitly mention their history.
+{{#each userSanctionHistory}}
+- Action: {{this.action_type}}, Reason: {{this.reason}}, Date: {{this.timestamp}}
+{{/each}}
 {{/if}}
 
 Conversation History:

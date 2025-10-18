@@ -1,7 +1,7 @@
 
 
 import { Events, Message, Collection, EmbedBuilder, TextChannel, AttachmentBuilder } from 'discord.js';
-import { getServerConfig, addKnowledgeBaseItem } from '../../../src/lib/db';
+import { getServerConfig, addKnowledgeBaseItem, getUserSanctionHistory } from '../../../src/lib/db';
 import { conversationalAgentFlow } from '../../../src/ai/flows/conversational-agent-flow';
 import { knowledgeCreationFlow } from '../../../src/ai/flows/knowledge-creation-flow';
 import { faqFlow } from '../../../src/ai/flows/faq-flow';
@@ -96,6 +96,9 @@ async function handleConversationalAgent(message: Message) {
         if (imageAttachment) {
             photoDataUri = await imageUrlToDataUri(imageAttachment.url);
         }
+        
+        const userSanctionHistory = getUserSanctionHistory(message.guild.id, message.author.id);
+
 
         // Fetch last 5 messages for context, unless it's a dedicated channel (which has its own history)
         let historyForPrompt: { user: string, content: string }[] = [];
@@ -123,6 +126,7 @@ async function handleConversationalAgent(message: Message) {
             customPrompt: config.custom_prompt,
             knowledgeBase: config.knowledge_base,
             conversationHistory: historyForPrompt,
+            userSanctionHistory: userSanctionHistory,
             photoDataUri: photoDataUri,
             allow_imagination: config.allow_imagination,
             allow_freewheeling: config.allow_freewheeling,
