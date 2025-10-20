@@ -226,3 +226,35 @@ export interface AntiAfkConfig {
     timeout_minutes: number;
     afk_channel_id: string | null;
 }
+
+// --- Embed Builder Specific Types ---
+export interface EmbedField {
+    id: string; // Used for React keys
+    name: string;
+    value: string;
+    inline: boolean;
+}
+
+export interface DiscordEmbed {
+    title: string;
+    description: string;
+    url?: string;
+    color: number | string;
+    author: {
+        name: string;
+        url: string;
+        icon_url: string;
+    };
+    image: {
+        url: string;
+    };
+    thumbnail: {
+        url: string;
+    };
+    footer: {
+        text: string;
+        icon_url: string;
+    };
+    timestamp: boolean;
+    fields: EmbedField[];
+}
