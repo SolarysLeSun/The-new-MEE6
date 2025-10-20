@@ -1,7 +1,7 @@
 
-
 'use client';
 
+import * as React from 'react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -412,7 +412,7 @@ export default function EmbedBuilderPage() {
                             <Button variant="ghost" size="icon"><Smile /></Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 h-96">
-                             <h4 className="font-medium text-lg leading-none mb-4">Emojis</h4>
+                             <DialogTitle className="font-medium text-lg leading-none mb-4">Emojis</DialogTitle>
                              <div className="h-full overflow-y-auto">
                                 <p className="font-bold text-sm mb-2">Marcus</p>
                                 <div className="flex flex-wrap gap-2">
