@@ -410,14 +410,14 @@ export default function EmbedBuilderPage() {
                                 <p className="font-bold text-sm mb-2">Marcus</p>
                                 <div className="flex flex-wrap gap-2">
                                 {marcusEmojis.map(emoji => (
-                                    <Image key={emoji.id} src={emoji.url} alt={emoji.name} width={32} height={32} className="cursor-pointer" onClick={() => handleEmojiSelect(emoji)} />
+                                    <Image key={emoji.id} src={emoji.url} alt={emoji.name || ''} width={32} height={32} className="cursor-pointer" onClick={() => handleEmojiSelect(emoji)} />
                                 ))}
                                 </div>
                                 <Separator className="my-4"/>
                                 <p className="font-bold text-sm mb-2">Emojis du Serveur</p>
                                 <div className="flex flex-wrap gap-2">
                                 {serverEmojis.map(emoji => (
-                                    <Image key={emoji.id} src={emoji.url} alt={emoji.name} width={32} height={32} className="cursor-pointer" onClick={() => handleEmojiSelect(emoji)} />
+                                    <Image key={emoji.id} src={emoji.url} alt={emoji.name || ''} width={32} height={32} className="cursor-pointer" onClick={() => handleEmojiSelect(emoji)} />
                                 ))}
                                 </div>
                              </div>
@@ -512,4 +512,3 @@ if (typeof window !== 'undefined' && !(window as any).uuidv4) {
     (window as any).uuidv4 = uuidv4;
 }
 
-    

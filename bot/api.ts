@@ -558,7 +558,7 @@ export function startApi(client: Client) {
             res.status(200).json({ success: true });
         } catch (error: any) {
             console.error('[API] Error sending webhook embed:', error);
-            res.status(500).json({ error: `Failed to send embed: ${error.message}` });
+            res.status(500).json({ error: error.message || 'Failed to send embed' });
         }
     });
     
