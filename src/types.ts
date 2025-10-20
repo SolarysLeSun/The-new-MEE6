@@ -241,7 +241,7 @@ export interface EmbedButton {
     style: 'Primary' | 'Secondary' | 'Success' | 'Danger' | 'Link';
     action_type: 'link' | 'give_role'; // More can be added later
     action_value: string; // URL for link, Role ID for give_role
-    emoji?: string;
+    emoji: string;
 }
 
 export interface DiscordEmbed {
@@ -249,21 +249,21 @@ export interface DiscordEmbed {
     description?: string;
     url?: string;
     color?: number | string;
-    author: {
+    author?: {
         name: string;
         url?: string;
         icon_url?: string;
     };
-    image: {
+    image?: {
         url: string;
     };
-    thumbnail: {
+    thumbnail?: {
         url: string;
     };
-    footer: {
+    footer?: {
         text: string;
         icon_url?: string;
     };
-    timestamp: boolean;
-    fields: EmbedField[];
+    timestamp?: boolean;
+    fields?: EmbedField[];
 }

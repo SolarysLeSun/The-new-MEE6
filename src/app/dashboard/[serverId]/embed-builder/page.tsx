@@ -1,14 +1,15 @@
 
+
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Eye, PencilRuler, Send, Sparkles, Loader2, Trash2, PlusCircle } from 'lucide-react';
+import { Eye, PencilRuler, Send, Sparkles, Loader2, Trash2, PlusCircle, Smile } from 'lucide-react';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { Combobox } from '@/components/ui/combobox';
 import { useToast } from '@/hooks/use-toast';
@@ -16,9 +17,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import type { DiscordEmbed, EmbedField } from '@/types';
+import type { DiscordEmbed, EmbedField, EmbedButton } from '@/types';
 import { Switch } from '@/components/ui/switch';
 import { v4 as uuidv4 } from 'uuid';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import Image from 'next/image';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -27,6 +30,23 @@ interface DiscordChannel {
     name: string;
     type: number;
 }
+
+interface DiscordEmoji {
+    id: string;
+    name: string;
+    animated: boolean;
+    url: string;
+}
+
+const marcusEmojis: DiscordEmoji[] = [
+    { id: '1421563500190371932', name: 'fleche', animated: false, url: '' },
+    { id: '1421563605630845009', name: 'point_h', animated: false, url: '' },
+    { id: '1421563647909560462', name: 'warn', animated: false, url: '' },
+    { id: '1421563353888723084', name: 'Oui', animated: false, url: '' },
+    { id: '1421563259537850471', name: 'Non', animated: false, url: '' },
+    { id: '1421563335094042796', name: 'Option', animated: false, url: '' },
+];
+
 
 const initialEmbed: DiscordEmbed = {
     title: "Titre de l'Embed",
@@ -43,6 +63,9 @@ const initialEmbed: DiscordEmbed = {
     ]
 };
 
+type SetState<T> = React.Dispatch<React.SetStateAction<T>>;
+type InputRef = React.RefObject<HTMLInputElement | HTMLTextAreaElement>;
+
 export default function EmbedBuilderPage() {
     const params = useParams();
     const serverId = params.serverId as string;
@@ -51,30 +74,37 @@ export default function EmbedBuilderPage() {
     const [content, setContent] = useState('Bienvenue sur le serveur !');
     const [embeds, setEmbeds] = useState<DiscordEmbed[]>([initialEmbed]);
     const [channels, setChannels] = useState<DiscordChannel[]>([]);
+    const [emojis, setEmojis] = useState<DiscordEmoji[]>([]);
     const [selectedChannel, setSelectedChannel] = useState<string>('');
     const [webhookName, setWebhookName] = useState('');
     const [webhookAvatarUrl, setWebhookAvatarUrl] = useState('');
-    const [loadingChannels, setLoadingChannels] = useState(true);
+    const [loading, setLoading] = useState(true);
     const [isSending, setIsSending] = useState(false);
+    const [components, setComponents] = useState<EmbedButton[]>([]);
+    const [focusedInput, setFocusedInput] = useState<{ setter: SetState<any>, key: string | number, ref: InputRef} | null>(null);
+    const contentRef = useRef<HTMLTextAreaElement>(null);
+
 
     useEffect(() => {
-        const fetchChannels = async () => {
+        const fetchServerData = async () => {
+            setLoading(true);
             try {
                 const res = await fetch(`${API_URL}/get-server-details/${serverId}`);
-                if (!res.ok) throw new Error('Failed to fetch channels');
+                if (!res.ok) throw new Error('Failed to fetch server data');
                 const data = await res.json();
                 const textChannels = data.channels.filter((c: DiscordChannel) => c.type === 0)
                 setChannels(textChannels);
+                setEmojis(data.emojis);
                 if (textChannels.length > 0) {
                     setSelectedChannel(textChannels[0]?.id || '');
                 }
             } catch (error) {
-                toast({ title: "Erreur", description: "Impossible de charger la liste des salons.", variant: "destructive" });
+                toast({ title: "Erreur", description: "Impossible de charger les données du serveur.", variant: "destructive" });
             } finally {
-                setLoadingChannels(false);
+                setLoading(false);
             }
         };
-        fetchChannels();
+        fetchServerData();
     }, [serverId, toast]);
 
     const handleEmbedChange = (index: number, field: keyof DiscordEmbed, value: any) => {
@@ -112,7 +142,33 @@ export default function EmbedBuilderPage() {
         newEmbeds[embedIndex].fields = (newEmbeds[embedIndex].fields || []).filter(f => f.id !== fieldId);
         setEmbeds(newEmbeds);
     };
+
+    const addComponent = () => {
+        if (components.length >= 5) {
+            toast({ title: "Limite atteinte", description: "Vous ne pouvez avoir que 5 boutons par message.", variant: "destructive"});
+            return;
+        }
+        const newButton: EmbedButton = {
+            id: uuidv4(),
+            label: 'Nouveau Bouton',
+            style: 'Primary',
+            action_type: 'link',
+            action_value: '',
+            emoji: '',
+        };
+        setComponents([...components, newButton]);
+    };
     
+    const updateComponent = (index: number, field: keyof EmbedButton, value: string) => {
+        const newComponents = [...components];
+        (newComponents[index] as any)[field] = value;
+        setComponents(newComponents);
+    };
+    
+    const removeComponent = (id: string) => {
+        setComponents(components.filter(c => c.id !== id));
+    };
+
     const handleSend = async () => {
         if (!selectedChannel) {
             toast({ title: "Aucun salon sélectionné", variant: "destructive" });
@@ -121,23 +177,19 @@ export default function EmbedBuilderPage() {
 
         const finalEmbeds = embeds.map(embed => {
             const copy: any = { ...embed };
-            // Convert color from hex to decimal
             if (typeof copy.color === 'string') {
                 copy.color = parseInt(copy.color.replace('#', ''), 16);
             }
-            // Add timestamp if enabled
             if (copy.timestamp) {
                 copy.timestamp = new Date().toISOString();
             } else {
                 delete copy.timestamp;
             }
-            // Clean up empty objects
-            if(!copy.author.name && !copy.author.url && !copy.author.icon_url) delete copy.author;
-            if(!copy.footer.text && !copy.footer.icon_url) delete copy.footer;
-            if(!copy.image.url) delete copy.image;
-            if(!copy.thumbnail.url) delete copy.thumbnail;
+            if(!copy.author?.name && !copy.author?.url && !copy.author?.icon_url) delete copy.author;
+            if(!copy.footer?.text && !copy.footer?.icon_url) delete copy.footer;
+            if(!copy.image?.url) delete copy.image;
+            if(!copy.thumbnail?.url) delete copy.thumbnail;
             
-            // Clean up field IDs
             if(copy.fields) {
                 copy.fields = copy.fields.map(({ id, ...rest }: EmbedField) => rest);
             }
@@ -153,6 +205,7 @@ export default function EmbedBuilderPage() {
                 body: JSON.stringify({
                     channelId: selectedChannel,
                     embedData: { content, embeds: finalEmbeds },
+                    components: components,
                     webhookName: webhookName || undefined,
                     webhookAvatarUrl: webhookAvatarUrl || undefined,
                 }),
@@ -168,8 +221,35 @@ export default function EmbedBuilderPage() {
             setIsSending(false);
         }
     };
-
+    
     const channelOptions = channels.map(c => ({ value: c.id, label: `# ${c.name}` }));
+
+    const handleEmojiSelect = (emoji: DiscordEmoji) => {
+        if (!focusedInput || !focusedInput.ref.current) return;
+        
+        const { ref, setter, key } = focusedInput;
+        const start = ref.current.selectionStart || 0;
+        const end = ref.current.selectionEnd || 0;
+        const emojiMarkdown = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
+
+        setter((prev: any) => {
+            if (typeof prev === 'string') {
+                return prev.slice(0, start) + emojiMarkdown + prev.slice(end);
+            }
+            if (Array.isArray(prev)) { // For embeds
+                const newArray = [...prev];
+                const item = newArray[key as number];
+                item.description = item.description.slice(0, start) + emojiMarkdown + item.description.slice(end);
+                return newArray;
+            }
+            return prev;
+        });
+    };
+    
+    if (loading) {
+        return <Skeleton className="w-full h-screen"/>
+    }
+
 
   return (
     <PageTransitionWrapper className="space-y-8 text-white max-w-7xl">
@@ -190,11 +270,16 @@ export default function EmbedBuilderPage() {
             <Card>
                 <CardHeader><CardTitle>Contenu du Message</CardTitle></CardHeader>
                 <CardContent>
-                    <Textarea placeholder="Contenu textuel principal du message..." value={content} onChange={(e) => setContent(e.target.value)}/>
+                    <Textarea 
+                      placeholder="Contenu textuel principal du message..." 
+                      value={content} 
+                      onChange={(e) => setContent(e.target.value)}
+                      onFocus={() => setFocusedInput({ setter: setContent, key: 'content', ref: contentRef })}
+                      ref={contentRef}
+                    />
                 </CardContent>
             </Card>
 
-            {/* Embed Editor Form */}
              <Card>
                  <CardHeader><CardTitle>Éditeur d'Embed</CardTitle></CardHeader>
                  <CardContent>
@@ -206,10 +291,10 @@ export default function EmbedBuilderPage() {
                                      {/* Author */}
                                      <div className="space-y-2">
                                          <h4 className="font-semibold">Auteur</h4>
-                                         <Input placeholder="Nom de l'auteur" value={embed.author.name} onChange={(e) => handleNestedEmbedChange(index, 'author', 'name', e.target.value)} />
+                                         <Input placeholder="Nom de l'auteur" value={embed.author?.name} onChange={(e) => handleNestedEmbedChange(index, 'author', 'name', e.target.value)} />
                                          <div className="grid grid-cols-2 gap-2">
-                                             <Input placeholder="URL de l'auteur" value={embed.author.url} onChange={(e) => handleNestedEmbedChange(index, 'author', 'url', e.target.value)} />
-                                             <Input placeholder="URL de l'icône de l'auteur" value={embed.author.icon_url} onChange={(e) => handleNestedEmbedChange(index, 'author', 'icon_url', e.target.value)} />
+                                             <Input placeholder="URL de l'auteur" value={embed.author?.url} onChange={(e) => handleNestedEmbedChange(index, 'author', 'url', e.target.value)} />
+                                             <Input placeholder="URL de l'icône de l'auteur" value={embed.author?.icon_url} onChange={(e) => handleNestedEmbedChange(index, 'author', 'icon_url', e.target.value)} />
                                          </div>
                                      </div>
                                      <Separator/>
@@ -230,15 +315,15 @@ export default function EmbedBuilderPage() {
                                      {/* Images */}
                                      <div className="space-y-2">
                                          <h4 className="font-semibold">Images</h4>
-                                         <Input placeholder="URL de l'image principale" value={embed.image.url} onChange={(e) => handleNestedEmbedChange(index, 'image', 'url', e.target.value)} />
-                                         <Input placeholder="URL de la miniature" value={embed.thumbnail.url} onChange={(e) => handleNestedEmbedChange(index, 'thumbnail', 'url', e.target.value)} />
+                                         <Input placeholder="URL de l'image principale" value={embed.image?.url} onChange={(e) => handleNestedEmbedChange(index, 'image', 'url', e.target.value)} />
+                                         <Input placeholder="URL de la miniature" value={embed.thumbnail?.url} onChange={(e) => handleNestedEmbedChange(index, 'thumbnail', 'url', e.target.value)} />
                                      </div>
                                       <Separator/>
                                      {/* Footer */}
                                      <div className="space-y-2">
                                          <h4 className="font-semibold">Pied de page</h4>
-                                         <Input placeholder="Texte du pied de page" value={embed.footer.text} onChange={(e) => handleNestedEmbedChange(index, 'footer', 'text', e.target.value)} maxLength={2048}/>
-                                         <Input placeholder="URL de l'icône du pied de page" value={embed.footer.icon_url} onChange={(e) => handleNestedEmbedChange(index, 'footer', 'icon_url', e.target.value)} />
+                                         <Input placeholder="Texte du pied de page" value={embed.footer?.text} onChange={(e) => handleNestedEmbedChange(index, 'footer', 'text', e.target.value)} maxLength={2048}/>
+                                         <Input placeholder="URL de l'icône du pied de page" value={embed.footer?.icon_url} onChange={(e) => handleNestedEmbedChange(index, 'footer', 'icon_url', e.target.value)} />
                                          <div className="flex items-center gap-2 pt-2">
                                              <Switch id={`timestamp-${index}`} checked={!!embed.timestamp} onCheckedChange={(val) => handleEmbedChange(index, 'timestamp', val)}/>
                                              <Label htmlFor={`timestamp-${index}`}>Afficher l'horodatage</Label>
@@ -248,7 +333,7 @@ export default function EmbedBuilderPage() {
                                      {/* Fields */}
                                       <div className="space-y-2">
                                          <h4 className="font-semibold">Champs</h4>
-                                         {(embed.fields || []).map((field) => (
+                                         {(embed.fields || []).map((field, fieldIndex) => (
                                              <div key={field.id} className="p-3 border rounded-md space-y-2">
                                                  <div className="flex justify-end"><Button variant="ghost" size="icon" onClick={() => removeField(index, field.id)}><Trash2 className="w-4 h-4 text-destructive"/></Button></div>
                                                  <Input placeholder="Nom du champ" value={field.name} onChange={(e) => updateField(index, field.id, 'name', e.target.value)} maxLength={256}/>
@@ -267,13 +352,72 @@ export default function EmbedBuilderPage() {
                      </Accordion>
                  </CardContent>
              </Card>
+
+            {/* Components (Buttons) */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Composants (Boutons)</CardTitle>
+                    <CardDescription>Ajoutez des boutons interactifs sous votre message.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                     {components.map((component, index) => (
+                        <div key={component.id} className="p-4 border rounded-lg bg-card-foreground/5 space-y-4">
+                             <div className="flex justify-between items-center">
+                                <Label className="font-semibold">Bouton {index + 1}</Label>
+                                <Button variant="ghost" size="icon" onClick={() => removeComponent(component.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <Input placeholder="Texte du bouton" value={component.label} onChange={e => updateComponent(index, 'label', e.target.value)} />
+                                <Input placeholder="Emoji (optionnel)" value={component.emoji || ''} onChange={e => updateComponent(index, 'emoji', e.target.value)} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <Select value={component.style} onValueChange={(val: 'Primary'|'Secondary'|'Success'|'Danger'|'Link') => updateComponent(index, 'style', val)}>
+                                    <SelectTrigger><SelectValue/></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Primary">Primaire (Bleu)</SelectItem>
+                                        <SelectItem value="Secondary">Secondaire (Gris)</SelectItem>
+                                        <SelectItem value="Success">Succès (Vert)</SelectItem>
+                                        <SelectItem value="Danger">Danger (Rouge)</SelectItem>
+                                        <SelectItem value="Link">Lien</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                 <Input placeholder="URL ou ID d'Action" value={component.action_value} onChange={e => updateComponent(index, 'action_value', e.target.value)} />
+                            </div>
+                        </div>
+                     ))}
+                     <Button variant="outline" className="w-full" onClick={addComponent} disabled={components.length >= 5}><PlusCircle />Ajouter un bouton</Button>
+                </CardContent>
+            </Card>
         </div>
 
          {/* Live Preview */}
         <div className="sticky top-24">
             <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="flex items-center gap-2"><Eye/>Aperçu en Direct</CardTitle>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon"><Smile /></Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 h-96">
+                             <h4 className="font-medium text-lg leading-none mb-4">Emojis</h4>
+                             <div className="h-full overflow-y-auto">
+                                <p className="font-bold text-sm mb-2">Marcus</p>
+                                <div className="flex flex-wrap gap-2">
+                                {marcusEmojis.map(emoji => (
+                                    <span key={emoji.id} className="cursor-pointer text-2xl" onClick={() => handleEmojiSelect(emoji)}>{`<:${emoji.name}:${emoji.id}>`}</span>
+                                ))}
+                                </div>
+                                <Separator className="my-4"/>
+                                <p className="font-bold text-sm mb-2">Emojis du Serveur</p>
+                                <div className="flex flex-wrap gap-2">
+                                {emojis.map(emoji => (
+                                    <Image key={emoji.id} src={emoji.url} alt={emoji.name} width={32} height={32} className="cursor-pointer" onClick={() => handleEmojiSelect(emoji)} />
+                                ))}
+                                </div>
+                             </div>
+                        </PopoverContent>
+                    </Popover>
                 </CardHeader>
                 <CardContent className="bg-secondary/30 p-4 rounded-lg space-y-2 max-h-[70vh] overflow-y-auto">
                     {content && <p className="text-white whitespace-pre-wrap">{content}</p>}
@@ -288,8 +432,8 @@ export default function EmbedBuilderPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                                         {embed.fields.map((field) => (
                                             <div key={field.id} className={field.inline ? 'col-span-1' : 'col-span-1 md:col-span-3'}>
-                                                <h4 className="font-semibold text-sm text-gray-200">{field.name}</h4>
-                                                <p className="text-sm text-gray-400 whitespace-pre-wrap">{field.value}</p>
+                                                <h4 className="font-semibold text-sm text-gray-200">{field.name || '​'}</h4>
+                                                <p className="text-sm text-gray-400 whitespace-pre-wrap">{field.value || '​'}</p>
                                             </div>
                                         ))}
                                     </div>
@@ -306,6 +450,15 @@ export default function EmbedBuilderPage() {
                             </div>
                         )
                     })}
+                     {components.length > 0 && (
+                        <div className="flex gap-2 mt-2">
+                            {components.map((btn) => (
+                                <Button key={btn.id} variant={btn.style === 'Link' ? 'link' : btn.style.toLowerCase() as any} size="sm">
+                                    {btn.label}
+                                </Button>
+                            ))}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>
@@ -319,7 +472,7 @@ export default function EmbedBuilderPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="space-y-2 lg:col-span-1">
                         <Label>Salon d'envoi</Label>
-                        {loadingChannels ? <Skeleton className="h-10 w-full" /> : (
+                        {loading ? <Skeleton className="h-10 w-full" /> : (
                             <Combobox
                                 options={channelOptions}
                                 value={selectedChannel}
