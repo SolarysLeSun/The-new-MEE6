@@ -329,7 +329,7 @@ export function startApi(client: Client) {
         }
 
         try {
-            const result = redeemPremiumKey(key, guildId);
+            const result = redeemPremiumKey(key, guildId, req.body.userId);
             if (result.success) {
                 res.status(200).json(result);
             } else {

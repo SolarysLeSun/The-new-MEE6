@@ -236,14 +236,14 @@ export interface EmbedField {
 }
 
 export interface DiscordEmbed {
-    title: string;
-    description: string;
+    title?: string;
+    description?: string;
     url?: string;
-    color: number | string;
+    color?: number | string;
     author: {
         name: string;
-        url: string;
-        icon_url: string;
+        url?: string;
+        icon_url?: string;
     };
     image: {
         url: string;
@@ -253,7 +253,7 @@ export interface DiscordEmbed {
     };
     footer: {
         text: string;
-        icon_url: string;
+        icon_url?: string;
     };
     timestamp: boolean;
     fields: EmbedField[];
