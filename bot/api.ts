@@ -216,7 +216,7 @@ export function startApi(client: Client) {
                 isPremium: premiumConfig?.premium || false,
                 channels: Array.from(guild.channels.cache.values()).map(c => ({ id: c.id, name: c.name, type: c.type })),
                 roles: Array.from(guild.roles.cache.values()).map(r => ({ id: r.id, name: r.name, color: r.color })),
-                emojis: Array.from(guild.emojis.cache.values()).map(e => ({ id: e.id, name: e.name, animated: e.animated, url: e.url })),
+                emojis: Array.from(guild.emojis.cache.values()).map(e => ({ id: e.id, name: e.name, animated: e.animated, url: e.imageURL() })),
             };
             
             res.json(serverDetails);
