@@ -1,7 +1,7 @@
 
 import express from 'express';
 import cors from 'cors';
-import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder } from 'discord.js';
+import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType } from 'discord.js';
 import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard } from '@/lib/db';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
@@ -477,9 +477,9 @@ export function startApi(client: Client) {
     });
 
     app.post('/api/send-webhook-embed', async (req, res) => {
-        const { channelId, embedData, webhookName, webhookAvatarUrl } = req.body;
-        if (!channelId || !embedData) {
-            return res.status(400).json({ error: 'channelId and embedData are required.' });
+        const { channelId, embedData, components, webhookName, webhookAvatarUrl } = req.body;
+        if (!channelId) {
+            return res.status(400).json({ error: 'channelId is required.' });
         }
 
         try {
@@ -502,11 +502,36 @@ export function startApi(client: Client) {
                 });
             }
 
+            // Build components if they exist
+            let actionRows = [];
+            if (components && components.length > 0) {
+                const row = new ActionRowBuilder<ButtonBuilder>();
+                components.forEach((button: any) => {
+                    const btn = new ButtonBuilder()
+                        .setLabel(button.label);
+
+                    if (button.style === 'Link') {
+                        btn.setStyle(ButtonStyle.Link).setURL(button.action_value);
+                    } else {
+                        // For non-link buttons, a custom_id is needed.
+                        btn.setCustomId(button.id)
+                           .setStyle(ButtonStyle[button.style as keyof typeof ButtonStyle]);
+                    }
+
+                    if(button.emoji) {
+                        btn.setEmoji(button.emoji);
+                    }
+                    row.addComponents(btn);
+                });
+                actionRows.push(row);
+            }
+
             await webhook.send({
                 content: embedData.content,
                 username: webhookName || (identityConfig?.enabled ? identityConfig.nickname : client.user?.username),
                 avatarURL: webhookAvatarUrl || (identityConfig?.enabled ? identityConfig.avatar_url : client.user?.displayAvatarURL()),
-                embeds: embedData.embeds
+                embeds: embedData.embeds,
+                components: actionRows,
             });
 
             res.status(200).json({ success: true });

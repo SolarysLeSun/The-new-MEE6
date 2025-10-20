@@ -235,6 +235,15 @@ export interface EmbedField {
     inline: boolean;
 }
 
+export interface EmbedButton {
+    id: string; // Used for React keys
+    label: string;
+    style: 'Primary' | 'Secondary' | 'Success' | 'Danger' | 'Link';
+    action_type: 'link' | 'give_role'; // More can be added later
+    action_value: string; // URL for link, Role ID for give_role
+    emoji?: string;
+}
+
 export interface DiscordEmbed {
     title?: string;
     description?: string;

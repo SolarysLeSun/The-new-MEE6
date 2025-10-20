@@ -47,18 +47,12 @@ const RappelCommand: Command = {
         await interaction.reply({ content: `<:Oui:1421563353888723084> D'accord ! Je vous le rappellerai <t:${reminderTimestamp}:R>.`, ephemeral: true });
 
         setTimeout(async () => {
-            const cardUrl = new URL(`${process.env.PANEL_BASE_URL}/card/rappel`);
-            cardUrl.searchParams.append('authorName', interaction.user.username);
-            cardUrl.searchParams.append('authorAvatar', interaction.user.displayAvatarURL({ extension: 'png', size: 128 }));
-            cardUrl.searchParams.append('message', message);
-            cardUrl.searchParams.append('timestamp', creationTimestamp.toString());
-            
             const embed = new EmbedBuilder()
                 .setColor(0x3498DB)
                 .setTitle('⏰ C\'est l\'heure !')
-                .setImage(cardUrl.toString())
-                .setDescription(`Rappel demandé <t:${creationTimestamp}:R>`);
-
+                .setDescription(`Rappel demandé <t:${creationTimestamp}:R>:\n\n> ${message}`)
+                .setTimestamp();
+            
             const row = new ActionRowBuilder<ButtonBuilder>()
                 .addComponents(
                     new ButtonBuilder()
