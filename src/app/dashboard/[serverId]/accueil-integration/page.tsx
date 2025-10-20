@@ -214,6 +214,7 @@ function WelcomePageContent({ isPremium, serverId }: { isPremium: boolean, serve
                         <div className="space-y-4 border p-4 rounded-lg">
                              <div className="space-y-2">
                                 <Label>URL de l'image de fond</Label>
+                                <p className="text-sm text-muted-foreground">Astuce : Vous pouvez utiliser un service comme <a href="https://imgur.com/upload" target="_blank" rel="noopener noreferrer" className="text-primary underline">imgur.com</a> pour héberger votre image et obtenir un lien direct.</p>
                                 <Input placeholder="https://example.com/image.png" defaultValue={welcomeConfig.card_background_url || ''} onBlur={(e) => handleWelcomeChange('card_background_url', e.target.value)} />
                             </div>
                             <div className="space-y-2">
