@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { FileText, UploadCloud, MessageSquare, Paperclip, Reply } from 'lucide-react';
+import { FileText, UploadCloud, Reply, Paperclip } from 'lucide-react';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -38,7 +39,7 @@ interface TranscriptMessage {
 
 const renderContent = (content: string) => {
     const mentionRegex = /<(@[!&]?|#)(\d+)>/g;
-    return content.replace(mentionRegex, (match, type, id) => {
+    return content.replace(mentionRegex, (match) => {
         return `<span class="bg-primary/20 text-primary/90 px-1 rounded-sm">${match}</span>`;
     });
 };
@@ -222,3 +223,5 @@ export default function TranscriptViewerPage() {
         </PageTransitionWrapper>
     );
 }
+
+    
