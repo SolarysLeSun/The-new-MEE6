@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -217,8 +218,8 @@ export default function EmbedBuilderPage() {
             }
             toast({ title: "Succès", description: "Votre embed a été envoyé avec succès." });
         } catch (error: any) {
-            console.error("Erreur d'envoi de l'embed:", error.message);
-            toast({ title: "Erreur d'envoi", description: error.message, variant: "destructive" });
+            console.error("Erreur d'envoi de l'embed:", error);
+            toast({ title: "Erreur d'envoi", description: `Erreur: ${error.message}`, variant: "destructive" });
         } finally {
             setIsSending(false);
         }

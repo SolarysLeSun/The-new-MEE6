@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -15,6 +16,7 @@ import { Button } from './ui/button';
 import { Search } from 'lucide-react';
 import { navCategories } from './module-sidebar';
 import { cn } from '@/lib/utils';
+import { DialogTitle } from './ui/dialog';
 
 export function CommandMenu() {
   const router = useRouter();
@@ -55,6 +57,7 @@ export function CommandMenu() {
         </kbd>
       </Button>
       <CommandDialog open={open} onOpenChange={setOpen}>
+        <DialogTitle className="sr-only">Palette de commandes</DialogTitle>
         <CommandInput placeholder="Rechercher une fonctionnalité ou un module..." />
         <CommandList>
           <CommandEmpty>Aucun résultat trouvé.</CommandEmpty>
