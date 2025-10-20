@@ -40,11 +40,15 @@ async function updateChannelName(channel: NonThreadGuildBasedChannel) {
     if (channel.members.size === 0) {
         if (channel.name !== defaultChannelName) {
             console.log(`[Smart-Voice] Channel "${channel.name}" is empty. Resetting.`);
-            await channel.setName(defaultChannelName);
-            if (channel instanceof VoiceChannel) {
-                await channel.setTopic('');
+            try {
+                await channel.setName(defaultChannelName);
+                if (channel instanceof VoiceChannel) {
+                    await channel.setTopic('');
+                }
+                channelUpdateCache.delete(channel.id); // Clear cache on reset
+            } catch (error) {
+                console.error(`[Smart-Voice] Failed to reset channel ${channel.id}. It might have been deleted or a race condition occurred.`, error);
             }
-            channelUpdateCache.delete(channel.id); // Clear cache on reset
         }
         return;
     }
@@ -128,4 +132,3 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     }
 }
 
-    
