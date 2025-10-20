@@ -21,13 +21,8 @@ import { Switch } from '@/components/ui/switch';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import Image from 'next/image';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from '@/lib/utils';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -81,6 +76,7 @@ export default function EmbedBuilderPage() {
     const [focusedInput, setFocusedInput] = useState<{ setter: SetState<any>, key: string | number, ref: InputRef} | null>(null);
     const contentRef = useRef<HTMLTextAreaElement>(null);
 
+    const allEmojis = React.useMemo(() => [...marcusEmojis, ...serverEmojis], [marcusEmojis, serverEmojis]);
 
     useEffect(() => {
         const fetchServerData = async () => {
@@ -221,6 +217,7 @@ export default function EmbedBuilderPage() {
             }
             toast({ title: "Succès", description: "Votre embed a été envoyé avec succès." });
         } catch (error: any) {
+            console.error("Erreur d'envoi de l'embed:", error.message);
             toast({ title: "Erreur d'envoi", description: error.message, variant: "destructive" });
         } finally {
             setIsSending(false);
@@ -248,6 +245,15 @@ export default function EmbedBuilderPage() {
                 return newArray;
             }
             return prev;
+        });
+    };
+
+    const renderWithEmojis = (text: string) => {
+        if (!text) return text;
+        const emojiRegex = /<a?:(\w+):(\d+)>/g;
+        return text.replace(emojiRegex, (match, name, id) => {
+            const emoji = allEmojis.find(e => e.id === id);
+            return emoji ? `<img src="${emoji.url}" alt="${name}" class="inline-block h-5 w-5 mx-0.5" />` : match;
         });
     };
     
@@ -425,20 +431,20 @@ export default function EmbedBuilderPage() {
                     </Popover>
                 </CardHeader>
                 <CardContent className="bg-secondary/30 p-4 rounded-lg space-y-2 max-h-[70vh] overflow-y-auto">
-                    {content && <p className="text-white whitespace-pre-wrap">{content}</p>}
+                    {content && <p className="text-white whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: renderWithEmojis(content) }}></p>}
                     {embeds.map((embed, i) => {
                         const colorHex = typeof embed.color === 'number' ? `#${embed.color.toString(16).padStart(6, '0')}` : embed.color;
                         return (
                             <div key={i} className="bg-[#2B2D31] p-4 rounded border-l-4" style={{ borderColor: colorHex }}>
                                 {embed.author?.name && <p className="text-sm font-semibold flex items-center gap-2 mb-2"><img src={embed.author.icon_url || undefined} className="w-6 h-6 rounded-full" /> {embed.author.name}</p>}
-                                {embed.title && <h3 className="font-bold text-white">{embed.title}</h3>}
-                                {embed.description && <p className="text-sm text-gray-300 whitespace-pre-wrap">{embed.description}</p>}
+                                {embed.title && <h3 className="font-bold text-white" dangerouslySetInnerHTML={{ __html: renderWithEmojis(embed.title) }}></h3>}
+                                {embed.description && <p className="text-sm text-gray-300 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: renderWithEmojis(embed.description) }}></p>}
                                 {embed.fields && embed.fields.length > 0 && (
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                                         {embed.fields.map((field) => (
                                             <div key={field.id} className={field.inline ? 'col-span-1' : 'col-span-1 md:col-span-3'}>
-                                                <h4 className="font-semibold text-sm text-gray-200">{field.name || '​'}</h4>
-                                                <p className="text-sm text-gray-400 whitespace-pre-wrap">{field.value || '​'}</p>
+                                                <h4 className="font-semibold text-sm text-gray-200" dangerouslySetInnerHTML={{ __html: renderWithEmojis(field.name || '​') }}></h4>
+                                                <p className="text-sm text-gray-400 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: renderWithEmojis(field.value || '​') }}></p>
                                             </div>
                                         ))}
                                     </div>
@@ -449,7 +455,8 @@ export default function EmbedBuilderPage() {
                                 {embed.footer?.text && (
                                      <div className="flex items-center gap-2 text-xs text-gray-500 mt-4">
                                         {embed.footer.icon_url && <img src={embed.footer.icon_url} className="w-5 h-5 rounded-full"/>}
-                                        <span>{embed.footer.text} {embed.timestamp && `• Aujourd'hui à ${new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}`}</span>
+                                        <span dangerouslySetInnerHTML={{ __html: renderWithEmojis(embed.footer.text) }}></span>
+                                        {embed.timestamp && <span> • Aujourd'hui à {new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</span>}
                                     </div>
                                 )}
                             </div>
@@ -511,4 +518,3 @@ export default function EmbedBuilderPage() {
 if (typeof window !== 'undefined' && !(window as any).uuidv4) {
     (window as any).uuidv4 = uuidv4;
 }
-

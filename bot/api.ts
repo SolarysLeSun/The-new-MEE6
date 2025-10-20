@@ -1,7 +1,7 @@
 
 import express from 'express';
 import cors from 'cors';
-import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType } from 'discord.js';
+import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType, DiscordAPIError } from 'discord.js';
 import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard } from '@/lib/db';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
@@ -558,7 +558,10 @@ export function startApi(client: Client) {
             res.status(200).json({ success: true });
         } catch (error: any) {
             console.error('[API] Error sending webhook embed:', error);
-            res.status(500).json({ error: error.message || 'Failed to send embed' });
+            if (error instanceof DiscordAPIError) {
+                return res.status(400).json({ error: `Erreur de l'API Discord : ${error.message}` });
+            }
+            res.status(500).json({ error: `Erreur interne : ${error.message || 'Impossible d\'envoyer l\'embed'}` });
         }
     });
     
@@ -701,5 +704,3 @@ export function startApi(client: Client) {
         console.log(`[Bot API] Le serveur API interne écoute sur le port ${API_PORT}`);
     });
 }
-
-    
