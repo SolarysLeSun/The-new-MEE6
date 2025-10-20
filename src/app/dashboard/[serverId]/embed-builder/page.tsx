@@ -412,7 +412,7 @@ export default function EmbedBuilderPage() {
                             <Button variant="ghost" size="icon"><Smile /></Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 h-96">
-                             <DialogTitle className="font-medium text-lg leading-none mb-4">Emojis</DialogTitle>
+                             <p className="font-medium text-lg leading-none mb-4">Emojis</p>
                              <div className="h-full overflow-y-auto">
                                 <p className="font-bold text-sm mb-2">Marcus</p>
                                 <div className="flex flex-wrap gap-2">
@@ -519,3 +519,5 @@ export default function EmbedBuilderPage() {
 if (typeof window !== 'undefined' && !(window as any).uuidv4) {
     (window as any).uuidv4 = uuidv4;
 }
+
+    
