@@ -32,7 +32,7 @@ async function handleAutoTranslate(message: Message) {
                 description: `**Traduction :** ${result.translatedText}`,
                 footer: {
                     text: `Message original de ${message.author.tag}`,
-                    icon_url: message.author.displayAvatarURL(),
+                    icon_url: message.author.displayAvatarURL()  || '',
                 },
             };
 
@@ -49,7 +49,7 @@ async function handleAutoTranslate(message: Message) {
                 if (!webhook) {
                     webhook = await targetChannel.createWebhook({
                         name: WEBHOOK_NAME,
-                        avatar: message.client.user?.displayAvatarURL(),
+                        avatar: message.client.user?.displayAvatarURL() || undefined,
                         reason: 'Webhook pour la traduction automatique'
                     });
                 }
@@ -58,7 +58,7 @@ async function handleAutoTranslate(message: Message) {
                 await webhook.send({
                     content: result.translatedText,
                     username: message.member?.displayName || message.author.username,
-                    avatarURL: message.author.displayAvatarURL(),
+                    avatarURL: message.author.displayAvatarURL() || undefined,
                 });
             }
         }
@@ -79,3 +79,5 @@ export async function execute(message: Message) {
     
     return;
 }
+
+    

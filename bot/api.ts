@@ -1,5 +1,4 @@
 
-
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType } from 'discord.js';
@@ -16,6 +15,7 @@ import { fixEmbedJson } from '@/ai/flows/embed-json-fixer';
 const API_PORT = process.env.BOT_API_PORT || 3630; // toujour le port 3630 !!
 const OWNER_ID = '556529963877138442';
 const WEBHOOK_NAME = "Marcus";
+const MARCUS_EMOJI_GUILD_ID = '1245654161282826260';
 
 // --- Panel User Authentication ---
 
@@ -198,6 +198,25 @@ export function startApi(client: Client) {
             res.status(500).json({ error: 'Failed to fetch global AI status.' });
         }
     });
+    
+    app.get('/api/get-marcus-emojis', async (req, res) => {
+        try {
+            const guild = await client.guilds.fetch(MARCUS_EMOJI_GUILD_ID).catch(() => null);
+            if (!guild) {
+                return res.status(404).json({ error: 'Serveur des emojis Marcus introuvable.' });
+            }
+            const emojis = Array.from(guild.emojis.cache.values()).map(e => ({ 
+                id: e.id, 
+                name: e.name, 
+                animated: e.animated, 
+                url: e.imageURL({ size: 64 }) 
+            }));
+            res.json({ emojis });
+        } catch (error) {
+             console.error(`[Bot API] Erreur lors de la récupération des emojis Marcus:`, error);
+            res.status(500).json({ error: 'Erreur interne du serveur.' });
+        }
+    });
 
      app.get('/api/get-server-details/:guildId', async (req, res) => {
         const { guildId } = req.params;
@@ -216,7 +235,7 @@ export function startApi(client: Client) {
                 isPremium: premiumConfig?.premium || false,
                 channels: Array.from(guild.channels.cache.values()).map(c => ({ id: c.id, name: c.name, type: c.type })),
                 roles: Array.from(guild.roles.cache.values()).map(r => ({ id: r.id, name: r.name, color: r.color })),
-                emojis: Array.from(guild.emojis.cache.values()).map(e => ({ id: e.id, name: e.name, animated: e.animated, url: e.imageURL() })),
+                emojis: Array.from(guild.emojis.cache.values()).map(e => ({ id: e.id, name: e.name, animated: e.animated, url: e.imageURL({ size: 64 }) })),
             };
             
             res.json(serverDetails);
@@ -682,3 +701,5 @@ export function startApi(client: Client) {
         console.log(`[Bot API] Le serveur API interne écoute sur le port ${API_PORT}`);
     });
 }
+
+    

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -38,16 +37,6 @@ interface DiscordEmoji {
     url: string;
 }
 
-const marcusEmojis: DiscordEmoji[] = [
-    { id: '1421563500190371932', name: 'fleche', animated: false, url: '' },
-    { id: '1421563605630845009', name: 'point_h', animated: false, url: '' },
-    { id: '1421563647909560462', name: 'warn', animated: false, url: '' },
-    { id: '1421563353888723084', name: 'Oui', animated: false, url: '' },
-    { id: '1421563259537850471', name: 'Non', animated: false, url: '' },
-    { id: '1421563335094042796', name: 'Option', animated: false, url: '' },
-];
-
-
 const initialEmbed: DiscordEmbed = {
     title: "Titre de l'Embed",
     description: "Ceci est un exemple de description. Vous pouvez utiliser le **Markdown** de Discord.",
@@ -74,7 +63,8 @@ export default function EmbedBuilderPage() {
     const [content, setContent] = useState('Bienvenue sur le serveur !');
     const [embeds, setEmbeds] = useState<DiscordEmbed[]>([initialEmbed]);
     const [channels, setChannels] = useState<DiscordChannel[]>([]);
-    const [emojis, setEmojis] = useState<DiscordEmoji[]>([]);
+    const [serverEmojis, setServerEmojis] = useState<DiscordEmoji[]>([]);
+    const [marcusEmojis, setMarcusEmojis] = useState<DiscordEmoji[]>([]);
     const [selectedChannel, setSelectedChannel] = useState<string>('');
     const [webhookName, setWebhookName] = useState('');
     const [webhookAvatarUrl, setWebhookAvatarUrl] = useState('');
@@ -89,12 +79,20 @@ export default function EmbedBuilderPage() {
         const fetchServerData = async () => {
             setLoading(true);
             try {
-                const res = await fetch(`${API_URL}/get-server-details/${serverId}`);
-                if (!res.ok) throw new Error('Failed to fetch server data');
-                const data = await res.json();
-                const textChannels = data.channels.filter((c: DiscordChannel) => c.type === 0)
+                const [serverDetailsRes, marcusEmojisRes] = await Promise.all([
+                    fetch(`${API_URL}/get-server-details/${serverId}`),
+                    fetch(`${API_URL}/get-marcus-emojis`)
+                ]);
+                if (!serverDetailsRes.ok || !marcusEmojisRes.ok) throw new Error('Failed to fetch server data');
+                
+                const serverData = await serverDetailsRes.json();
+                const marcusData = await marcusEmojisRes.json();
+                
+                const textChannels = serverData.channels.filter((c: DiscordChannel) => c.type === 0)
                 setChannels(textChannels);
-                setEmojis(data.emojis);
+                setServerEmojis(serverData.emojis);
+                setMarcusEmojis(marcusData.emojis);
+                
                 if (textChannels.length > 0) {
                     setSelectedChannel(textChannels[0]?.id || '');
                 }
@@ -405,13 +403,13 @@ export default function EmbedBuilderPage() {
                                 <p className="font-bold text-sm mb-2">Marcus</p>
                                 <div className="flex flex-wrap gap-2">
                                 {marcusEmojis.map(emoji => (
-                                    <span key={emoji.id} className="cursor-pointer text-2xl" onClick={() => handleEmojiSelect(emoji)}>{`<:${emoji.name}:${emoji.id}>`}</span>
+                                    <Image key={emoji.id} src={emoji.url} alt={emoji.name} width={32} height={32} className="cursor-pointer" onClick={() => handleEmojiSelect(emoji)} />
                                 ))}
                                 </div>
                                 <Separator className="my-4"/>
                                 <p className="font-bold text-sm mb-2">Emojis du Serveur</p>
                                 <div className="flex flex-wrap gap-2">
-                                {emojis.map(emoji => (
+                                {serverEmojis.map(emoji => (
                                     <Image key={emoji.id} src={emoji.url} alt={emoji.name} width={32} height={32} className="cursor-pointer" onClick={() => handleEmojiSelect(emoji)} />
                                 ))}
                                 </div>
@@ -506,3 +504,5 @@ export default function EmbedBuilderPage() {
 if (typeof window !== 'undefined' && !(window as any).uuidv4) {
     (window as any).uuidv4 = uuidv4;
 }
+
+    
