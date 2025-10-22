@@ -22,7 +22,7 @@ interface FunCommandsConfig {
   command_permissions: { [key: string]: string | null };
   gaypride_enabled?: boolean;
   oktban_enabled?: boolean;
-  putin_enabled?: boolean;
+  poutine_enabled?: boolean;
 }
 interface DiscordRole {
     id: string;
@@ -41,7 +41,7 @@ const funCommands = [
     { name: '/action-verite', key: 'action-verite', description: 'Joue à Action ou Vérité avec les membres du salon.', defaultEveryone: true, icon: Dice5 },
     { name: '/gaypride', key: 'gaypride', description: 'Réagit 🏳️‍🌈 à chaque nouveau message.', defaultEveryone: false, icon: Flag },
     { name: '/oktban', key: 'oktban', description: 'Réagit avec l\'émoji OK T BAN.', defaultEveryone: false, icon: Ban },
-    { name: '/putin', key: 'putin', description: 'Réagit avec l\'émoji Poutine.', defaultEveryone: false, icon: RussianRuble },
+    { name: '/poutine', key: 'poutine', description: 'Réagit avec l\'émoji Poutine.', defaultEveryone: false, icon: RussianRuble },
 ];
 
 function PageSkeleton() {

@@ -555,7 +555,7 @@ const defaultConfigs: DefaultConfigs = {
         enabled: true,
         gaypride_enabled: false,
         oktban_enabled: false,
-        putin_enabled: false,
+        poutine_enabled: false,
         command_permissions: {
             renameall: null,
             mutemass: null,
@@ -1426,4 +1426,5 @@ export function getCombinedUserLevel(userId: string): number {
     const rows = stmt.all(userId) as { level: number }[];
     return rows.reduce((sum, row) => sum + row.level, 0);
 }
+
 

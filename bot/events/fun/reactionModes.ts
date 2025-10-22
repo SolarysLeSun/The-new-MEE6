@@ -19,7 +19,7 @@ export async function execute(message: Message) {
         if (config.oktban_enabled) {
             await message.react('1421563278039056528');
         }
-        if (config.putin_enabled) {
+        if (config.poutine_enabled) {
             await message.react('1430663147294953472');
         }
     } catch (error) {

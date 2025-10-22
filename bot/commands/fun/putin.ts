@@ -5,7 +5,7 @@ import { getServerConfig, updateServerConfig } from '@/lib/db';
 
 const PutinCommand: Command = {
     data: new SlashCommandBuilder()
-        .setName('putin')
+        .setName('poutine')
         .setDescription('Active ou désactive la réaction Poutine à chaque message.')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
@@ -21,12 +21,12 @@ const PutinCommand: Command = {
             return;
         }
 
-        const newState = !config.putin_enabled;
-        updateServerConfig(interaction.guild.id, 'fun-commands', { ...config, putin_enabled: newState });
+        const newState = !config.poutine_enabled;
+        updateServerConfig(interaction.guild.id, 'fun-commands', { ...config, poutine_enabled: newState });
 
         const embed = new EmbedBuilder()
             .setColor(newState ? 0x00FF00 : 0xFF0000)
-            .setDescription(`Le mode **Putin** a été **${newState ? 'activé' : 'désactivé'}**.`);
+            .setDescription(`Le mode **Poutine** a été **${newState ? 'activé' : 'désactivé'}**.`);
             
         await interaction.reply({ embeds: [embed] });
     },
