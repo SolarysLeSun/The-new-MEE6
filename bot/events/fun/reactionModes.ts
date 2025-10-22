@@ -20,7 +20,7 @@ export async function execute(message: Message) {
             await message.react('1421563278039056528');
         }
         if (config.putin_enabled) {
-            await message.react('479577352628731905');
+            await message.react('1430663147294953472');
         }
     } catch (error) {
         // Ignore errors if the bot can't react (e.g., permissions, emoji not found)
