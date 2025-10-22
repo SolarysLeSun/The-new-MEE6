@@ -6,7 +6,7 @@
  * @fileOverview AI flow for generating and interacting with AI personas.
  */
 
-import { ai, imageModel } from '@/ai/genkit';
+import { ai, imageModel, textModelCascade } from '@/ai/genkit';
 import { z } from 'genkit';
 import type { ConversationHistoryItem, PersonaMemory } from '@/types';
 
@@ -132,7 +132,6 @@ const personaInteractionPrompt = ai.definePrompt({
     name: 'personaInteractionPrompt',
     input: { schema: PersonaInteractionInputSchema },
     output: { schema: PersonaInteractionOutputSchema },
-    model: 'googleai/gemini-2.5-pro',
     safetySettings: [{ category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' }],
     prompt: `You are an AI actor. Your role is to perfectly and realistically embody the character described in the persona prompt below.
 
@@ -220,8 +219,22 @@ export const personaInteractionFlow = ai.defineFlow(
       ' on ' +
       now.toLocaleDateString('fr-FR', { weekday: 'long' });
 
-    const { output } = await personaInteractionPrompt({ ...input, currentTime });
-    return output!;
+    const modelToUse = input.photoDataUri ? imageModel : textModelCascade[0];
+
+    for (const model of (input.photoDataUri ? [imageModel] : textModelCascade)) {
+        try {
+            const { output } = await personaInteractionPrompt({ ...input, currentTime }, { model });
+            return output!;
+        } catch (error: any) {
+            console.warn(`[Persona] Model ${model} failed. Trying next.`, error.message);
+            if (error.status === 429 || error.status === 503 || error.message.includes('quota')) {
+                continue;
+            }
+            throw error; // Re-throw other errors immediately
+        }
+    }
+    // If all models fail, throw an error
+    throw new Error("All AI models in the cascade failed to generate a response.");
   }
 );
 

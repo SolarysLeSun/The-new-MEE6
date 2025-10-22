@@ -10,7 +10,7 @@ export const ai = genkit({
 // Tries the most powerful models first, then falls back to lighter ones.
 export const textModelCascade = [
     'googleai/gemini-2.5-flash',
-    'googleai/gemini-pro',
+    'googleai/gemini-2.0-flash',
 ];
 
 export const imageModel = 'googleai/gemini-2.0-flash-preview-image-generation';
