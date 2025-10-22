@@ -78,11 +78,28 @@ async function handleConversationalAgent(message: Message) {
         return;
     }
 
-    const userMessage = message.content.replace(/<@!?\d+>/g, '').trim();
+    // --- Message Processing for AI ---
+    let processedMessage = message.content;
+
+    // Replace user mentions with their display names
+    message.mentions.users.forEach(user => {
+        const member = message.guild?.members.cache.get(user.id);
+        const name = member ? member.displayName : user.username;
+        processedMessage = processedMessage.replace(new RegExp(`<@!?${user.id}>`, 'g'), `@${name}`);
+    });
+
+    // Replace role mentions with role names
+    message.mentions.roles.forEach(role => {
+        processedMessage = processedMessage.replace(new RegExp(`<@&${role.id}>`, 'g'), `@${role.name}`);
+    });
+
+    // Remove the bot's own mention if it's still there after replacement (e.g. if bot has no nickname)
+    processedMessage = processedMessage.replace(new RegExp(`<@!?${message.client.user.id}>`, 'g'), '').trim();
+
     const imageAttachment = message.attachments.find(att => imageMimeTypes.some(mime => att.contentType?.startsWith(mime)));
     
-    // Don't respond to empty messages (e.g. a ping with no text)
-    if (!userMessage && !imageAttachment) {
+    // Don't respond to empty messages
+    if (!processedMessage && !imageAttachment) {
         return;
     }
     
@@ -108,7 +125,7 @@ async function handleConversationalAgent(message: Message) {
             const currentHistory = conversationHistory.get(message.channel.id) || [];
             historyForPrompt = [...currentHistory]; 
 
-            currentHistory.push({ user: message.member.displayName, content: userMessage });
+            currentHistory.push({ user: message.member.displayName, content: processedMessage });
             if (currentHistory.length > HISTORY_LIMIT) {
                 currentHistory.shift();
             }
@@ -120,7 +137,7 @@ async function handleConversationalAgent(message: Message) {
 
         const result = await conversationalAgentFlow({
             serverName: message.guild.name,
-            userMessage: userMessage,
+            userMessage: processedMessage,
             userName: message.member.displayName,
             userRoles,
             userLevel,
@@ -169,7 +186,7 @@ async function handleConversationalAgent(message: Message) {
                 if (result.imagined_answer) {
                     console.log('[Agent] Imagined answer detected. Creating new knowledge item...');
                      // No need to await this, it can run in the background
-                    knowledgeCreationFlow({ userQuestion: userMessage, agentResponse: result.response })
+                    knowledgeCreationFlow({ userQuestion: processedMessage, agentResponse: result.response })
                         .then(newItem => {
                             addKnowledgeBaseItem(message.guild!.id, newItem);
                              console.log(`[Agent] New knowledge item created and saved for guild ${message.guild!.id}.`);
