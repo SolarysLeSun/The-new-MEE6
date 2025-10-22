@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import { Dice5 } from 'lucide-react';
+import { Dice5, MessageCircle, Flag, Ban, RussianRuble } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Combobox } from '@/components/ui/combobox';
@@ -20,6 +20,9 @@ const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/ap
 interface FunCommandsConfig {
   enabled: boolean;
   command_permissions: { [key: string]: string | null };
+  gaypride_enabled?: boolean;
+  oktban_enabled?: boolean;
+  putin_enabled?: boolean;
 }
 interface DiscordRole {
     id: string;
@@ -27,15 +30,18 @@ interface DiscordRole {
 }
 
 const funCommands = [
-    { name: '/renameall', key: 'renameall', description: 'Renomme tous les membres du serveur.', defaultEveryone: false },
-    { name: '/mutemass', key: 'mutemass', description: 'Rend tous les utilisateurs d\'un salon vocal muets.', defaultEveryone: false },
-    { name: '/reactbomb', key: 'reactbomb', description: 'Bombarde un message de réactions aléatoires.', defaultEveryone: false },
-    { name: '/react', key: 'react', description: 'Réagit à un message avec un emoji spécifique.', defaultEveryone: false },
-    { name: '/randomnickname', key: 'randomnickname', description: 'Donne un surnom aléatoire à un ou plusieurs utilisateurs.', defaultEveryone: false },
-    { name: '/pileouface', key: 'pileouface', description: 'Pariez votre XP sur un lancer de pièce.', isLevel: true, defaultEveryone: true },
-    { name: '/slots', key: 'slots', description: 'Jouez à la machine à sous avec votre XP.', isLevel: true, defaultEveryone: true },
-    { name: '/de', key: 'de', description: 'Lance un ou plusieurs dés.', defaultEveryone: true },
-    { name: '/action-verite', key: 'action-verite', description: 'Joue à Action ou Vérité avec les membres du salon.', defaultEveryone: true },
+    { name: '/renameall', key: 'renameall', description: 'Renomme tous les membres du serveur.', defaultEveryone: false, icon: MessageCircle },
+    { name: '/mutemass', key: 'mutemass', description: 'Rend tous les utilisateurs d\'un salon vocal muets.', defaultEveryone: false, icon: MessageCircle },
+    { name: '/reactbomb', key: 'reactbomb', description: 'Bombarde un message de réactions aléatoires.', defaultEveryone: false, icon: MessageCircle },
+    { name: '/react', key: 'react', description: 'Réagit à un message avec un emoji spécifique.', defaultEveryone: false, icon: MessageCircle },
+    { name: '/randomnickname', key: 'randomnickname', description: 'Donne un surnom aléatoire à un ou plusieurs utilisateurs.', defaultEveryone: false, icon: MessageCircle },
+    { name: '/pileouface', key: 'pileouface', description: 'Pariez votre XP sur un lancer de pièce.', isLevel: true, defaultEveryone: true, icon: Dice5 },
+    { name: '/slots', key: 'slots', description: 'Jouez à la machine à sous avec votre XP.', isLevel: true, defaultEveryone: true, icon: Dice5 },
+    { name: '/de', key: 'de', description: 'Lance un ou plusieurs dés.', defaultEveryone: true, icon: Dice5 },
+    { name: '/action-verite', key: 'action-verite', description: 'Joue à Action ou Vérité avec les membres du salon.', defaultEveryone: true, icon: Dice5 },
+    { name: '/gaypride', key: 'gaypride', description: 'Réagit 🏳️‍🌈 à chaque nouveau message.', defaultEveryone: false, icon: Flag },
+    { name: '/oktban', key: 'oktban', description: 'Réagit avec l\'émoji OK T BAN.', defaultEveryone: false, icon: Ban },
+    { name: '/putin', key: 'putin', description: 'Réagit avec l\'émoji Poutine.', defaultEveryone: false, icon: RussianRuble },
 ];
 
 function PageSkeleton() {
@@ -191,7 +197,7 @@ export default function FunCommandsPage() {
                     <CardHeader>
                         <CardTitle className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Dice5 className="w-5 h-5 text-primary" />
+                                <command.icon className="w-5 h-5 text-primary" />
                                 <span>{command.name}</span>
                             </div>
                         </CardTitle>
