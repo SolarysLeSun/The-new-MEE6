@@ -1,4 +1,5 @@
 
+
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType, DiscordAPIError } from 'discord.js';
@@ -226,13 +227,24 @@ export function startApi(client: Client) {
                 return res.status(404).json({ error: 'Serveur non trouvé.' });
             }
 
-            const premiumConfig = await getServerConfig(guildId, 'moderation'); 
+            const premiumConfig = getServerConfig(guildId, 'premium'); // Check a placeholder module to get status
 
+            let isPremium = false;
+            if (premiumConfig) {
+                isPremium = premiumConfig.premium;
+                if (premiumConfig.premium_expires_at) {
+                    const expiryDate = new Date(premiumConfig.premium_expires_at);
+                    if (expiryDate < new Date()) {
+                        isPremium = false;
+                    }
+                }
+            }
+            
             const serverDetails = {
                 id: guild.id,
                 name: guild.name,
                 icon: guild.iconURL(),
-                isPremium: premiumConfig?.premium || false,
+                isPremium: isPremium,
                 channels: Array.from(guild.channels.cache.values()).map(c => ({ id: c.id, name: c.name, type: c.type })),
                 roles: Array.from(guild.roles.cache.values()).map(r => ({ id: r.id, name: r.name, color: r.color })),
                 emojis: Array.from(guild.emojis.cache.values()).map(e => ({ id: e.id, name: e.name, animated: e.animated, url: e.imageURL({ size: 64 }) })),

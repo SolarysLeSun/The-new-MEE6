@@ -63,6 +63,10 @@ const upgradeSchema = () => {
             console.log('[Database] Mise à jour du schéma : Ajout de la colonne "premium" à server_configs.');
             db.exec('ALTER TABLE server_configs ADD COLUMN premium BOOLEAN DEFAULT FALSE');
         }
+        if (configColumns.length > 0 && !configColumns.some(col => col.name === 'premium_expires_at')) {
+            console.log('[Database] Mise à jour du schéma : Ajout de la colonne "premium_expires_at" à server_configs.');
+            db.exec('ALTER TABLE server_configs ADD COLUMN premium_expires_at DATETIME');
+        }
         
         db.exec(`
             CREATE TABLE IF NOT EXISTS testers (
@@ -159,6 +163,14 @@ const upgradeSchema = () => {
         `);
         console.log('[Database] Table "bot_bans" is ready.');
 
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS owner_trials (
+                owner_id TEXT PRIMARY KEY NOT NULL,
+                claimed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log('[Database] La table "owner_trials" est prête.');
+
 
     } catch (error) {
         console.error('[Database] Erreur lors de la mise à jour du schéma:', error);
@@ -173,6 +185,7 @@ const createConfigTable = () => {
             module TEXT NOT NULL,
             config TEXT NOT NULL,
             premium BOOLEAN DEFAULT FALSE,
+            premium_expires_at DATETIME,
             PRIMARY KEY (guild_id, module)
         );
     `);
@@ -689,13 +702,15 @@ export function getServerConfig(guildId: string, module: Module): ModuleConfig |
         return defaultConfigs[module] || null;
     }
     try {
-        const stmt = db.prepare('SELECT config, premium FROM server_configs WHERE guild_id = ? AND module = ?');
-        const result = stmt.get(guildId, module) as { config: string, premium: number } | undefined;
+        const stmt = db.prepare('SELECT config, premium, premium_expires_at FROM server_configs WHERE guild_id = ? AND module = ?');
+        const result = stmt.get(guildId, module) as { config: string, premium: number, premium_expires_at: string | null } | undefined;
         const defaultConfig = defaultConfigs[module] || {};
+
+        let finalConfig: ModuleConfig;
 
         if (result && result.config) {
             const config = JSON.parse(result.config);
-            const finalConfig = { ...defaultConfig, ...config };
+            finalConfig = { ...defaultConfig, ...config };
 
             // Deep merge for nested objects to prevent overwriting with partial data
             if (defaultConfig.command_permissions && config.command_permissions) {
@@ -715,29 +730,37 @@ export function getServerConfig(guildId: string, module: Module): ModuleConfig |
                     }
                 }
             }
-
-            if (module === 'referral' && !finalConfig.referral_code) {
-                finalConfig.referral_code = `MARCUS-${guildId.slice(-6)}`;
-                updateServerConfig(guildId, module, finalConfig);
-            }
-
             finalConfig.premium = !!result.premium;
-            return finalConfig;
-        } else {
-            // If no config exists for this module, create the default one and return it.
-            console.log(`[Database] Aucune config trouvée pour ${guildId} et le module ${module}. Création de la config par défaut.`);
-            
-            let configToSave = {...defaultConfig};
-            if (module === 'referral') {
-                configToSave.referral_code = `MARCUS-${guildId.slice(-6)}`;
-            }
+            finalConfig.premium_expires_at = result.premium_expires_at;
 
-            updateServerConfig(guildId, module, configToSave);
-            const premiumStatusStmt = db.prepare('SELECT premium FROM server_configs WHERE guild_id = ? LIMIT 1');
-            const premiumResult = premiumStatusStmt.get(guildId) as { premium: number } | undefined;
-            configToSave.premium = premiumResult ? !!premiumResult.premium : false;
-            return configToSave;
+        } else {
+             finalConfig = {...defaultConfig};
+             updateServerConfig(guildId, module, finalConfig);
+             const premiumStatusStmt = db.prepare('SELECT premium, premium_expires_at FROM server_configs WHERE guild_id = ? LIMIT 1');
+             const premiumResult = premiumStatusStmt.get(guildId) as { premium: number, premium_expires_at: string | null } | undefined;
+             finalConfig.premium = premiumResult ? !!premiumResult.premium : false;
+             finalConfig.premium_expires_at = premiumResult?.premium_expires_at;
         }
+
+        // Handle referral code initialization
+        if (module === 'referral' && !finalConfig.referral_code) {
+            finalConfig.referral_code = `MARCUS-${guildId.slice(-6)}`;
+            updateServerConfig(guildId, module, finalConfig);
+        }
+
+        // Check for premium expiration
+        if (finalConfig.premium_expires_at) {
+            const expiryDate = new Date(finalConfig.premium_expires_at);
+            if (expiryDate < new Date()) {
+                console.log(`[Premium] Le statut Premium pour le serveur ${guildId} a expiré. Désactivation.`);
+                setPremiumStatus(guildId, false, null);
+                finalConfig.premium = false;
+                finalConfig.premium_expires_at = null;
+            }
+        }
+        
+        return finalConfig;
+
     } catch (error) {
         console.error(`[Database] Erreur lors de la récupération de la config pour ${guildId} (module: ${module}):`, error);
         return defaultConfigs[module] || null;
@@ -750,7 +773,7 @@ export function updateServerConfig(guildId: string, module: Module, configData: 
         return;
     }
     try {
-        const { premium, ...restConfig } = configData;
+        const { premium, premium_expires_at, ...restConfig } = configData;
         const configString = JSON.stringify(restConfig);
         
         const stmt = db.prepare(`
@@ -813,11 +836,11 @@ export function getAllBotServers(): { id: string; name: string; icon: string | n
     }
 }
 
-export function setPremiumStatus(guildId: string, isPremium: boolean) {
+export function setPremiumStatus(guildId: string, isPremium: boolean, expiresAt: Date | null) {
     try {
-        const stmt = db.prepare(`UPDATE server_configs SET premium = ? WHERE guild_id = ?`);
-        stmt.run(isPremium ? 1 : 0, guildId);
-        console.log(`[Database] Statut premium mis à jour à '${isPremium}' pour le serveur ${guildId}.`);
+        const stmt = db.prepare(`UPDATE server_configs SET premium = ?, premium_expires_at = ? WHERE guild_id = ?`);
+        stmt.run(isPremium ? 1 : 0, expiresAt ? expiresAt.toISOString() : null, guildId);
+        console.log(`[Database] Statut premium mis à jour à '${isPremium}' pour le serveur ${guildId}. Expiration: ${expiresAt || 'Jamais'}`);
     } catch (error) {
         console.error(`[Database] Erreur lors de la mise à jour du statut premium pour ${guildId}:`, error);
     }
@@ -974,7 +997,7 @@ export function redeemPremiumKey(key: string, guildId: string, usedById: string)
     const updateStmt = db.prepare('UPDATE premium_keys SET is_used = TRUE, used_by_guild = ?, used_at = CURRENT_TIMESTAMP WHERE key = ?');
     updateStmt.run(guildId, key);
 
-    setPremiumStatus(guildId, true);
+    setPremiumStatus(guildId, true, expiresAt);
 
     // After successfully redeeming a key, check if the redeemer should get tester status
     const supportServerId = process.env.SUPPORT_SERVER_ID;
@@ -1338,4 +1361,15 @@ export function resetGuildXP(guildId: string): void {
 export function resetUserXP(guildId: string, userId: string): void {
     const stmt = db.prepare('UPDATE user_levels SET xp = 0, level = 0 WHERE guild_id = ? AND user_id = ?');
     stmt.run(guildId, userId);
+}
+
+// --- Trial System ---
+export function hasClaimedTrial(ownerId: string): boolean {
+    const stmt = db.prepare('SELECT 1 FROM owner_trials WHERE owner_id = ?');
+    return !!stmt.get(ownerId);
+}
+
+export function claimTrial(ownerId: string): void {
+    const stmt = db.prepare('INSERT OR IGNORE INTO owner_trials (owner_id) VALUES (?)');
+    stmt.run(ownerId);
 }

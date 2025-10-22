@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +20,7 @@ export default function ServerDashboardPage() {
 
   return (
     <PageTransitionWrapper className="space-y-8">
-      <WelcomeDialog />
+      <WelcomeDialog serverName={serverInfo?.name || "votre serveur"} isPremium={serverInfo?.isPremium || false} />
       <div>
         <h1 className="text-4xl font-bold tracking-tight text-white">{welcomeText}</h1>
         <div className="text-muted-foreground mt-2 text-lg flex items-center gap-1.5">
