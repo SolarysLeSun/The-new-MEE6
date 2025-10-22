@@ -218,7 +218,13 @@ export interface ConversationalAgentConfig {
         share_sanction_history: boolean;
         share_roles: boolean;
         share_level: boolean;
-    }
+    };
+    agent_actions: {
+        can_give_xp: boolean;
+        can_apply_sanctions: boolean;
+        can_give_roles: boolean;
+        can_change_nickname: boolean;
+    };
 }
 
 export interface AntiAfkConfig {

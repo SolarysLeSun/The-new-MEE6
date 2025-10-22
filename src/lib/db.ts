@@ -423,6 +423,17 @@ const defaultConfigs: DefaultConfigs = {
         allow_imagination: false,
         allow_freewheeling: false,
         allow_image_generation: true,
+        data_sharing: {
+            share_sanction_history: false,
+            share_roles: true,
+            share_level: true,
+        },
+        agent_actions: {
+            can_give_xp: false,
+            can_apply_sanctions: false,
+            can_give_roles: false,
+            can_change_nickname: false,
+        }
     },
     'suggestions': {
         enabled: true,
@@ -455,6 +466,11 @@ const defaultConfigs: DefaultConfigs = {
         ai_onboarding_enabled: false,
         ai_onboarding_questions: [],
         ai_onboarding_roles: [],
+    },
+    'server-identity': {
+        enabled: false,
+        nickname: null,
+        avatar_url: null,
     },
     'security-alerts': {
         enabled: true,
