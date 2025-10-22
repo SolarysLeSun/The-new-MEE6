@@ -4,7 +4,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig } from '../types';
+import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile } from '../types';
 import { randomBytes } from 'crypto';
 import ms from 'ms';
 
@@ -108,6 +108,16 @@ const upgradeSchema = () => {
             );
         `);
         console.log('[Database] La table "user_levels" est prête.');
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS user_profiles (
+                user_id TEXT PRIMARY KEY NOT NULL,
+                bio TEXT,
+                links TEXT,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log('[Database] La table "user_profiles" est prête.');
 
         db.exec(`
             CREATE TABLE IF NOT EXISTS delegated_permissions (
@@ -567,6 +577,8 @@ const defaultConfigs: DefaultConfigs = {
             patchnote: null,
             rappel: null,
             parrainage: null,
+            setprofil: null,
+            profil: null,
         }
     },
      'referral': {
@@ -1372,4 +1384,38 @@ export function hasClaimedTrial(ownerId: string): boolean {
 export function claimTrial(ownerId: string): void {
     const stmt = db.prepare('INSERT OR IGNORE INTO owner_trials (owner_id) VALUES (?)');
     stmt.run(ownerId);
+}
+
+
+// --- User Profile System ---
+export function getUserProfile(userId: string): UserProfile | null {
+    const stmt = db.prepare('SELECT bio, links FROM user_profiles WHERE user_id = ?');
+    const row = stmt.get(userId) as { bio: string | null; links: string | null } | undefined;
+    if (!row) {
+        return { user_id: userId, bio: null, links: [] };
+    }
+    return {
+        user_id: userId,
+        bio: row.bio,
+        links: row.links ? JSON.parse(row.links) : [],
+    };
+}
+
+export function updateUserProfile(userId: string, profileData: Partial<Omit<UserProfile, 'user_id'>>) {
+    const { bio, links } = profileData;
+    const stmt = db.prepare(`
+        INSERT INTO user_profiles (user_id, bio, links, updated_at) 
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+            bio = excluded.bio,
+            links = excluded.links,
+            updated_at = CURRENT_TIMESTAMP
+    `);
+    stmt.run(userId, bio, JSON.stringify(links || []));
+}
+
+export function getCombinedUserLevel(userId: string): number {
+    const stmt = db.prepare('SELECT level FROM user_levels WHERE user_id = ?');
+    const rows = stmt.all(userId) as { level: number }[];
+    return rows.reduce((sum, row) => sum + row.level, 0);
 }

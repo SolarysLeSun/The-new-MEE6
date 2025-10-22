@@ -5,8 +5,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
-import type { Command, CustomField } from '@/types';
-import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds, getGuildWarnHistory } from '@/lib/db';
+import type { Command, CustomField, ProfileLink } from '@/types';
+import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds, getGuildWarnHistory, updateUserProfile } from '@/lib/db';
 import { startApi } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
@@ -200,6 +200,36 @@ async function handleBotSuggestionModal(interaction: ModalSubmitInteraction) {
         await interaction.editReply({ content: '<:Non:1421563259537850471> Une erreur est survenue lors de l\'envoi de votre idée. Le développeur a peut-être fermé ses messages privés.' });
     }
 }
+
+async function handleSetProfilModal(interaction: ModalSubmitInteraction) {
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+        const bio = interaction.fields.getTextInputValue('profile_bio');
+        const linksString = interaction.fields.getTextInputValue('profile_links');
+
+        const links: ProfileLink[] = linksString
+            .split('\n')
+            .map(line => {
+                const [label, url] = line.split('|').map(s => s.trim());
+                if (label && url) {
+                    return { label, url };
+                }
+                return null;
+            })
+            .filter((link): link is ProfileLink => link !== null)
+            .slice(0, 3); // Limit to 3 links
+
+        updateUserProfile(interaction.user.id, { bio, links });
+        
+        await interaction.editReply({ content: '✅ Votre profil a été mis à jour avec succès !' });
+
+    } catch (error) {
+        console.error("Failed to update user profile:", error);
+        await interaction.editReply({ content: '❌ Une erreur est survenue lors de la mise à jour de votre profil.' });
+    }
+}
+
 
 async function handleContentModificationModal(interaction: ModalSubmitInteraction) {
     if (!interaction.message || !interaction.message.embeds[0]) return;
@@ -449,6 +479,8 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
              await handleContentModificationModal(interaction);
         } else if (interaction.customId === 'private_room_modal') {
             await handlePrivateRoomModal(interaction);
+        } else if (interaction.customId === 'setprofil_modal') {
+            await handleSetProfilModal(interaction);
         }
         return;
     }

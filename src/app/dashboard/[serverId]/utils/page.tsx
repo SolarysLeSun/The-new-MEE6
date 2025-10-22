@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import { Wrench } from 'lucide-react';
+import { Wrench, User } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Combobox } from '@/components/ui/combobox';
@@ -29,6 +29,8 @@ const utilCommands = [
     { name: '/save', key: 'save', description: 'Sauvegarde la conversation du salon actuel en fichier HTML.' },
     { name: '/patchnote', key: 'patchnote', description: 'Fait corriger ou améliorer un texte par l\'IA.' },
     { name: '/rappel', key: 'rappel', description: 'Définit un rappel personnel.' },
+    { name: '/setprofil', key: 'setprofil', description: 'Définit votre biographie et vos liens de profil.', icon: User },
+    { name: '/profil', key: 'profil', description: 'Affiche le profil d\'un utilisateur.', icon: User },
 ];
 
 function PageSkeleton() {
@@ -184,7 +186,7 @@ export default function UtilsPage() {
                     <CardHeader>
                         <CardTitle className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Wrench className="w-5 h-5 text-primary" />
+                                {command.icon ? <command.icon className="w-5 h-5 text-primary" /> : <Wrench className="w-5 h-5 text-primary" />}
                                 <span>{command.name}</span>
                             </div>
                         </CardTitle>
@@ -194,7 +196,7 @@ export default function UtilsPage() {
                         <div className="space-y-2">
                             <Label htmlFor={`role-select-${command.key}`} className="text-sm font-medium">Rôle minimum requis</Label>
                             <Combobox
-                                options={command.key === 'rappel' ? everyoneRoleOption : roleOptions}
+                                options={command.key === 'rappel' || command.key === 'profil' || command.key === 'setprofil' ? everyoneRoleOption : roleOptions}
                                 value={config.command_permissions?.[command.key] || 'none'}
                                 onChange={(value) => handlePermissionChange(command.key, value)}
                                 placeholder="Sélectionner un rôle"

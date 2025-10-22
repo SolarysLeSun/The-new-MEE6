@@ -273,3 +273,14 @@ export interface DiscordEmbed {
     timestamp?: boolean;
     fields?: EmbedField[];
 }
+
+export interface ProfileLink {
+    label: string;
+    url: string;
+}
+
+export interface UserProfile {
+    user_id: string;
+    bio: string | null;
+    links: ProfileLink[];
+}
