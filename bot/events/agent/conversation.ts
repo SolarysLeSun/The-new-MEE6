@@ -86,7 +86,7 @@ async function handleConversationalAgent(message: Message) {
     
     // In a dedicated channel, don't respond to empty messages (e.g., only attachments without text).
     const imageAttachment = message.attachments.find(att => imageMimeTypes.some(mime => att.contentType?.startsWith(mime)));
-    if (isInDedicatedChannel && !message.content && !imageAttachment) {
+    if (isInDedicatedChannel && !message.content && !imageAttachment && !isMentioned) {
         return;
     }
 
@@ -105,7 +105,13 @@ async function handleConversationalAgent(message: Message) {
         processedMessage = processedMessage.replace(new RegExp(`<@&${role.id}>`, 'g'), `@${role.name}`);
     });
     
-    const interactionContext = isInDedicatedChannel ? 'Salon dédié actif' : 'Mention dans un groupe';
+    // Define the interaction context: a direct mention is always treated as such, otherwise it's passive listening in a dedicated channel.
+    const interactionContext = isMentioned 
+        ? 'Mention dans un groupe' 
+        : isInDedicatedChannel 
+        ? 'Salon dédié actif'
+        : 'Inconnu'; // Should not happen due to initial checks
+    
     console.log(`[Agent] Received message from ${message.author.tag} in ${message.guild.name}. Trigger: ${interactionContext}`);
 
     try {
