@@ -29,7 +29,7 @@ const ConversationHistoryItemSchema = z.object({
 
 export const ConversationalAgentInputSchema = z.object({
   serverName: z.string().describe("The name of the Discord server where the conversation is taking place."),
-  userMessage: z.string().describe('The message sent by the agent to the user.'),
+  userMessage: z.string().describe('The message sent by the user.'),
   userName: z.string().describe("The user's display name (nickname)."),
   userRoles: z.array(z.string()).optional().describe("A list of the user's roles."),
   userLevel: z.object({
@@ -53,10 +53,11 @@ export const ConversationalAgentInputSchema = z.object({
     .describe(
       "An optional photo sent by the user, as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+  interactionContext: z.string().describe("The social context of the interaction (e.g., 'Message Privé', 'Mention dans un groupe', 'Salon dédié actif')."),
 });
 
 export const ConversationalAgentOutputSchema = z.object({
-  response: z.string().describe("The agent's generated response to the user's message."),
+  response: z.string().describe("The agent's generated response to the user's message. Can be an empty string if the character decides not to speak."),
   imagined_answer: z.boolean().describe("True if the answer was imagined because it was not in the knowledge base."),
   image_prompt: z.string().optional().describe("If the character decides to generate an image to accompany its response, this should be the prompt for the image generation model. Otherwise, this should be null."),
 });
@@ -148,8 +149,16 @@ Here are the last few messages in this conversation. Use them to understand the 
 {{/each}}
 {{/if}}
 
+**Your Task & Context:**
+- The current social context is: **{{{interactionContext}}}**.
+{{#ifEquals interactionContext "Salon dédié actif"}}
+- This means you are in your dedicated channel. The user has **not** mentioned you directly. You are "passively listening" to the conversation.
+- You MUST analyze the user's message and decide if it's relevant to you or if you have something meaningful to add.
+- If the message is a private conversation between other users that doesn't concern you, you MUST return an empty string for the 'response' field.
+- Only respond if you can add value based on your persona, knowledge, or the ongoing conversation.
+{{/ifEquals}}
 
-The user has sent the following message to you.
+The user has sent the following message.
 {{#if photoDataUri}}
 The user has also included an image in their message. Analyze the image as part of the context.
 Image: {{media url=photoDataUri}}

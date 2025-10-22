@@ -71,10 +71,22 @@ async function handleConversationalAgent(message: Message) {
     }
 
     const config = await getServerConfig(message.guild.id, 'conversational-agent');
-
-    // This check is slightly redundant because the calling function already checks for enabled.
-    // However, it's good practice for a handler to be self-contained.
     if (!config?.enabled || !config.premium) {
+        return;
+    }
+
+    const isInDedicatedChannel = message.channel.id === config.dedicated_channel_id;
+    const isMentioned = message.mentions.has(message.client.user.id);
+
+    // --- Determine if the agent should be triggered ---
+    // The agent is triggered if it's mentioned anywhere OR if the message is in its dedicated channel.
+    if (!isMentioned && !isInDedicatedChannel) {
+        return;
+    }
+    
+    // In a dedicated channel, don't respond to empty messages (e.g., only attachments without text).
+    const imageAttachment = message.attachments.find(att => imageMimeTypes.some(mime => att.contentType?.startsWith(mime)));
+    if (isInDedicatedChannel && !message.content && !imageAttachment) {
         return;
     }
 
@@ -92,19 +104,9 @@ async function handleConversationalAgent(message: Message) {
     message.mentions.roles.forEach(role => {
         processedMessage = processedMessage.replace(new RegExp(`<@&${role.id}>`, 'g'), `@${role.name}`);
     });
-
-    // Remove the bot's own mention if it's still there after replacement (e.g. if bot has no nickname)
-    processedMessage = processedMessage.replace(new RegExp(`<@!?${message.client.user.id}>`, 'g'), '').trim();
-
-    const imageAttachment = message.attachments.find(att => imageMimeTypes.some(mime => att.contentType?.startsWith(mime)));
     
-    // Don't respond to empty messages unless they contain an image
-    if (!processedMessage && !imageAttachment) {
-        return;
-    }
-    
-    const isInDedicatedChannel = message.channel.id === config.dedicated_channel_id;
-    console.log(`[Agent] Received message from ${message.author.tag} in ${message.guild.name}. Trigger: ${isInDedicatedChannel ? 'Dedicated Channel' : 'Mention'}`);
+    const interactionContext = isInDedicatedChannel ? 'Salon dédié actif' : 'Mention dans un groupe';
+    console.log(`[Agent] Received message from ${message.author.tag} in ${message.guild.name}. Trigger: ${interactionContext}`);
 
     try {
         await message.channel.sendTyping();
@@ -156,55 +158,60 @@ async function handleConversationalAgent(message: Message) {
             allow_imagination: config.allow_imagination,
             allow_freewheeling: config.allow_freewheeling,
             allow_image_generation: config.allow_image_generation,
+            interactionContext: interactionContext
         });
 
-        if (result.response || result.image_prompt) {
-            let files: AttachmentBuilder[] = [];
-            if (result.image_prompt) {
-                console.log(`[Agent] Generating image with prompt: "${result.image_prompt}"`);
-                try {
-                    const imageResult = await generateImage({ prompt: result.image_prompt, allow_nsfw: config.allow_freewheeling });
-                    if (imageResult.imageDataUri) {
-                        const imageBuffer = Buffer.from(imageResult.imageDataUri.split(',')[1], 'base64');
-                        files.push(new AttachmentBuilder(imageBuffer, { name: 'agent_image.png' }));
-                    }
-                } catch (imgError) {
-                    console.error(`[Agent] Image generation failed:`, imgError);
-                }
-            }
-            
-            try {
-                // Use channel.send instead of reply to avoid errors if original message is deleted
-                await message.channel.send({ content: result.response || undefined, files: files });
-                
-                if (isInDedicatedChannel) {
-                    const currentHistory = conversationHistory.get(message.channel.id) || [];
-                    currentHistory.push({ user: config.agent_name, content: result.response });
-                    if (currentHistory.length > HISTORY_LIMIT) {
-                        currentHistory.shift();
-                    }
-                    conversationHistory.set(message.channel.id, currentHistory);
-                }
+        // The AI can choose not to respond by returning an empty string
+        if (!result.response && !result.image_prompt) {
+            console.log(`[Agent] Agent chose not to respond to the message in ${interactionContext}.`);
+            return;
+        }
 
-                // If the answer was imagined, save it to the knowledge base
-                if (result.imagined_answer) {
-                    console.log('[Agent] Imagined answer detected. Creating new knowledge item...');
-                     // No need to await this, it can run in the background
-                    knowledgeCreationFlow({ userQuestion: processedMessage, agentResponse: result.response })
-                        .then(newItem => {
-                            addKnowledgeBaseItem(message.guild!.id, newItem);
-                             console.log(`[Agent] New knowledge item created and saved for guild ${message.guild!.id}.`);
-                        })
-                        .catch(err => {
-                             console.error('[Agent] Failed to create or save new knowledge item:', err);
-                        });
+        let files: AttachmentBuilder[] = [];
+        if (result.image_prompt) {
+            console.log(`[Agent] Generating image with prompt: "${result.image_prompt}"`);
+            try {
+                const imageResult = await generateImage({ prompt: result.image_prompt, allow_nsfw: config.allow_freewheeling });
+                if (imageResult.imageDataUri) {
+                    const imageBuffer = Buffer.from(imageResult.imageDataUri.split(',')[1], 'base64');
+                    files.push(new AttachmentBuilder(imageBuffer, { name: 'agent_image.png' }));
                 }
-            } catch (replyError: any) {
-                 if (replyError.code === 10008) { // Unknown Message
-                    console.warn(`[Agent] Could not reply to message ${message.id} because it was deleted.`);
-                } else {
-                    throw replyError; // Re-throw other errors
+            } catch (imgError) {
+                console.error(`[Agent] Image generation failed:`, imgError);
+            }
+        }
+        
+        try {
+            // Use channel.send instead of reply to avoid errors if original message is deleted
+            await message.channel.send({ content: result.response || undefined, files: files });
+            
+            if (isInDedicatedChannel) {
+                const currentHistory = conversationHistory.get(message.channel.id) || [];
+                currentHistory.push({ user: config.agent_name, content: result.response });
+                if (currentHistory.length > HISTORY_LIMIT) {
+                    currentHistory.shift();
                 }
+                conversationHistory.set(message.channel.id, currentHistory);
+            }
+
+            // If the answer was imagined, save it to the knowledge base
+            if (result.imagined_answer) {
+                console.log('[Agent] Imagined answer detected. Creating new knowledge item...');
+                 // No need to await this, it can run in the background
+                knowledgeCreationFlow({ userQuestion: processedMessage, agentResponse: result.response })
+                    .then(newItem => {
+                        addKnowledgeBaseItem(message.guild!.id, newItem);
+                         console.log(`[Agent] New knowledge item created and saved for guild ${message.guild!.id}.`);
+                    })
+                    .catch(err => {
+                         console.error('[Agent] Failed to create or save new knowledge item:', err);
+                    });
+            }
+        } catch (replyError: any) {
+             if (replyError.code === 10008) { // Unknown Message
+                console.warn(`[Agent] Could not reply to message ${message.id} because it was deleted.`);
+            } else {
+                throw replyError; // Re-throw other errors
             }
         }
 
@@ -245,19 +252,9 @@ export const once = false;
 export async function execute(message: Message) {
     if (message.author.bot || !message.guild) return;
 
-    // Determine if the message is for the conversational agent
-    const agentConfig = await getServerConfig(message.guild.id, 'conversational-agent');
-    const hasImage = message.attachments.some(att => imageMimeTypes.some(mime => att.contentType?.startsWith(mime)));
-    const isForAgent =
-        agentConfig?.enabled && agentConfig.premium &&
-        (message.channel.id === agentConfig.dedicated_channel_id || message.mentions.has(message.client.user.id) || (hasImage && message.channel.id === agentConfig.dedicated_channel_id));
-    
-    // If it's for the agent, let it handle it exclusively.
-    if (isForAgent) {
-        await handleConversationalAgent(message);
-        return; // Stop further processing
-    }
+    // The conversational agent logic is now self-contained and decides if it should trigger.
+    await handleConversationalAgent(message);
 
-    // Otherwise, run other message-based scans like the FAQ scan.
+    // Run other message-based scans like the FAQ scan.
     await handleFaqScan(message);
 }
