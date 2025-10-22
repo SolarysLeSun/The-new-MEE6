@@ -179,8 +179,10 @@ export const conversationalAgentFlow = ai.defineFlow(
           { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
         ]
       : [];
+      
+    const modelToUse = input.photoDataUri ? imageModel : textModelCascade[0]; // Use image model if photo is present
 
-    for (const model of textModelCascade) {
+    for (const model of (input.photoDataUri ? [imageModel] : textModelCascade)) {
       try {
         console.log(`[Agent] Trying model ${model}...`);
         const { output } = await agentPrompt(input, { model, config: { safetySettings } });

@@ -98,7 +98,7 @@ async function handleConversationalAgent(message: Message) {
 
     const imageAttachment = message.attachments.find(att => imageMimeTypes.some(mime => att.contentType?.startsWith(mime)));
     
-    // Don't respond to empty messages
+    // Don't respond to empty messages unless they contain an image
     if (!processedMessage && !imageAttachment) {
         return;
     }
@@ -111,7 +111,11 @@ async function handleConversationalAgent(message: Message) {
 
         let photoDataUri: string | undefined = undefined;
         if (imageAttachment) {
-            photoDataUri = await imageUrlToDataUri(imageAttachment.url);
+            try {
+                photoDataUri = await imageUrlToDataUri(imageAttachment.url);
+            } catch (imageError) {
+                console.error('[Agent] Failed to process image attachment:', imageError);
+            }
         }
         
         // --- Gather user context based on config ---
@@ -243,9 +247,10 @@ export async function execute(message: Message) {
 
     // Determine if the message is for the conversational agent
     const agentConfig = await getServerConfig(message.guild.id, 'conversational-agent');
+    const hasImage = message.attachments.some(att => imageMimeTypes.some(mime => att.contentType?.startsWith(mime)));
     const isForAgent =
         agentConfig?.enabled && agentConfig.premium &&
-        (message.channel.id === agentConfig.dedicated_channel_id || message.mentions.has(message.client.user.id));
+        (message.channel.id === agentConfig.dedicated_channel_id || message.mentions.has(message.client.user.id) || (hasImage && message.channel.id === agentConfig.dedicated_channel_id));
     
     // If it's for the agent, let it handle it exclusively.
     if (isForAgent) {
