@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageCircleQuestion, Trash2, PlusCircle, Gamepad2, BrainCircuit, AlertTriangle, Image, FileLock } from 'lucide-react';
+import { MessageCircleQuestion, Trash2, PlusCircle, Gamepad2, BrainCircuit, AlertTriangle, Image, FileLock, Bot, UserCog, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { KnowledgeBaseItem, ConversationalAgentConfig } from '@/types';
@@ -105,6 +105,12 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
         if (!config) return;
         const newDataSharing = { ...config.data_sharing, [key]: value };
         handleValueChange('data_sharing', newDataSharing);
+    }
+    
+    const handleAgentActionsChange = (key: keyof ConversationalAgentConfig['agent_actions'], value: boolean) => {
+        if (!config) return;
+        const newAgentActions = { ...config.agent_actions, [key]: value };
+        handleValueChange('agent_actions', newAgentActions);
     }
 
     const handleKnowledgeBaseChange = (index: number, field: 'question' | 'answer', value: string) => {
@@ -305,6 +311,42 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                         </div>
                     </CardContent>
                 </Card>
+                 {/* Section Actions de l'agent */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Bot />Actions de l'Agent</CardTitle>
+                        <CardDescription>
+                           Permettez à l'IA d'effectuer des actions sur le serveur en votre nom.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="can_give_xp" className="font-semibold flex items-center gap-2"><Gamepad2/>Donner de l'XP</Label>
+                            <Switch id="can_give_xp" checked={config.agent_actions?.can_give_xp ?? false} onCheckedChange={(val) => handleAgentActionsChange('can_give_xp', val)} />
+                        </div>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                           <Label htmlFor="can_apply_sanctions" className="font-semibold flex items-center gap-2"><AlertTriangle/>Appliquer des sanctions</Label>
+                           <Switch id="can_apply_sanctions" checked={config.agent_actions?.can_apply_sanctions ?? false} onCheckedChange={(val) => handleAgentActionsChange('can_apply_sanctions', val)} />
+                        </div>
+                        <Separator />
+                         <div className="flex items-center justify-between">
+                            <Label htmlFor="can_give_roles" className="font-semibold flex items-center gap-2"><PlusCircle/>Attribuer des rôles</Label>
+                            <Switch id="can_give_roles" checked={config.agent_actions?.can_give_roles ?? false} onCheckedChange={(val) => handleAgentActionsChange('can_give_roles', val)} />
+                        </div>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="can_change_nickname" className="font-semibold flex items-center gap-2"><UserCog/>Modifier un pseudo</Label>
+                            <Switch id="can_change_nickname" checked={config.agent_actions?.can_change_nickname ?? false} onCheckedChange={(val) => handleAgentActionsChange('can_change_nickname', val)} />
+                        </div>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="can_send_dms" className="font-semibold flex items-center gap-2"><Send/>Envoyer des messages privés</Label>
+                            <Switch id="can_send_dms" checked={config.agent_actions?.can_send_dms ?? false} onCheckedChange={(val) => handleAgentActionsChange('can_send_dms', val)} />
+                        </div>
+                    </CardContent>
+                </Card>
+
 
                 {/* Section Base de connaissances */}
                 <div className="space-y-4">

@@ -10,6 +10,20 @@ import { ai, textModelCascade, imageModel } from '@/ai/genkit';
 import { z } from 'genkit';
 import type { KnowledgeBaseItem } from '@/types';
 
+const AgentActionSchema = z.object({
+  type: z.enum(["give_xp", "apply_sanction", "give_role", "change_nickname", "send_dm"]),
+  userId: z.string().describe("The ID of the user to apply the action on."),
+  details: z.object({
+    amount: z.number().optional().describe("Amount of XP to give."),
+    sanctionType: z.enum(["warn", "mute", "kick", "ban"]).optional(),
+    reason: z.string().optional(),
+    roleId: z.string().optional(),
+    newNickname: z.string().optional(),
+    messageContent: z.string().optional().describe("The content of the direct message to send."),
+  })
+});
+
+
 // Define schemas for input and output
 const SanctionHistoryEntrySchema = z.object({
   action_type: z.string(),
@@ -31,6 +45,7 @@ export const ConversationalAgentInputSchema = z.object({
   serverName: z.string().describe("The name of the Discord server where the conversation is taking place."),
   userMessage: z.string().describe('The message sent by the user.'),
   userName: z.string().describe("The user's display name (nickname)."),
+  userId: z.string().describe("The user's unique ID."),
   userRoles: z.array(z.string()).optional().describe("A list of the user's roles."),
   userLevel: z.object({
       level: z.number(),
@@ -54,12 +69,20 @@ export const ConversationalAgentInputSchema = z.object({
       "An optional photo sent by the user, as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
   interactionContext: z.string().describe("The social context of the interaction (e.g., 'Message Privé', 'Mention dans un groupe', 'Salon dédié actif')."),
+  agent_actions: z.object({
+      can_give_xp: z.boolean(),
+      can_apply_sanctions: z.boolean(),
+      can_give_roles: z.boolean(),
+      can_change_nickname: z.boolean(),
+      can_send_dms: z.boolean(),
+  }).describe("A list of actions the agent is allowed to perform."),
 });
 
 export const ConversationalAgentOutputSchema = z.object({
   response: z.string().describe("The agent's generated response to the user's message. Can be an empty string if the character decides not to speak."),
   imagined_answer: z.boolean().describe("True if the answer was imagined because it was not in the knowledge base."),
   image_prompt: z.string().optional().describe("If the character decides to generate an image to accompany its response, this should be the prompt for the image generation model. Otherwise, this should be null."),
+  action: AgentActionSchema.optional().describe("An optional action to perform on a user."),
 });
 
 export type ConversationalAgentInput = z.infer<typeof ConversationalAgentInputSchema>;
@@ -93,6 +116,7 @@ Your Instructions:
 {{/if}}
 
 User Context:
+- User's ID: {{{userId}}}
 {{#if userRoles}}
 - User's Roles: [{{#each userRoles}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]. Use this to understand their status on the server.
 {{/if}}
@@ -116,6 +140,15 @@ You have access to the following information.
 {{else}}
 - **Imagination is disabled.** If the user's question cannot be answered from your knowledge base, you MUST state that you don't know the answer. Do not invent information. Set 'imagined_answer' to false.
 {{/if}}
+
+Agent Actions:
+You have the ability to perform actions. Decide if an action is necessary based on the conversation.
+- Give XP: {{{agent_actions.can_give_xp}}}
+- Apply Sanctions: {{{agent_actions.can_apply_sanctions}}}
+- Give Roles: {{{agent_actions.can_give_roles}}}
+- Change Nickname: {{{agent_actions.can_change_nickname}}}
+- Send DM: {{{agent_actions.can_send_dms}}}
+If you decide to take an action, set the 'action' field in the output. For example, to give 50 XP to the user, you would set 'action' to: { "type": "give_xp", "userId": "{{{userId}}}", "details": { "amount": 50 } }. To send a DM, you would set it to: { "type": "send_dm", "userId": "{{{userId}}}", "details": { "messageContent": "Ton message privé ici." } }
 
 Image Generation:
 {{#if allow_image_generation}}

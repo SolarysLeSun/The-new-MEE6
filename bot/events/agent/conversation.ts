@@ -1,7 +1,7 @@
 
 
-import { Events, Message, Collection, EmbedBuilder, TextChannel, AttachmentBuilder } from 'discord.js';
-import { getServerConfig, addKnowledgeBaseItem, getUserSanctionHistory, getUserLevel } from '../../../src/lib/db';
+import { Events, Message, Collection, EmbedBuilder, TextChannel, AttachmentBuilder, User } from 'discord.js';
+import { getServerConfig, addKnowledgeBaseItem, getUserSanctionHistory, getUserLevel, updateUserXP, recordSanction } from '../../../src/lib/db';
 import { conversationalAgentFlow } from '../../../src/ai/flows/conversational-agent-flow';
 import { knowledgeCreationFlow } from '../../../src/ai/flows/knowledge-creation-flow';
 import { faqFlow } from '../../../src/ai/flows/faq-flow';
@@ -151,6 +151,7 @@ async function handleConversationalAgent(message: Message) {
             serverName: message.guild.name,
             userMessage: processedMessage,
             userName: message.member.displayName,
+            userId: message.author.id,
             userRoles,
             userLevel,
             agentName: config.agent_name,
@@ -164,14 +165,36 @@ async function handleConversationalAgent(message: Message) {
             allow_imagination: config.allow_imagination,
             allow_freewheeling: config.allow_freewheeling,
             allow_image_generation: config.allow_image_generation,
-            interactionContext: interactionContext
+            interactionContext: interactionContext,
+            agent_actions: config.agent_actions,
         });
 
         // The AI can choose not to respond by returning an empty string
-        if (!result.response && !result.image_prompt) {
+        if (!result.response && !result.image_prompt && !result.action) {
             console.log(`[Agent] Agent chose not to respond to the message in ${interactionContext}.`);
             return;
         }
+        
+        // --- Execute Action if present ---
+        if (result.action) {
+            const targetUser = await message.client.users.fetch(result.action.userId).catch(() => null);
+            if (targetUser) {
+                switch(result.action.type) {
+                    case 'send_dm':
+                        if (config.agent_actions.can_send_dms && result.action.details.messageContent) {
+                            try {
+                                await targetUser.send(result.action.details.messageContent);
+                                console.log(`[Agent Action] Sent DM to ${targetUser.tag}`);
+                            } catch (e) {
+                                console.error(`[Agent Action] Failed to send DM to ${targetUser.tag}`);
+                            }
+                        }
+                        break;
+                     // ... other actions can be implemented here in the future
+                }
+            }
+        }
+
 
         let files: AttachmentBuilder[] = [];
         if (result.image_prompt) {

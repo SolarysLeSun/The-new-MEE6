@@ -456,6 +456,7 @@ const defaultConfigs: DefaultConfigs = {
             can_apply_sanctions: false,
             can_give_roles: false,
             can_change_nickname: false,
+            can_send_dms: false,
         }
     },
     'suggestions': {
@@ -741,6 +742,9 @@ export function getServerConfig(guildId: string, module: Module): ModuleConfig |
                         finalConfig.log_settings[key] = { ...defaultConfig.log_settings[key], ...config.log_settings[key] };
                     }
                 }
+            }
+            if (defaultConfig.agent_actions && config.agent_actions) {
+                finalConfig.agent_actions = { ...defaultConfig.agent_actions, ...config.agent_actions };
             }
             finalConfig.premium = !!result.premium;
             finalConfig.premium_expires_at = result.premium_expires_at;
