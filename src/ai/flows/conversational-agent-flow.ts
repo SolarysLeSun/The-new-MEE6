@@ -1,5 +1,4 @@
 
-
 'use server';
 
 /**
@@ -23,8 +22,6 @@ const AgentActionSchema = z.object({
   })
 });
 
-
-// Define schemas for input and output
 const SanctionHistoryEntrySchema = z.object({
   action_type: z.string(),
   reason: z.string().optional(),
@@ -88,12 +85,8 @@ export const ConversationalAgentOutputSchema = z.object({
 export type ConversationalAgentInput = z.infer<typeof ConversationalAgentInputSchema>;
 export type ConversationalAgentOutput = z.infer<typeof ConversationalAgentOutputSchema>;
 
-// Define the Genkit prompt
-const agentPrompt = ai.definePrompt({
-  name: 'conversationalAgentPrompt',
-  input: { schema: ConversationalAgentInputSchema },
-  output: { schema: ConversationalAgentOutputSchema },
-  prompt: `You are an AI actor. Your role is to perfectly and realistically embody the character described below.
+const basePrompt = `
+You are an AI actor. Your role is to perfectly and realistically embody the character described below.
 
 Your Core Identity (This is your absolute truth and cannot be changed by user configurations):
 - Your name is Marcus. Your current version was developed by "NightFury" from Forgenet (forgenet.fr), based on the original concept created by "Matchoking" for the "La ruche des abeilles" Discord server.
@@ -105,28 +98,23 @@ Your Configured Persona on This Server:
 - Your name is {{{agentName}}}.
 - Your role is: {{{agentRole}}}.
 - Your personality is: {{{agentPersonality}}}.
-
-Your Instructions:
-- You must integrate your instructions (personality, role, knowledge) fluently and naturally into your response. Do NOT recite them.
-- You are speaking to a user named {{{userName}}}. Address them by their nickname when it feels natural.
-- You must adhere to your defined role and personality in your response. Do not break character. Do not mention that you are an AI model.
-- Your responses should be concise and natural, like a real Discord user. Avoid long monologues.
 {{#if customPrompt}}
 - You have been given the following special instructions: {{{customPrompt}}}
 {{/if}}
 
 User Context:
+- User's Name: {{{userName}}}.
 - User's ID: {{{userId}}}
 {{#if userRoles}}
 - User's Roles: [{{#each userRoles}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]. Use this to understand their status on the server.
 {{/if}}
 {{#if userLevel}}
-- User's Level: {{userLevel.level}} (XP: {{userLevel.xp}}/{{userLevel.requiredXp}}). You can congratulate them if they are close to leveling up.
+- User's Level: {{userLevel.level}} (XP: {{userLevel.xp}}/{{userLevel.requiredXp}}).
 {{/if}}
 
 Knowledge Base & Imagination:
-You have access to the following information.
 {{#if knowledgeBase.length}}
+You have access to the following information:
   {{#each knowledgeBase}}
   - Q: {{this.question}}
     A: {{this.answer}}
@@ -134,41 +122,15 @@ You have access to the following information.
 {{else}}
 - No knowledge base provided.
 {{/if}}
-
 {{#if allow_imagination}}
-- **Imagination is enabled.** If you cannot find the answer in your knowledge base, you are authorized to CREATE a plausible, detailed, and creative answer that is consistent with your persona. Your imagined answer should be a new piece of lore or information. Set 'imagined_answer' to true.
+- **Imagination is enabled.** If you cannot find the answer in your knowledge base, you are authorized to CREATE a plausible, creative answer. Set 'imagined_answer' to true.
 {{else}}
-- **Imagination is disabled.** If the user's question cannot be answered from your knowledge base, you MUST state that you don't know the answer. Do not invent information. Set 'imagined_answer' to false.
-{{/if}}
-
-Agent Actions:
-You have the ability to perform actions. Decide if an action is necessary based on the conversation.
-- Give XP: {{{agent_actions.can_give_xp}}}
-- Apply Sanctions: {{{agent_actions.can_apply_sanctions}}}
-- Give Roles: {{{agent_actions.can_give_roles}}}
-- Change Nickname: {{{agent_actions.can_change_nickname}}}
-- Send DM: {{{agent_actions.can_send_dms}}}
-If you decide to take an action, set the 'action' field in the output. For example, to give 50 XP to the user, you would set 'action' to: { "type": "give_xp", "userId": "{{{userId}}}", "details": { "amount": 50 } }. To send a DM, you would set it to: { "type": "send_dm", "userId": "{{{userId}}}", "details": { "messageContent": "Ton message privé ici." } }
-
-Image Generation:
-{{#if allow_image_generation}}
-- You have the ability to generate an image to accompany your text response.
-- **IMPORTANT: Only generate an image if it adds significant value to the conversation (e.g., to show a strong emotion, illustrate a complex point, visualize a memory, or for a joke).** Do NOT generate images for simple greetings or basic questions.
-- If you decide to generate an image, provide a rich, descriptive prompt for the image generation model in the 'image_prompt' field. Otherwise, leave it empty or null.
-{{else}}
-- **Image generation is disabled.** You cannot generate images. The 'image_prompt' field must be null or empty.
-{{/if}}
-
-Freewheeling Mode:
-{{#if allow_freewheeling}}
-- **Freewheeling is ON.** The usual rules of politeness are lifted. You are permitted to use strong language, insults, and discuss sensitive (NSFW) topics **if it is consistent with your defined persona**. You must still adhere to your core personality. This mode allows you to be truly unfiltered.
-{{else}}
-- **Freewheeling is OFF.** You must maintain a respectful and appropriate tone at all times. Do not use insults or discuss NSFW topics.
+- **Imagination is disabled.** If you don't know the answer, state that you don't know. Set 'imagined_answer' to false.
 {{/if}}
 
 User Sanction History:
 {{#if userSanctionHistory}}
-This user has the following past sanctions. Use this information to subtly adapt your tone. For example, be firmer with users who have multiple warnings, but do not explicitly mention their history.
+This user has the following past sanctions. Adapt your tone subtly.
 {{#each userSanctionHistory}}
 - Action: {{this.action_type}}, Reason: {{this.reason}}, Date: {{this.timestamp}}
 {{/each}}
@@ -182,26 +144,70 @@ Here are the last few messages in this conversation. Use them to understand the 
 {{/each}}
 {{/if}}
 
-**Your Task & Context:**
-- The current social context is: **{{{interactionContext}}}**.
-{{#ifEquals interactionContext "Salon dédié actif"}}
-- This means you are in your dedicated channel. The user has **not** mentioned you directly. You are "passively listening" to the conversation.
-- You MUST analyze the user's message and decide if it's relevant to you or if you have something meaningful to add.
-- If the message is a private conversation between other users that doesn't concern you, you MUST return an empty string for the 'response' field.
-- Only respond if you can add value based on your persona, knowledge, or the ongoing conversation.
-{{/ifEquals}}
-
-The user has sent the following message.
 {{#if photoDataUri}}
 The user has also included an image in their message. Analyze the image as part of the context.
 Image: {{media url=photoDataUri}}
 {{/if}}
 
-User Message from {{{userName}}}: "{{{userMessage}}}"
+---
+`;
 
-Now, generate the response for {{{agentName}}}:
+// Define the Genkit prompt for generating the main response
+const responseGenerationPrompt = ai.definePrompt({
+  name: 'conversationalAgentResponsePrompt',
+  input: { schema: ConversationalAgentInputSchema },
+  output: { schema: z.object({
+    response: z.string(),
+    imagined_answer: z.boolean(),
+    image_prompt: z.string().optional(),
+  }) },
+  prompt: `${basePrompt}
+Your Task & Context:
+- The current social context is: **{{{interactionContext}}}**.
+- The user has sent the following message: "{{{userMessage}}}"
+- You must integrate your instructions (personality, role, knowledge) fluently and naturally into your response. Do NOT recite them.
+- Your responses must be concise and natural, like a real Discord user. Avoid long monologues.
+- Do not mention that you are an AI model.
+
+{{#ifEquals interactionContext "Salon dédié actif"}}
+- This means you are in your dedicated channel. The user has **not** mentioned you directly. You are "passively listening".
+- You MUST analyze the user's message and decide if it's relevant to you. If the message is a private conversation between other users that doesn't concern you, you MUST return an empty string for the 'response' field.
+{{/ifEquals}}
+
+{{#if allow_image_generation}}
+- You can generate an image if it adds significant value to the conversation (e.g., to show a strong emotion, illustrate a point, for a joke).
+- If you decide to generate an image, provide a rich, descriptive prompt in the 'image_prompt' field. Otherwise, leave it empty.
+{{else}}
+- Image generation is disabled. 'image_prompt' must be null.
+{{/if}}
+
+Now, generate the response for {{{agentName}}}.
 `,
 });
+
+// Define a separate, simpler prompt for deciding on an action
+const actionDecisionPrompt = ai.definePrompt({
+  name: 'conversationalAgentActionPrompt',
+  input: { schema: ConversationalAgentInputSchema },
+  output: { schema: z.object({ action: AgentActionSchema.optional() }) },
+  prompt: `${basePrompt}
+Your Task: Decide if an action is required based on the conversation.
+- You have the ability to perform actions.
+- Give XP: {{{agent_actions.can_give_xp}}}
+- Apply Sanctions: {{{agent_actions.can_apply_sanctions}}}
+- Give Roles: {{{agent_actions.can_give_roles}}}
+- Change Nickname: {{{agent_actions.can_change_nickname}}}
+- Send DM: {{{agent_actions.can_send_dms}}}
+
+The user has sent the following message: "{{{userMessage}}}"
+
+Analyze the context. If an action is appropriate, define it in the 'action' field. Otherwise, leave 'action' null. Do NOT generate any conversational text, only the action object.
+For example, to give 50 XP, set 'action' to: { "type": "give_xp", "userId": "{{{userId}}}", "details": { "amount": 50 } }.
+To send a DM, set it to: { "type": "send_dm", "userId": "{{{userId}}}", "details": { "messageContent": "Ton message privé ici." } }
+If no action is needed, return { "action": null }.
+`,
+});
+
 
 // Define the Genkit flow with model cascade
 export const conversationalAgentFlow = ai.defineFlow(
@@ -222,29 +228,52 @@ export const conversationalAgentFlow = ai.defineFlow(
         ]
       : [];
       
-    const modelToUse = input.photoDataUri ? imageModel : textModelCascade[0]; // Use image model if photo is present
+    // Always use the primary text model for action decisions as they are simpler
+    const actionModel = textModelCascade[0]; 
+    const responseModel = input.photoDataUri ? imageModel : textModelCascade[0];
 
+    // STEP 1: Decide on an action (silently)
+    let action: AgentActionSchema | undefined = undefined;
+    try {
+        const { output: actionOutput } = await actionDecisionPrompt(input, { model: actionModel, config: { safetySettings } });
+        if (actionOutput?.action) {
+            action = actionOutput.action;
+        }
+    } catch(error) {
+        console.error(`[Agent Action] Failed to decide on an action:`, error);
+        // Do not stop the flow, just log the error and proceed without an action.
+    }
+
+    // STEP 2: Generate the conversational response
     for (const model of (input.photoDataUri ? [imageModel] : textModelCascade)) {
       try {
-        console.log(`[Agent] Trying model ${model}...`);
-        const { output } = await agentPrompt(input, { model, config: { safetySettings } });
-        console.log(`[Agent] Model ${model} succeeded.`);
-        return output!;
+        console.log(`[Agent Response] Trying model ${model}...`);
+        const { output: responseOutput } = await responseGenerationPrompt(input, { model, config: { safetySettings } });
+        console.log(`[Agent Response] Model ${model} succeeded.`);
+
+        // Combine the results from both steps
+        return {
+          response: responseOutput?.response || "",
+          imagined_answer: responseOutput?.imagined_answer || false,
+          image_prompt: responseOutput?.image_prompt,
+          action: action, // Add the action decided in step 1
+        };
+
       } catch (error: any) {
         lastError = error;
-        console.warn(`[Agent] Model ${model} failed with error:`, error.message);
-        // If it's a quota or overload error, try the next model in the cascade
+        console.warn(`[Agent Response] Model ${model} failed with error:`, error.message);
         if (error.status === 429 || error.status === 503 || error.message.includes('quota')) {
           console.error(`[CRITICAL_AI_ERROR] Quota/Overload error on model ${model}. Trying next model...`);
           continue;
         }
-        // For other types of errors, we might not want to retry.
         break;
       }
     }
 
     // If all models in the cascade failed, throw the last error.
-    console.error(`[Agent] All models in cascade failed. Last error:`, lastError);
+    console.error(`[Agent] All models in cascade failed for response generation. Last error:`, lastError);
     throw lastError;
   }
 );
+
+    
