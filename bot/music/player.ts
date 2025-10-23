@@ -55,8 +55,7 @@ class MusicPlayer {
         const guildQueue = musicQueue.get(interaction.guildId);
         
         const searchResults = await play.search(query, {
-            limit: 1,
-            source: { youtube : "video" }
+            limit: 1
         });
 
         if (!searchResults || searchResults.length === 0) {
@@ -66,10 +65,13 @@ class MusicPlayer {
 
         const songInfo = searchResults[0];
 
+        // Fetch full video details to get a streamable URL
+        const videoInfo = await play.video_info(`https://www.youtube.com/watch?v=${songInfo.id}`);
+
         const song = {
-            title: songInfo.title || 'Titre inconnu',
-            url: songInfo.url ?? `https://www.youtube.com/watch?v=${songInfo.id}`,
-            duration: songInfo.durationInSec,
+            title: videoInfo.video_details.title || 'Titre inconnu',
+            url: videoInfo.video_details.url,
+            duration: videoInfo.video_details.durationInSec,
             requestedBy: interaction.user,
         };
 
@@ -91,6 +93,13 @@ class MusicPlayer {
             this.stop(guildId);
             textChannel.send('File d\'attente terminée. Je me déconnecte.');
             return;
+        }
+        
+        if (!song.url) {
+            console.error(`[Music Player] URL manquante pour ${song.title}`, song);
+            textChannel.send(`❌ Impossible de lire la chanson : ${song.title} (URL non trouvée).`);
+            guildQueue.next();
+            return this.playNext(guildId, textChannel);
         }
 
         try {
