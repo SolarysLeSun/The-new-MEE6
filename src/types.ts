@@ -171,7 +171,7 @@ export interface PanelMessage {
 
 export interface LevelingConfig {
     enabled: boolean;
-    difficulty: 'easy' | 'medium' | 'hard';
+    difficulty: 'easy' | 'medium' | 'hard' | 'arcade';
     xp_per_message: number;
     xp_per_reaction: number;
     xp_per_welcome_reaction: number;

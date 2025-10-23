@@ -193,7 +193,7 @@ export default function LevelingPage() {
                 <div className="space-y-2">
                     <Label>Difficulté de progression</Label>
                     <p className="text-sm text-muted-foreground">Ajuste la quantité d'XP requise pour chaque niveau.</p>
-                    <Select value={config.difficulty || 'medium'} onValueChange={(val: 'easy' | 'medium' | 'hard') => handleValueChange('difficulty', val)}>
+                    <Select value={config.difficulty || 'medium'} onValueChange={(val: 'easy' | 'medium' | 'hard' | 'arcade') => handleValueChange('difficulty', val)}>
                         <SelectTrigger>
                             <SelectValue />
                         </SelectTrigger>
@@ -201,6 +201,7 @@ export default function LevelingPage() {
                             <SelectItem value="easy">Facile</SelectItem>
                             <SelectItem value="medium">Moyen</SelectItem>
                             <SelectItem value="hard">Difficile</SelectItem>
+                            <SelectItem value="arcade">Arcade (250 XP/niveau)</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>

@@ -1175,10 +1175,13 @@ const difficultyMultipliers = {
     medium: 1.0,
     hard: 1.5,
 };
+const ARCADE_XP_PER_LEVEL = 250;
 
-const calculateRequiredXp = (level: number, difficulty: 'easy' | 'medium' | 'hard' = 'medium') => {
+const calculateRequiredXp = (level: number, difficulty: 'easy' | 'medium' | 'hard' | 'arcade' = 'medium') => {
+    if (difficulty === 'arcade') {
+        return ARCADE_XP_PER_LEVEL;
+    }
     const multiplier = difficultyMultipliers[difficulty] || 1.0;
-    // XP needed to get FROM level X TO level X+1
     return Math.floor((5 * (level ** 2) + 50 * level + 100) * multiplier);
 };
 
@@ -1192,6 +1195,14 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
     if (!user) {
         user = { xp: 0, level: 0 };
     }
+
+    if (difficulty === 'arcade') {
+        const level = Math.floor(user.xp / ARCADE_XP_PER_LEVEL);
+        const xpInCurrentLevel = user.xp % ARCADE_XP_PER_LEVEL;
+        const requiredXp = ARCADE_XP_PER_LEVEL;
+        return { xp: xpInCurrentLevel, level, requiredXp, totalXp: user.xp };
+    }
+
 
     let cumulativeXpForPreviousLevels = 0;
     for (let i = 0; i < user.level; i++) {
@@ -1235,9 +1246,14 @@ export const setUserLevel = db.transaction((userId: string, guildId: string, tar
     const difficulty = levelingConfig?.difficulty || 'medium';
 
     let totalXpForTargetLevel = 0;
-    for (let i = 0; i < targetLevel; i++) {
-        totalXpForTargetLevel += calculateRequiredXp(i, difficulty);
+    if (difficulty === 'arcade') {
+        totalXpForTargetLevel = targetLevel * ARCADE_XP_PER_LEVEL;
+    } else {
+        for (let i = 0; i < targetLevel; i++) {
+            totalXpForTargetLevel += calculateRequiredXp(i, difficulty);
+        }
     }
+
 
     const upsertStmt = db.prepare(`
         INSERT INTO user_levels (user_id, guild_id, xp, level)
@@ -1257,6 +1273,23 @@ function checkLevel(userId: string, guildId: string) {
     if (!user) return;
 
     let { xp: totalXp, level } = user;
+    
+    if (difficulty === 'arcade') {
+        const newLevel = Math.floor(totalXp / ARCADE_XP_PER_LEVEL);
+        if (newLevel > level) {
+            db.prepare('UPDATE user_levels SET level = ? WHERE user_id = ? AND guild_id = ?').run(newLevel, userId, guildId);
+             console.log(`[Leveling] ${userId} has reached level ${newLevel} in guild ${guildId}!`);
+            if (clientInstance) {
+                clientInstance.users.fetch(userId).then(userObj => {
+                    clientInstance!.guilds.fetch(guildId).then(guildObj => {
+                        clientInstance!.emit('levelUp', userObj, guildObj, newLevel);
+                    });
+                }).catch(console.error);
+            }
+        }
+        return;
+    }
+
     let requiredXpForNextLevel = calculateRequiredXp(level, difficulty);
     
     let cumulativeXpForCurrentLevel = 0;
@@ -1325,7 +1358,15 @@ export function resetUserXP(guildId: string, userId: string): void {
     const stmt = db.prepare('UPDATE user_levels SET xp = 0, level = 0 WHERE guild_id = ? AND user_id = ?');
     stmt.run(guildId, userId);
 }
-
+// Owner XP Boost
+let globalXPBoost = 1.0;
+export function setGlobalXPBoost(multiplier: number) {
+    globalXPBoost = multiplier;
+    console.log(`[XP Boost] Le multiplicateur d'XP global a été défini sur x${multiplier}.`);
+}
+export function getGlobalXPBoost(): number {
+    return globalXPBoost;
+}
 // --- Trial System ---
 export function hasClaimedTrial(ownerId: string): boolean {
     const stmt = db.prepare('SELECT 1 FROM owner_trials WHERE owner_id = ?');
