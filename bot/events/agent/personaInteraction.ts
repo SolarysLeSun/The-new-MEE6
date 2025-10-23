@@ -39,41 +39,9 @@ export const name = Events.MessageCreate;
 export const once = false;
 
 export async function execute(message: Message) {
-    if (message.author.bot) return;
-
-    // --- DM Handling ---
-    if (!message.guild) {
-        // Find if this user is interacting with any persona across all guilds the bot is in.
-        // This is a simplified approach. A real implementation might need a way for the user
-        // to specify which persona they want to talk to. For now, we'll find the first one.
-        const allGuilds = Array.from(message.client.guilds.cache.values());
-        let personaToTalkTo: Persona | undefined;
-        let guild: {id: string, name: string} | undefined;
-
-        for (const g of allGuilds) {
-            const personas = getPersonasForGuild(g.id);
-            if (personas.length > 0) {
-                // Heuristic: maybe the user shares a server with one of the personas.
-                // A better approach would be to let the user select a persona to DM.
-                personaToTalkTo = personas[0];
-                guild = { id: g.id, name: g.name };
-                break;
-            }
-        }
-        
-        if (personaToTalkTo && guild) {
-            console.log(`[Persona DM] Triggered: Persona "${personaToTalkTo.name}" is processing a DM from ${message.author.tag}.`);
-            await handlePersonaInteraction(message, personaToTalkTo, guild, 'Message Privé');
-        } else {
-             console.log(`[Persona DM] Received DM from ${message.author.tag}, but no persona could be assigned.`);
-        }
-        return;
-    }
-
+    if (message.author.bot || !message.guild || !message.member) return;
 
     // --- Guild Message Handling ---
-    if (!message.member) return;
-
     const config = await getServerConfig(message.guild.id, 'ai-personas');
     if (!config?.enabled || !config.premium) {
         return;
