@@ -387,13 +387,11 @@ export function startApi(client: Client) {
 
     app.post('/api/personas/generate-prompt', checkGlobalAiStatus, async (req, res) => {
         const { name, instructions } = req.body;
-        if (!name || !instructions) {
-            return res.status(400).json({ error: 'Name and instructions are required.' });
-        }
         try {
             const personaPrompt = await generatePersonaPrompt({ name, instructions });
-            res.json({ personaPrompt });
+            res.json(personaPrompt);
         } catch (error) {
+            console.error("[API] Failed to generate persona prompt:", error);
             res.status(500).json({ error: 'Failed to generate persona prompt.' });
         }
     });

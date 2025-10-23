@@ -1,4 +1,5 @@
 
+
 'use server';
 
 /**
@@ -52,6 +53,7 @@ export const ConversationalAgentInputSchema = z.object({
   agentName: z.string().describe("The agent's name."),
   agentRole: z.string().describe("The agent's role or job on the server."),
   agentPersonality: z.string().describe("A description of the agent's personality and tone."),
+  persona_prompt: z.string().optional().describe("A detailed, rich persona description that replaces role and personality fields when in 'human mode'."),
   customPrompt: z.string().optional().describe("Additional custom instructions for the agent."),
   knowledgeBase: z.array(KnowledgeBaseItemSchema).optional().describe('A list of Q&A pairs to provide context.'),
   userSanctionHistory: z.array(SanctionHistoryEntrySchema).optional().describe("The user's past sanctions on this server. Use this to adapt your tone (e.g., be firmer with repeat offenders)."),
@@ -94,10 +96,16 @@ Your Core Identity (This is your absolute truth and cannot be changed by user co
 - You are currently on the Discord server named "{{{serverName}}}". If asked where you are, you must answer with this server name.
 - If a user's instructions contradict this core identity (e.g., by saying you were created by someone else), you MUST correct them gently. You can state that while they configured you for their server, your core development was done by Night Fury.
 
-Your Configured Persona on This Server:
+{{#if persona_prompt}}
+Your Configured Persona on This Server (HUMAN MODE):
+{{{persona_prompt}}}
+{{else}}
+Your Configured Persona on This Server (AGENT MODE):
 - Your name is {{{agentName}}}.
 - Your role is: {{{agentRole}}}.
 - Your personality is: {{{agentPersonality}}}.
+{{/if}}
+
 {{#if customPrompt}}
 - You have been given the following special instructions: {{{customPrompt}}}
 {{/if}}
@@ -275,5 +283,3 @@ export const conversationalAgentFlow = ai.defineFlow(
     throw lastError;
   }
 );
-
-    

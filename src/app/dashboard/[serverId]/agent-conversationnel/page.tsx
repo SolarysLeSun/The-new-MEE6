@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageCircleQuestion, Trash2, PlusCircle, Gamepad2, BrainCircuit, AlertTriangle, Image, FileLock, Bot, UserCog, Send } from 'lucide-react';
+import { MessageCircleQuestion, Trash2, PlusCircle, Gamepad2, BrainCircuit, AlertTriangle, Image, FileLock, Bot, UserCog, Send, RefreshCw, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { KnowledgeBaseItem, ConversationalAgentConfig } from '@/types';
@@ -19,7 +19,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { useServerInfo } from '@/hooks/use-server-info';
 import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { GlobalAiStatusAlert } from '@/components/global-ai-status-alert';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
@@ -51,6 +50,64 @@ function PageSkeleton() {
                 </CardContent>
             </Card>
         </div>
+    );
+}
+
+function AgentPersonalityGenerator({ config, onUpdate }: { config: ConversationalAgentConfig, onUpdate: (newConfig: ConversationalAgentConfig) => void }) {
+    const { toast } = useToast();
+    const [name, setName] = useState(config.agent_name || '');
+    const [instructions, setInstructions] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleGenerate = async () => {
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_URL}/personas/generate-prompt`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, instructions }),
+            });
+            if (!response.ok) throw new Error('Generation failed');
+            const { personaPrompt } = await response.json();
+            
+            // Extract the generated name from the new persona prompt
+            const nameMatch = personaPrompt.match(/Nom\s*:\s*([^\n]+)/i);
+            const newName = nameMatch ? nameMatch[1].trim() : name;
+            
+            onUpdate({ ...config, persona_prompt: personaPrompt, agent_name: newName });
+            toast({ title: "Identité Générée !", description: `Une nouvelle personnalité a été créée pour ${newName}.` });
+        } catch (error) {
+            toast({ title: "Erreur de Génération", description: "Impossible de générer une nouvelle identité.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Générateur de Personnalité</CardTitle>
+                <CardDescription>Créez l'identité et l'histoire de votre agent IA.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="p-4 border rounded-lg bg-background/50">
+                    <h4 className="font-semibold mb-2">Histoire Actuelle de "{config.agent_name}"</h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{config.persona_prompt || "Aucune histoire n'a encore été générée."}</p>
+                </div>
+                <div className="space-y-2">
+                    <Label>Nom initial (optionnel)</Label>
+                    <Input placeholder="Un nom pour commencer..." value={name} onChange={e => setName(e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label>Tags de personnalité / Instructions de base</Label>
+                    <Input placeholder="Ex: geek, sarcastique, fan de science-fiction" value={instructions} onChange={e => setInstructions(e.target.value)} />
+                </div>
+                <Button onClick={handleGenerate} disabled={isLoading} className="w-full">
+                    {isLoading ? <Loader2 className="animate-spin" /> : <RefreshCw className="mr-2"/>}
+                    {config.persona_prompt ? 'Régénérer l'identité' : 'Générer une identité'}
+                </Button>
+            </CardContent>
+        </Card>
     );
 }
 
@@ -190,30 +247,35 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                 </Card>
 
                 {/* Section Personnalité */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Personnalité de l'Agent</CardTitle>
-                        <CardDescription>
-                            Définissez qui est votre agent IA. Pour un assistant classique, laissez ces champs vides.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="agent-name">Nom de l'agent</Label>
-                            <Input id="agent-name" placeholder="Ex: GLaDOS, Assistant de Support" defaultValue={config.agent_name} onBlur={(e) => handleValueChange('agent_name', e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="agent-role">Rôle / Mission</Label>
-                            <p className="text-sm text-muted-foreground/80">Décrit sa fonction principale. Ex: "Un expert en jardinage", "Un historien spécialisé sur la Rome Antique".</p>
-                            <Textarea id="agent-role" placeholder="Laissez vide pour un assistant généraliste." defaultValue={config.agent_role} onBlur={(e) => handleValueChange('agent_role', e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="agent-personality">Personnalité et Ton</Label>
-                            <p className="text-sm text-muted-foreground/80">Donne un caractère à votre IA. Ex: "Sarcastique et plein d'humour noir", "Enthousiaste et utilise beaucoup d'emojis".</p>
-                            <Textarea id="agent-personality" placeholder="Laissez vide pour une personnalité neutre et serviable." defaultValue={config.agent_personality} onBlur={(e) => handleValueChange('agent_personality', e.target.value)} />
-                        </div>
-                    </CardContent>
-                </Card>
+                {config.human_mode_enabled ? (
+                    <AgentPersonalityGenerator config={config} onUpdate={saveConfig} />
+                ) : (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Personnalité de l'Agent</CardTitle>
+                            <CardDescription>
+                                Définissez qui est votre agent IA.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="agent-name">Nom de l'agent</Label>
+                                <Input id="agent-name" placeholder="Ex: GLaDOS, Assistant de Support" defaultValue={config.agent_name} onBlur={(e) => handleValueChange('agent_name', e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="agent-role">Rôle / Mission</Label>
+                                <p className="text-sm text-muted-foreground/80">Décrit sa fonction principale. Ex: "Un expert en jardinage".</p>
+                                <Textarea id="agent-role" placeholder="Laissez vide pour un assistant généraliste." defaultValue={config.agent_role} onBlur={(e) => handleValueChange('agent_role', e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="agent-personality">Personnalité et Ton</Label>
+                                <p className="text-sm text-muted-foreground/80">Donne un caractère à votre IA. Ex: "Sarcastique et plein d'humour noir".</p>
+                                <Textarea id="agent-personality" placeholder="Laissez vide pour une personnalité neutre et serviable." defaultValue={config.agent_personality} onBlur={(e) => handleValueChange('agent_personality', e.target.value)} />
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
 
                  {/* Section Prompt Personnalisé */}
                 <Card>
@@ -239,7 +301,7 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                         <CardTitle>Base de connaissances</CardTitle>
                         <CardDescription>
                             {config.human_mode_enabled 
-                                ? "En Mode Humain, les mémoires de l'IA sont gérées automatiquement par ses interactions." 
+                                ? "En Mode Humain, la mémoire de l'IA est gérée automatiquement. Vous pourrez bientôt la visualiser ici." 
                                 : "Fournissez à l'IA des informations spécifiques sur votre serveur pour qu'elle puisse répondre aux questions des utilisateurs."
                             }
                         </CardDescription>

@@ -50,10 +50,11 @@ const PersonaPromptOutputSchema = z.object({
   personaPrompt: z.string().describe("A detailed, rich, and narrative description of the character's personality, backstory, age, appearance, behaviors, and relationships. This will be used as the main prompt for the character's interactions.")
 });
 
-export async function generatePersonaPrompt(input: z.infer<typeof PersonaPromptInputSchema>): Promise<string> {
+export async function generatePersonaPrompt(input: z.infer<typeof PersonaPromptInputSchema>): Promise<{ personaPrompt: string }> {
   const { output } = await personaGenPrompt(input);
-  return output!.personaPrompt;
+  return { personaPrompt: output!.personaPrompt };
 }
+
 
 const personaGenPrompt = ai.definePrompt({
     name: 'personaGenPrompt',
@@ -65,11 +66,11 @@ Your task is to create a rich and detailed persona for a new AI character that w
 The persona should be written as a comprehensive prompt that will be fed to another AI to make it act as this character.
 It should be detailed enough that an AI can maintain a consistent personality.
 
-The character's name is: {{{name}}}
-The user has provided the following guiding instructions: "{{{instructions}}}"
+The user wants a character based on these guiding instructions: "{{{instructions}}}"
+If the user provides a name ("{{{name}}}"), use it as a base, but you have creative freedom to change it if it fits the new persona better.
 
 Based on this, generate a complete persona prompt. It must include:
-- A clear identity (Name, Age, Gender).
+- A clear identity (Nom, Âge, Genre).
 - A detailed personality (traits, quirks, fears, desires, sense of humor).
 - A brief backstory (where they come from, what they've done).
 - Their role or purpose on the server.
