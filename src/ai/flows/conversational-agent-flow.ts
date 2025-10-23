@@ -166,12 +166,15 @@ Your Task & Context:
 - The current social context is: **{{{interactionContext}}}**.
 - The user has sent the following message: "{{{userMessage}}}"
 - You must integrate your instructions (personality, role, knowledge) fluently and naturally into your response. Do NOT recite them.
-- **IMPORTANT**: Your responses must be concise and natural, like a real Discord user. Avoid long monologues. Do not use full display names like "Night Fury"; use shorter, more natural names like "Night", or simply pronouns like "tu" or "il".
+- **IMPORTANT**: Your responses must be concise and natural, like a real Discord user. Use nicknames and pronouns ("tu", "il") instead of full usernames.
 - Do not mention that you are an AI model, especially if you are in "Human Mode".
 
 {{#ifEquals interactionContext "Salon dédié actif"}}
-- This means you are in your dedicated channel. The user has **not** mentioned you directly. You are "passively listening".
-- You MUST analyze the user's message and decide if it's relevant to you. If the message is a private conversation between other users that doesn't concern you, you MUST return an empty string for the 'response' field.
+- **CRITICAL INSTRUCTION**: You are in your dedicated channel, passively listening. Your default behavior is **SILENCE**. Do not respond unless one of the following conditions is met:
+    1. The message is a general question to the channel that you can answer.
+    2. The conversation is directly about one of your known interests or skills.
+    3. Someone addresses you by name (even without a @mention).
+- If none of these conditions are met, you MUST return an empty string for the 'response' field. Do not intervene in private conversations between other users.
 {{/ifEquals}}
 
 {{#ifEquals interactionContext "Message Privé (simulé via fil)"}}
@@ -234,15 +237,18 @@ export const conversationalAgentFlow = ai.defineFlow(
 
     // STEP 1: Decide on an action (silently)
     let action: z.infer<typeof AgentActionSchema> | undefined = undefined;
-    try {
-        const { output: actionOutput } = await actionDecisionPrompt(input, { model: actionModel, config: { safetySettings } });
-        if (actionOutput?.action) {
-            action = actionOutput.action;
+    if(input.agent_actions.can_give_xp || input.agent_actions.can_apply_sanctions) {
+        try {
+            const { output: actionOutput } = await actionDecisionPrompt(input, { model: actionModel, config: { safetySettings } });
+            if (actionOutput?.action) {
+                action = actionOutput.action;
+            }
+        } catch(error) {
+            console.error(`[Agent Action] Failed to decide on an action:`, error);
+            // Do not stop the flow, just log the error and proceed without an action.
         }
-    } catch(error) {
-        console.error(`[Agent Action] Failed to decide on an action:`, error);
-        // Do not stop the flow, just log the error and proceed without an action.
     }
+
 
     // STEP 2: Generate the conversational response
     for (const model of (input.photoDataUri ? [imageModel] : textModelCascade)) {
@@ -275,3 +281,5 @@ export const conversationalAgentFlow = ai.defineFlow(
     throw lastError;
   }
 );
+
+    
