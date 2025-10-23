@@ -9,12 +9,12 @@ const RappelCommand: Command = {
         .setDescription('Définit un rappel personnel.')
         .setDMPermission(true)
         .addStringOption(option =>
-            option.setName('delai')
-                .setDescription('Le délai avant le rappel (ex: 5m, 1h, 2j).')
-                .setRequired(true))
-        .addStringOption(option =>
             option.setName('message')
                 .setDescription('Le message que vous souhaitez vous rappeler.')
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('delai')
+                .setDescription('Le délai avant le rappel (ex: 5m, 1h, 2j).')
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('destination')
@@ -26,15 +26,18 @@ const RappelCommand: Command = {
                 )),
 
     async execute(interaction: ChatInputCommandInteraction) {
-        const delayStr = interaction.options.getString('delai', true);
         const message = interaction.options.getString('message', true);
+        const delayStr = interaction.options.getString('delai', true);
         
-        // If in DMs, destination can only be 'mp'. If in a guild, it defaults to 'mp' but can be 'salon'.
         const isGuild = !!interaction.guild;
-        let destination = interaction.options.getString('destination') || 'mp';
-        if (!isGuild && destination === 'salon') {
-            await interaction.reply({ content: 'Vous ne pouvez pas choisir "Salon Actuel" comme destination lorsque vous êtes en message privé.', ephemeral: true });
-            return;
+        let destination = interaction.options.getString('destination');
+        
+        // Force destination to 'mp' if not in a guild.
+        if (!isGuild) {
+            destination = 'mp';
+        } else if (!destination) {
+            // Default to 'mp' if in a guild but no destination is specified
+            destination = 'mp';
         }
 
 
@@ -79,17 +82,6 @@ const RappelCommand: Command = {
                 }
             } catch (error) {
                 console.error('[Rappel] Erreur lors de l\'envoi du rappel :', error);
-                // Try to notify user in the original channel if DM fails
-                if (destination === 'mp' && interaction.channel) {
-                    try {
-                        await interaction.followUp({
-                            content: `Impossible de vous envoyer votre rappel en message privé. Vos MPs sont probablement fermés.`,
-                            ephemeral: true,
-                        });
-                    } catch(e) {
-                         console.error('[Rappel] Impossible de notifier l\'utilisateur de l\'échec du DM.');
-                    }
-                }
             }
         }, delayMs);
     },
