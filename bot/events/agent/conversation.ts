@@ -105,7 +105,13 @@ async function handleConversationalAgent(message: Message) {
     
     let interactionContext = 'Unknown';
     if(isDMThread) interactionContext = "Message Privé (simulé via fil)";
-    else if (isMentioned) interactionContext = 'Mention dans un groupe';
+    else if (isMentioned) {
+        if(isInDedicatedChannel) {
+             interactionContext = 'Mention dans un salon dédié';
+        } else {
+            interactionContext = 'Mention dans un groupe';
+        }
+    }
     else if (isInDedicatedChannel) interactionContext = 'Salon dédié actif';
     
     console.log(`[Agent] Received message from ${message.author.tag} in ${message.guild.name}. Trigger: ${interactionContext}`);
@@ -275,7 +281,32 @@ async function handleConversationalAgent(message: Message) {
 
     } catch (error: any) {
         console.error('[Agent] Error during conversational agent flow:', error);
-        // Do not send an error message to the channel to avoid spam
+        
+        let errorMessage = 'Désolé, une erreur est survenue pendant que je réfléchissais. Veuillez réessayer.';
+
+        // --- Handle specific error statuses ---
+        if (error.status === 429) { // Quota Exceeded
+            errorMessage = "Désolé, j'ai atteint ma limite de requêtes pour aujourd'hui. Veuillez réessayer demain.";
+            // Optionally, notify bot owners
+            const ownerIds = ['556529963877138442', '760977578839506985', '800041004400902145'];
+            const ownerMessage = `🚨 **Erreur de Quota API Gemini** 🚨\n\nLe bot a atteint sa limite sur le serveur **${message.guild.name}**.`;
+            for (const id of ownerIds) {
+                try {
+                    const user = await message.client.users.fetch(id);
+                    await user.send(ownerMessage);
+                } catch (dmError) {
+                    console.error(`[Agent Error] Impossible d'envoyer un DM d'erreur de quota à l'utilisateur ${id}`, dmError);
+                }
+            }
+        } else if (error.status === 503) { // Service Unavailable
+            errorMessage = "Les services de l'IA (Google) sont actuellement indisponibles ou surchargés. Veuillez réessayer dans quelques instants.";
+        }
+        
+        try {
+            await message.reply({ content: errorMessage });
+        } catch (replyError) {
+            console.error('[Agent] Failed to send error reply:', replyError);
+        }
     }
 }
 
