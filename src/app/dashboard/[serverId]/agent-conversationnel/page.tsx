@@ -84,30 +84,32 @@ function AgentPersonalityGenerator({ config, onUpdate }: { config: Conversationa
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Générateur de Personnalité</CardTitle>
-                <CardDescription>Créez l'identité et l'histoire de votre agent IA.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="p-4 border rounded-lg bg-background/50">
-                    <h4 className="font-semibold mb-2">Histoire Actuelle de "{config.agent_name}"</h4>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{config.persona_prompt || "Aucune histoire n'a encore été générée."}</p>
-                </div>
-                <div className="space-y-2">
-                    <Label>Nom initial (optionnel)</Label>
-                    <Input placeholder="Un nom pour commencer..." value={name} onChange={e => setName(e.target.value)} />
-                </div>
-                 <div className="space-y-2">
-                    <Label>Tags de personnalité / Instructions de base</Label>
-                    <Input placeholder="Ex: geek, sarcastique, fan de science-fiction" value={instructions} onChange={e => setInstructions(e.target.value)} />
-                </div>
-                <Button onClick={handleGenerate} disabled={isLoading} className="w-full">
-                    {isLoading ? <Loader2 className="animate-spin" /> : <RefreshCw className="mr-2"/>}
-                    {config.persona_prompt ? 'Régénérer l'identité' : 'Générer une identité'}
-                </Button>
-            </CardContent>
-        </Card>
+        <>
+            <div className="p-4 border rounded-lg bg-background/50">
+                <h4 className="font-semibold mb-2">Histoire Actuelle de "{config.agent_name}"</h4>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{config.persona_prompt || "Aucune histoire n'a encore été générée."}</p>
+            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Générateur de Personnalité</CardTitle>
+                    <CardDescription>Créez l'identité et l'histoire de votre agent IA.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label>Nom initial (optionnel)</Label>
+                        <Input placeholder="Un nom pour commencer..." value={name} onChange={e => setName(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Tags de personnalité / Instructions de base</Label>
+                        <Input placeholder="Ex: geek, sarcastique, fan de science-fiction" value={instructions} onChange={e => setInstructions(e.target.value)} />
+                    </div>
+                    <Button onClick={handleGenerate} disabled={isLoading} className="w-full">
+                        {isLoading ? <Loader2 className="animate-spin" /> : <RefreshCw className="mr-2"/>}
+                        {config.persona_prompt ? 'Régénérer l'identité' : 'Générer une identité'}
+                    </Button>
+                </CardContent>
+            </Card>
+        </>
     );
 }
 
