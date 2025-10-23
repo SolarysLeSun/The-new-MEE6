@@ -1,7 +1,7 @@
 
 
-import { Events, Message, Collection, ChannelType } from 'discord.js';
-import { getServerConfig, updateUserXP } from '@/lib/db';
+import { Events, Message, Collection, ChannelType, PermissionFlagsBits } from 'discord.js';
+import { getServerConfig, updateUserXP, getGlobalXPBoost } from '@/lib/db';
 
 const userCooldowns = new Collection<string, number>();
 
@@ -36,6 +36,17 @@ export async function execute(message: Message) {
     userCooldowns.set(cooldownKey, now + cooldownTime);
 
     let xpToGive = config.xp_per_message || 15;
+
+    // --- Admin boost (permanent x2) ---
+    if (message.member?.permissions.has(PermissionFlagsBits.Administrator)) {
+        xpToGive *= 2;
+    }
+
+    // --- Global Owner Boost ---
+    const globalMultiplier = getGlobalXPBoost();
+    if (globalMultiplier > 1) {
+        xpToGive *= globalMultiplier;
+    }
 
     // --- Check for channel boosts ---
     const channelBoost = config.xp_boost_channels?.find((c: any) => c.channel_id === channelForXpCheck.id);

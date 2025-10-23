@@ -5,10 +5,10 @@ import { updateUserXP, checkTesterStatus, getUserLevel, setUserLevel } from '@/l
 
 const OWNER_ID = '556529963877138442';
 
-const XpAdminCommand: Command = {
+const AdminXpCommand: Command = {
     data: new SlashCommandBuilder()
-        .setName('xpadmin')
-        .setDescription("Gère l'XP et le niveau d'un utilisateur. (Accès restreint)")
+        .setName('adminxp')
+        .setDescription("Gère l'XP et le niveau d'un utilisateur. (Admin seulement)")
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addSubcommand(subcommand =>
             subcommand
@@ -61,9 +61,8 @@ const XpAdminCommand: Command = {
 
         const isOwner = interaction.user.id === OWNER_ID;
         const isAdmin = (interaction.member.permissions as any).has(PermissionFlagsBits.Administrator);
-        const isTester = checkTesterStatus(interaction.user.id, interaction.guild.id).isTester;
 
-        if (!isOwner && !(isAdmin && isTester)) {
+        if (!isOwner && !isAdmin) {
             await interaction.reply({ content: "Vous n'avez pas la permission d'utiliser cette commande.", ephemeral: true });
             return;
         }
@@ -141,4 +140,4 @@ const XpAdminCommand: Command = {
     },
 };
 
-export default XpAdminCommand;
+export default AdminXpCommand;
