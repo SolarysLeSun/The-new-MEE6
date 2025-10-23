@@ -1,3 +1,4 @@
+
 import {
     AudioPlayer,
     AudioPlayerStatus,
@@ -54,7 +55,8 @@ class MusicPlayer {
         const guildQueue = musicQueue.get(interaction.guildId);
         
         const searchResults = await play.search(query, {
-            limit: 1
+            limit: 1,
+            source: { youtube : "video" }
         });
 
         if (!searchResults || searchResults.length === 0) {
