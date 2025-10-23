@@ -46,15 +46,21 @@ class MusicPlayer {
     async play(interaction: ChatInputCommandInteraction) {
         if (!interaction.guildId || !interaction.channel || !(interaction.member instanceof GuildMember)) return;
 
-        const query = interaction.options.getString('chanson', true);
+        const url = interaction.options.getString('chanson', true);
         const voiceChannel = interaction.member.voice.channel;
 
         if (!voiceChannel) {
             await this.sendReply(interaction, 'Vous devez être dans un salon vocal pour jouer de la musique.', true);
             return;
         }
+
+        const validation = await play.validate(url);
+        if (validation !== 'yt_video') {
+             await this.sendReply(interaction, "L'URL fournie n'est pas un lien YouTube valide.", true);
+             return;
+        }
         
-        await this.sendReply(interaction, `🔍 Recherche de \`${query}\`...`);
+        await this.sendReply(interaction, `🎵 Chargement de la chanson...`);
 
         // Stop any currently playing song in this guild
         if (this.players.has(interaction.guildId)) {
@@ -78,27 +84,24 @@ class MusicPlayer {
             return;
         }
 
-        this.playSong(query, interaction.guildId, interaction.channel, interaction);
+        this.playSong(url, interaction.guildId, interaction.channel, interaction);
     }
     
-    private async playSong(query: string, guildId: string, textChannel: TextBasedChannel, interaction?: ChatInputCommandInteraction) {
+    private async playSong(url: string, guildId: string, textChannel: TextBasedChannel, interaction?: ChatInputCommandInteraction) {
         try {
-            const stream = await play.stream(query, {
-                discordPlayer: true
-            });
+            const videoInfo = await play.video_info(url);
             
-            const videoInfo = (stream as any).video_info;
-
             if (interaction) {
                  const song: Song = {
                     title: videoInfo?.video_details?.title || 'Titre inconnu',
-                    url: videoInfo?.video_details?.url || `https://www.youtube.com/watch?v=${videoInfo?.video_details?.id}`,
+                    url: videoInfo?.video_details?.url,
                     duration: videoInfo?.video_details?.durationInSec || 0,
                     requestedBy: interaction.user,
                 };
                 await this.sendReply(interaction, { embeds: [nowPlayingEmbed(song, 'Joue maintenant')] });
             }
 
+            const stream = await play.stream(url);
             const resource = createAudioResource(stream.stream, { inputType: stream.type });
 
             const player = createAudioPlayer({
@@ -124,11 +127,11 @@ class MusicPlayer {
             }
 
         } catch (error) {
-            console.error(`Error streaming query "${query}":`, error);
+            console.error(`Error streaming url "${url}":`, error);
             if (interaction) {
-                 await this.sendReply(interaction, `❌ Je n'ai pas trouvé de vidéo pour \`${query}\`.`);
+                 await this.sendReply(interaction, `❌ Je n'ai pas pu lire la vidéo depuis cette URL.`);
             } else {
-                 textChannel.send(`❌ Je n'ai pas trouvé de vidéo pour \`${query}\`.`);
+                 textChannel.send(`❌ Je n'ai pas pu lire la vidéo depuis cette URL.`);
             }
             this.stop(guildId);
         }
