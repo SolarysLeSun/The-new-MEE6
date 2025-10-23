@@ -70,7 +70,6 @@ function AgentPersonalityGenerator({ config, onUpdate }: { config: Conversationa
             if (!response.ok) throw new Error('Generation failed');
             const { personaPrompt } = await response.json();
             
-            // Extract the generated name from the new persona prompt
             const nameMatch = personaPrompt.match(/Nom\s*:\s*([^\n]+)/i);
             const newName = nameMatch ? nameMatch[1].trim() : name;
             
@@ -515,3 +514,4 @@ if (typeof window !== 'undefined' && !(window as any).uuidv4) {
         });
     }
 }
+
