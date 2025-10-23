@@ -521,8 +521,6 @@ const defaultConfigs: DefaultConfigs = {
             parle: null,
             play: null,
             stop: null,
-            skip: null,
-            queue: null,
         }
     },
     'announcements': {

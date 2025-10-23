@@ -9,7 +9,7 @@ const StopCommand: Command = {
     async execute(interaction: ChatInputCommandInteraction, musicPlayer: any) {
         if (!interaction.guildId) return;
         await musicPlayer.stop(interaction.guildId);
-        await interaction.reply('La musique a été arrêtée et la file d\'attente vidée.');
+        await interaction.reply('La musique a été arrêtée.');
     },
 };
 

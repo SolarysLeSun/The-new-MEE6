@@ -1,4 +1,3 @@
-
 import {
     AudioPlayer,
     AudioPlayerStatus,
@@ -12,8 +11,8 @@ import {
 } from '@discordjs/voice';
 import { ChatInputCommandInteraction, Client, Collection, GuildMember, TextBasedChannel } from 'discord.js';
 import play from 'play-dl';
-import { musicQueue, Song } from './queue';
 import { nowPlayingEmbed } from './embeds';
+import { musicQueue, Song } from './queue';
 
 class MusicPlayer {
     public client!: Client;
@@ -54,6 +53,11 @@ class MusicPlayer {
             return;
         }
 
+        // Stop any currently playing song in this guild
+        if (this.players.has(interaction.guildId)) {
+            this.stop(interaction.guildId);
+        }
+
         let connection = this.connections.get(interaction.guildId);
         try {
             if (!connection || connection.state.status === VoiceConnectionStatus.Destroyed) {
@@ -71,8 +75,6 @@ class MusicPlayer {
             return;
         }
 
-        const guildQueue = musicQueue.get(interaction.guildId);
-
         let searchResults;
         try {
             searchResults = await play.search(query, { limit: 1 });
@@ -88,127 +90,62 @@ class MusicPlayer {
         }
 
         const songInfo = searchResults[0];
-        
+
         const song: Song = {
-            id: songInfo.id!,
             title: songInfo.title || 'Titre inconnu',
             url: `https://www.youtube.com/watch?v=${songInfo.id}`,
             duration: songInfo.durationInSec,
             requestedBy: interaction.user,
         };
 
-        guildQueue.add(song);
-
-        if (guildQueue.songs.length === 1) {
-             await this.sendReply(interaction, { embeds: [nowPlayingEmbed(song, 'Joue maintenant')] });
-             this.playNext(interaction.guildId, interaction.channel);
-        } else {
-            await this.sendReply(interaction, `Ajouté à la file d'attente : **${song.title}**`);
-        }
+        await this.sendReply(interaction, { embeds: [nowPlayingEmbed(song, 'Joue maintenant')] });
+        this.playSong(song, interaction.guildId, interaction.channel);
     }
-
-    private async playNext(guildId: string, textChannel: TextBasedChannel) {
-        const guildQueue = musicQueue.get(guildId);
-        const song = guildQueue.getCurrentSong();
-
-        if (!song) {
-            this.stop(guildId);
-            try { textChannel.send('File d\'attente terminée. Je me déconnecte.'); } catch {}
-            return;
-        }
-
+    
+    private async playSong(song: Song, guildId: string, textChannel: TextBasedChannel) {
         try {
-            const videoPageUrl = song.id ? `https://www.youtube.com/watch?v=${song.id}` : song.url!;
+            const stream = await play.stream(song.url);
+            const resource = createAudioResource(stream.stream, { inputType: stream.type });
 
-            if (play.validate(videoPageUrl) !== 'yt_video') {
-                console.error(`[Music Player] URL invalide pour ${song.title}: ${videoPageUrl}`);
-                textChannel.send(`❌ Impossible de lire la chanson : ${song.title} (URL invalide)`);
-                guildQueue.next();
-                // Utilisation d'un petit délai pour éviter une boucle trop rapide en cas d'erreurs multiples
-                setTimeout(() => this.playNext(guildId, textChannel), 250); 
-                return;
-            }
-
-            const stream = await play.stream(videoPageUrl);
-
-            const resource = createAudioResource(stream.stream, {
-                inputType: stream.type
+            const player = createAudioPlayer({
+                behaviors: { noSubscriber: NoSubscriberBehavior.Stop },
             });
-
-            let player = this.players.get(guildId);
-            if (!player) {
-                player = createAudioPlayer({
-                    behaviors: {
-                        noSubscriber: NoSubscriberBehavior.Pause,
-                    },
-                });
-                this.players.set(guildId, player);
-
-                player.on(AudioPlayerStatus.Idle, () => {
-                    guildQueue.next();
-                    this.playNext(guildId, textChannel);
-                });
-                player.on('error', error => {
-                    console.error(`[Music Player Error] Guild: ${guildId}`, error);
-                    guildQueue.next();
-                    this.playNext(guildId, textChannel);
-                });
-            }
-
+            this.players.set(guildId, player);
+            
             const connection = this.connections.get(guildId);
-            if (connection && connection.state.status === VoiceConnectionStatus.Ready) {
+            if (connection) {
                 connection.subscribe(player);
                 player.play(resource);
-            } else {
-                console.error(`[Music Player] No connection found for guild ${guildId}`);
-                textChannel.send('❌ Impossible de jouer : pas de connexion vocale.');
+
+                player.on(AudioPlayerStatus.Idle, () => {
+                    this.stop(guildId);
+                });
+
+                player.on('error', error => {
+                    console.error(`[Music Player Error] Guild: ${guildId}`, error);
+                    this.stop(guildId);
+                });
             }
+
         } catch (error) {
-            console.error(`Error streaming song ${song.url ?? song.id}:`, error);
+            console.error(`Error streaming song ${song.url}:`, error);
             textChannel.send(`❌ Impossible de lire la chanson : ${song.title}`);
-            guildQueue.next();
-            setTimeout(() => this.playNext(guildId, textChannel), 250);
+            this.stop(guildId);
         }
     }
 
     async stop(guildId: string) {
-        const connection = this.connections.get(guildId);
         const player = this.players.get(guildId);
-
-        musicQueue.clear(guildId);
-
-        if(player) {
+        if (player) {
             player.stop(true);
             this.players.delete(guildId);
         }
 
+        const connection = this.connections.get(guildId);
         if (connection && connection.state.status !== VoiceConnectionStatus.Destroyed) {
             connection.destroy();
             this.connections.delete(guildId);
         }
-    }
-
-    async skip(interaction: ChatInputCommandInteraction) {
-         if (!interaction.guildId) return;
-         const guildQueue = musicQueue.get(interaction.guildId);
-         if(guildQueue.songs.length === 0) {
-             await interaction.reply("La file d'attente est vide.");
-             return;
-         }
-
-         const player = this.players.get(interaction.guildId);
-         if(player) {
-             player.stop(); // This triggers the 'idle' event, which plays the next song
-             await interaction.reply("Chanson passée.");
-         } else {
-            await interaction.reply("Aucune musique n'est en cours de lecture.");
-         }
-    }
-
-    async queue(interaction: ChatInputCommandInteraction) {
-        if (!interaction.guildId) return;
-        const guildQueue = musicQueue.get(interaction.guildId);
-        await interaction.reply(guildQueue.getFormattedQueue());
     }
 }
 
