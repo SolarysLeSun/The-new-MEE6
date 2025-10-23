@@ -13,10 +13,10 @@ import '@/ai/flows/content-creation-flow.ts';
 import '@/ai/flows/server-builder-flow.ts';
 import '@/ai/flows/conversational-agent-flow.ts';
 import '@/ai/flows/keyword-generation-flow.ts';
-import '@/ai/flows/persona-flow.ts';
-import '@/ai/flows/memory-flow.ts';
-import '@/ai/flows/self-reflection-flow.ts';
-import '@/ai/flows/action-decision-flow.ts';
+// import '@/ai/flows/persona-flow.ts'; // Deprecated
+// import '@/ai/flows/memory-flow.ts'; // Deprecated
+// import '@/ai/flows/self-reflection-flow.ts'; // Deprecated
+// import '@/ai/flows/action-decision-flow.ts'; // Deprecated
 import '@/ai/flows/tts-flow.ts';
 import '@/ai/flows/knowledge-creation-flow.ts';
 import '@/ai/flows/announcement-flow.ts';

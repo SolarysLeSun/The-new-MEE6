@@ -74,43 +74,38 @@ async function handleConversationalAgent(message: Message) {
     if (!config?.enabled || !config.premium) {
         return;
     }
+    
+    // Check for "MP" simulation via thread
+    const isDMThread = message.channel.isThread() && message.channel.parent?.name.startsWith('mp-');
 
     const isInDedicatedChannel = message.channel.id === config.dedicated_channel_id;
     const isMentioned = message.mentions.has(message.client.user.id);
 
     // --- Determine if the agent should be triggered ---
-    // The agent is triggered if it's mentioned anywhere OR if the message is in its dedicated channel.
-    if (!isMentioned && !isInDedicatedChannel) {
+    if (!isMentioned && !isInDedicatedChannel && !isDMThread) {
         return;
     }
     
-    // In a dedicated channel, don't respond to empty messages (e.g., only attachments without text).
     const imageAttachment = message.attachments.find(att => imageMimeTypes.some(mime => att.contentType?.startsWith(mime)));
-    if (isInDedicatedChannel && !message.content && !imageAttachment && !isMentioned) {
+    if ((isInDedicatedChannel || isDMThread) && !message.content && !imageAttachment && !isMentioned) {
         return;
     }
 
     // --- Message Processing for AI ---
     let processedMessage = message.content;
-
-    // Replace user mentions with their display names
     message.mentions.users.forEach(user => {
         const member = message.guild?.members.cache.get(user.id);
         const name = member ? member.displayName : user.username;
         processedMessage = processedMessage.replace(new RegExp(`<@!?${user.id}>`, 'g'), `@${name}`);
     });
-
-    // Replace role mentions with role names
     message.mentions.roles.forEach(role => {
         processedMessage = processedMessage.replace(new RegExp(`<@&${role.id}>`, 'g'), `@${role.name}`);
     });
     
-    // Define the interaction context: a direct mention is always treated as such, otherwise it's passive listening in a dedicated channel.
-    const interactionContext = isMentioned 
-        ? 'Mention dans un groupe' 
-        : isInDedicatedChannel 
-        ? 'Salon dédié actif'
-        : 'Inconnu'; // Should not happen due to initial checks
+    let interactionContext = 'Unknown';
+    if(isDMThread) interactionContext = "Message Privé (simulé via fil)";
+    else if (isMentioned) interactionContext = 'Mention dans un groupe';
+    else if (isInDedicatedChannel) interactionContext = 'Salon dédié actif';
     
     console.log(`[Agent] Received message from ${message.author.tag} in ${message.guild.name}. Trigger: ${interactionContext}`);
 
@@ -126,14 +121,12 @@ async function handleConversationalAgent(message: Message) {
             }
         }
         
-        // --- Gather user context based on config ---
         const userSanctionHistory = config.data_sharing?.share_sanction_history ? getUserSanctionHistory(message.guild.id, message.author.id) : undefined;
         const userLevel = config.data_sharing?.share_level ? getUserLevel(message.author.id, message.guild.id) : undefined;
         const userRoles = config.data_sharing?.share_roles ? message.member.roles.cache.map(r => r.name).filter(n => n !== '@everyone') : undefined;
 
-        // Fetch last 5 messages for context, unless it's a dedicated channel (which has its own history)
         let historyForPrompt: { user: string, content: string }[] = [];
-        if (isInDedicatedChannel) {
+        if (isInDedicatedChannel || isDMThread) {
             const currentHistory = conversationHistory.get(message.channel.id) || [];
             historyForPrompt = [...currentHistory]; 
 
@@ -147,7 +140,7 @@ async function handleConversationalAgent(message: Message) {
              historyForPrompt = lastMessages.map(m => ({ user: m.author.username, content: m.content })).reverse();
         }
 
-        const result = await conversationalAgentFlow({
+        let result = await conversationalAgentFlow({
             serverName: message.guild.name,
             userMessage: processedMessage,
             userName: message.member.displayName,
@@ -166,36 +159,60 @@ async function handleConversationalAgent(message: Message) {
             allow_freewheeling: config.allow_freewheeling,
             allow_image_generation: config.allow_image_generation,
             interactionContext: interactionContext,
-            agent_actions: config.agent_actions,
         });
 
-        // The AI can choose not to respond by returning an empty string
-        if (!result.response && !result.image_prompt && !result.action) {
-            console.log(`[Agent] Agent chose not to respond to the message in ${interactionContext}.`);
-            return;
+        // --- Execute Actions from Response ---
+        let responseText = result.response;
+        const xpRegex = /--addxp\s+(\d+)\s+<@!?(\d+)>/;
+        const sanctionRegex = /--sanction\s+(warn|mute)\s+<@!?(\d+)>\s+(.+)/;
+
+        const xpMatch = responseText.match(xpRegex);
+        const sanctionMatch = responseText.match(sanctionRegex);
+
+        if (xpMatch && config.agent_actions?.can_give_xp) {
+            const amount = parseInt(xpMatch[1], 10);
+            const targetId = xpMatch[2];
+            if (targetId === message.author.id) { // For safety, only allow giving XP to the user who triggered the message
+                updateUserXP(targetId, message.guild.id, amount);
+                console.log(`[Agent Action] Gave ${amount} XP to user ${targetId}.`);
+                responseText = responseText.replace(xpRegex, '').trim(); // Clean the command from the response
+            }
         }
-        
-        // --- Execute Action if present ---
-        if (result.action) {
-            const targetUser = await message.client.users.fetch(result.action.userId).catch(() => null);
-            if (targetUser) {
-                switch(result.action.type) {
-                    case 'send_dm':
-                        if (config.agent_actions.can_send_dms && result.action.details.messageContent) {
-                            try {
-                                await targetUser.send(result.action.details.messageContent);
-                                console.log(`[Agent Action] Sent DM to ${targetUser.tag}`);
-                            } catch (e) {
-                                console.error(`[Agent Action] Failed to send DM to ${targetUser.tag}`);
-                            }
-                        }
-                        break;
-                     // ... other actions can be implemented here in the future
+
+        if (sanctionMatch && config.agent_actions?.can_apply_sanctions) {
+            const action = sanctionMatch[1];
+            const targetId = sanctionMatch[2];
+            const reason = sanctionMatch[3];
+            const targetMember = await message.guild.members.fetch(targetId).catch(() => null);
+
+            if (targetMember) {
+                if (action === 'warn') {
+                    recordSanction({
+                        guild_id: message.guild.id,
+                        user_id: targetMember.id,
+                        moderator_id: message.client.user.id,
+                        action_type: 'warn',
+                        reason: `[IA] ${reason}`
+                    });
+                     console.log(`[Agent Action] Warned user ${targetMember.id} for: ${reason}`);
+                } else if (action === 'mute') {
+                    const duration = ms(reason) || ms('10m'); // Default to 10m if duration is not parsable
+                     if (targetMember.moderatable) {
+                        await targetMember.timeout(duration, `[IA] ${reason}`);
+                        console.log(`[Agent Action] Muted user ${targetMember.id} for ${duration}ms. Reason: ${reason}`);
+                     }
                 }
+                responseText = responseText.replace(sanctionRegex, '').trim(); // Clean the command
             }
         }
 
 
+        // The AI can choose not to respond by returning an empty string
+        if (!responseText && !result.image_prompt) {
+            console.log(`[Agent] Agent chose not to respond to the message in ${interactionContext}.`);
+            return;
+        }
+        
         let files: AttachmentBuilder[] = [];
         if (result.image_prompt) {
             console.log(`[Agent] Generating image with prompt: "${result.image_prompt}"`);
@@ -211,23 +228,22 @@ async function handleConversationalAgent(message: Message) {
         }
         
         try {
-            // Use channel.send instead of reply to avoid errors if original message is deleted
-            await message.channel.send({ content: result.response || undefined, files: files });
+            if(responseText || files.length > 0) {
+                 await message.channel.send({ content: responseText || undefined, files: files });
+            }
             
-            if (isInDedicatedChannel) {
+            if (isInDedicatedChannel || isDMThread) {
                 const currentHistory = conversationHistory.get(message.channel.id) || [];
-                currentHistory.push({ user: config.agent_name, content: result.response });
+                currentHistory.push({ user: config.agent_name, content: responseText });
                 if (currentHistory.length > HISTORY_LIMIT) {
                     currentHistory.shift();
                 }
                 conversationHistory.set(message.channel.id, currentHistory);
             }
 
-            // If the answer was imagined, save it to the knowledge base
             if (result.imagined_answer) {
                 console.log('[Agent] Imagined answer detected. Creating new knowledge item...');
-                 // No need to await this, it can run in the background
-                knowledgeCreationFlow({ userQuestion: processedMessage, agentResponse: result.response })
+                knowledgeCreationFlow({ userQuestion: processedMessage, agentResponse: responseText })
                     .then(newItem => {
                         addKnowledgeBaseItem(message.guild!.id, newItem);
                          console.log(`[Agent] New knowledge item created and saved for guild ${message.guild!.id}.`);
@@ -239,34 +255,17 @@ async function handleConversationalAgent(message: Message) {
         } catch (replyError: any) {
              if (replyError.code === 10008) { // Unknown Message
                 console.warn(`[Agent] Could not reply to message ${message.id} because it was deleted.`);
-            } else {
-                throw replyError; // Re-throw other errors
+            } else if (replyError.code === 50006) { // Cannot send an empty message
+                console.warn(`[Agent] Agent tried to send an empty message and it was blocked.`);
+            }
+            else {
+                throw replyError;
             }
         }
 
     } catch (error: any) {
         console.error('[Agent] Error during conversational agent flow:', error);
-        
         let errorMessage = "Désolé, une erreur est survenue pendant que je réfléchissais. Veuillez réessayer.";
-
-        // --- Handle specific error statuses ---
-        if (error.status === 429) { // Quota Exceeded
-            errorMessage = "Désolé, j'ai atteint ma limite de requêtes pour aujourd'hui. Veuillez réessayer demain.";
-            // Optionally, notify bot owners
-            const ownerIds = ['556529963877138442', '760977578839506985', '800041004400902145'];
-            const ownerMessage = `🚨 **Erreur de Quota API Gemini** 🚨\n\nLe bot a atteint sa limite sur le serveur **${message.guild.name}**.`;
-            for (const id of ownerIds) {
-                try {
-                    const user = await message.client.users.fetch(id);
-                    await user.send(ownerMessage);
-                } catch (dmError) {
-                    console.error(`[Agent Error] Impossible d'envoyer un DM d'erreur de quota à l'utilisateur ${id}`, dmError);
-                }
-            }
-        } else if (error.status === 503) { // Service Unavailable
-            errorMessage = "Les services de l'IA (Google) sont actuellement indisponibles ou surchargés. Veuillez réessayer dans quelques instants.";
-        }
-
         try {
             await message.channel.send(errorMessage);
         } catch (finalError: any) {
@@ -280,10 +279,6 @@ export const name = Events.MessageCreate;
 export const once = false;
 export async function execute(message: Message) {
     if (message.author.bot || !message.guild) return;
-
-    // The conversational agent logic is now self-contained and decides if it should trigger.
     await handleConversationalAgent(message);
-
-    // Run other message-based scans like the FAQ scan.
     await handleFaqScan(message);
 }

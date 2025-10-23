@@ -4,21 +4,25 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import ShinyText from '@/components/ui/shiny-text';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Wrench } from 'lucide-react';
+import { Bot, Link as LinkIcon } from 'lucide-react';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
-
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 
 export default function PersonasPage() {
+  const params = useParams();
+  const serverId = params.serverId as string;
+
   return (
     <PageTransitionWrapper className="space-y-8 text-white max-w-7xl mx-auto">
       <div>
         <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold tracking-tight">
-                 <ShinyText text="Personnages IA" />
+                 Personnages IA
             </h1>
-            <Badge className="bg-yellow-400 text-yellow-900">Premium</Badge>
+            <Badge variant="destructive">Obsolète</Badge>
         </div>
         <p className="text-muted-foreground mt-2">
           Créez une population d'IA pour votre serveur, chacune avec sa propre personnalité, son histoire et ses relations.
@@ -27,11 +31,17 @@ export default function PersonasPage() {
       
       <Separator />
 
-      <Alert>
-        <Wrench className="h-4 w-4" />
-        <AlertTitle>Module en cours de refonte</AlertTitle>
+      <Alert variant="destructive">
+        <Bot className="h-4 w-4" />
+        <AlertTitle>Ce module est obsolète et ne sera plus maintenu.</AlertTitle>
         <AlertDescription>
-          La fonctionnalité des Personnages IA est actuellement en cours d'amélioration pour vous offrir une expérience encore plus incroyable. Elle sera de retour prochainement. Merci de votre patience !
+          Toutes les fonctionnalités de personnalité et de conversation ont été déplacées et améliorées dans le module **Agent Conversationnel**. Nous vous recommandons vivement de l'utiliser à la place pour une expérience plus stable et plus riche.
+          <Link href={`/dashboard/${serverId}/agent-conversationnel`}>
+            <Button variant="link" className="p-0 h-auto ml-2 text-destructive">
+                Aller à l'Agent Conversationnel
+                <LinkIcon className="ml-1 h-4 w-4"/>
+            </Button>
+          </Link>
         </AlertDescription>
       </Alert>
 
@@ -49,7 +59,7 @@ export default function PersonasPage() {
                     <CardTitle>Exemple de Personnage</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-muted-foreground">Les personnages que vous avez créés apparaîtront ici.</p>
+                    <p className="text-muted-foreground">Les personnages que vous avez créés apparaîtraient ici.</p>
                 </CardContent>
             </Card>
         </div>

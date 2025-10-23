@@ -4,7 +4,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, Persona, PersonaMemory, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile } from '../types';
+import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile } from '../types';
 import { randomBytes } from 'crypto';
 import ms from 'ms';
 
@@ -180,6 +180,11 @@ const upgradeSchema = () => {
             );
         `);
         console.log('[Database] La table "owner_trials" est prête.');
+
+        // Drop deprecated tables
+        db.exec(`DROP TABLE IF EXISTS ai_personas;`);
+        db.exec(`DROP TABLE IF EXISTS persona_memories;`);
+        console.log('[Database] Tables obsolètes "ai_personas" et "persona_memories" supprimées.');
 
 
     } catch (error) {
@@ -605,6 +610,11 @@ const defaultConfigs: DefaultConfigs = {
     'embed-builder': {
         enabled: true,
     },
+    'gif-filter': {
+        enabled: false,
+        exempt_roles: [],
+        exempt_channels: [],
+    },
     'anti-afk': {
         enabled: false,
         timeout_minutes: 15,
@@ -913,81 +923,7 @@ export function checkTesterStatus(userId: string, guildId: string): { isTester: 
     }
 }
 
-export function getPersonasForGuild(guildId: string): Persona[] {
-    const stmt = db.prepare('SELECT * FROM ai_personas WHERE guild_id = ?');
-    return stmt.all(guildId) as Persona[];
-}
-
-export function createPersona(persona: Omit<Persona, 'created_at'>): void {
-    const stmt = db.prepare(`
-        INSERT INTO ai_personas (id, guild_id, name, persona_prompt, creator_id, active_channel_id, avatar_url, role_id, bot_token)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    stmt.run(persona.id, persona.guild_id, persona.name, persona.persona_prompt, persona.creator_id, persona.active_channel_id, persona.avatar_url, persona.role_id, persona.bot_token);
-}
-
-export function updatePersona(id: string, updates: Partial<Omit<Persona, 'id' | 'guild_id' | 'creator_id'>>): void {
-    const fields = Object.keys(updates);
-    const values = Object.values(updates);
-    if (fields.length === 0) return;
-
-    const setClause = fields.map(field => `${field} = ?`).join(', ');
-    const stmt = db.prepare(`UPDATE ai_personas SET ${setClause} WHERE id = ?`);
-    stmt.run(...values, id);
-}
-
-export function deletePersona(id: string): void {
-    const stmt = db.prepare('DELETE FROM ai_personas WHERE id = ?');
-    stmt.run(id);
-}
-
-export function getMemoriesForPersona(personaId: string, userIds: (string | null)[]): PersonaMemory[] {
-    // Ensure userIds always contains at least one value to prevent SQL syntax errors, even if it's a value that won't match (like NULL for user_id)
-    const placeholders = userIds.length > 0 ? userIds.map(() => '?').join(',') : 'NULL';
-    
-    const query = `
-        SELECT * FROM persona_memories 
-        WHERE persona_id = ? AND (user_id IN (${placeholders}) OR user_id IS NULL)
-        ORDER BY salience_score DESC, last_accessed_at DESC 
-        LIMIT 20
-    `;
-    
-    const params: (string | number | null)[] = [personaId, ...userIds];
-    
-    const stmt = db.prepare(query);
-    const memories = stmt.all(...params) as PersonaMemory[];
-    
-    // Touch memories to update last_accessed_at
-    if (memories.length > 0) {
-        const touchStmt = db.prepare(`UPDATE persona_memories SET last_accessed_at = CURRENT_TIMESTAMP WHERE id = ?`);
-        const touchTransaction = db.transaction((mems) => {
-            for (const mem of mems) touchStmt.run(mem.id);
-        });
-        touchTransaction(memories);
-    }
-
-    return memories;
-}
-
-
-export function createMemory(memory: Omit<PersonaMemory, 'id' | 'created_at' | 'last_accessed_at'>): void {
-    const stmt = db.prepare(`
-        INSERT INTO persona_memories (persona_id, user_id, memory_type, content, salience_score)
-        VALUES (?, ?, ?, ?, ?)
-    `);
-    stmt.run(memory.persona_id, memory.user_id, memory.memory_type, memory.content, memory.salience_score);
-}
-
-export function createMultipleMemories(memories: Omit<PersonaMemory, 'id' | 'created_at' | 'last_accessed_at'>[]): void {
-    const insert = db.prepare(`
-        INSERT INTO persona_memories (persona_id, user_id, memory_type, content, salience_score)
-        VALUES (@persona_id, @user_id, @memory_type, @content, @salience_score)
-    `);
-    const insertMany = db.transaction((mems) => {
-        for (const mem of mems) insert.run(mem);
-    });
-    insertMany(memories);
-}
+// Deprecated functions for AI Personas are removed.
 
 export function createPremiumKey(generatedBy: string, expiresAt: Date | null): string {
     const key = `MARCUS-${randomBytes(8).toString('hex').toUpperCase()}`;
@@ -1426,5 +1362,3 @@ export function getCombinedUserLevel(userId: string): number {
     const rows = stmt.all(userId) as { level: number }[];
     return rows.reduce((sum, row) => sum + row.level, 0);
 }
-
-
