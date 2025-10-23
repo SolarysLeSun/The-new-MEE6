@@ -75,7 +75,7 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^9.0.1",
     "wav": "^1.0.2",
-    "ytdl-core": "^4.11.5",
+    "play-dl": "^1.9.7",
     "zod": "^3.24.2"
   },
   "devDependencies": {

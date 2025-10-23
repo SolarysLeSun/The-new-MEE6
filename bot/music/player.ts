@@ -10,7 +10,7 @@ import {
     NoSubscriberBehavior,
 } from '@discordjs/voice';
 import { ChatInputCommandInteraction, Client, Collection, GuildMember, TextBasedChannel } from 'discord.js';
-import ytdl from 'ytdl-core';
+import play from 'play-dl';
 import { musicQueue } from './queue';
 import { nowPlayingEmbed } from './embeds';
 
@@ -19,7 +19,7 @@ class MusicPlayer {
     private players: Collection<string, AudioPlayer> = new Collection();
     private connections: Collection<string, VoiceConnection> = new Collection();
 
-    initialize(client: Client) {
+    public initialize(client: Client) {
         this.client = client;
         this.client.on('voiceStateUpdate', (oldState, newState) => {
             // Auto-disconnect if bot is alone in channel
@@ -52,17 +52,22 @@ class MusicPlayer {
         }
         
         const guildQueue = musicQueue.get(interaction.guildId);
-        const songInfo = await ytdl.getInfo(query).catch(() => null);
+        
+        const searchResults = await play.search(query, {
+            limit: 1
+        });
 
-        if (!songInfo) {
+        if (!searchResults || searchResults.length === 0) {
             await interaction.editReply("Je n'ai pas trouvé de vidéo YouTube pour cette recherche.");
             return;
         }
 
+        const songInfo = searchResults[0];
+
         const song = {
-            title: songInfo.videoDetails.title,
-            url: songInfo.videoDetails.video_url,
-            duration: parseInt(songInfo.videoDetails.lengthSeconds),
+            title: songInfo.title || 'Titre inconnu',
+            url: songInfo.url,
+            duration: songInfo.durationInSec,
             requestedBy: interaction.user,
         };
 
@@ -76,7 +81,7 @@ class MusicPlayer {
         }
     }
 
-    private playNext(guildId: string, textChannel: TextBasedChannel) {
+    private async playNext(guildId: string, textChannel: TextBasedChannel) {
         const guildQueue = musicQueue.get(guildId);
         const song = guildQueue.getCurrentSong();
 
@@ -86,35 +91,45 @@ class MusicPlayer {
             return;
         }
 
-        const stream = ytdl(song.url, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 });
-        const resource = createAudioResource(stream);
-        let player = this.players.get(guildId);
+        try {
+            const stream = await play.stream(song.url);
+            const resource = createAudioResource(stream.stream, {
+                inputType: stream.type
+            });
 
-        if (!player) {
-            player = createAudioPlayer({
-                behaviors: {
-                    noSubscriber: NoSubscriberBehavior.Pause,
-                },
-            });
-            this.players.set(guildId, player);
+            let player = this.players.get(guildId);
 
-            player.on(AudioPlayerStatus.Idle, () => {
-                guildQueue.next();
-                this.playNext(guildId, textChannel);
-            });
-             player.on('error', error => {
-                console.error(`[Music Player Error] Guild: ${guildId}`, error);
-                guildQueue.next();
-                this.playNext(guildId, textChannel);
-            });
-        }
-        
-        const connection = this.connections.get(guildId);
-        if (connection && connection.state.status === VoiceConnectionStatus.Ready) {
-            connection.subscribe(player);
-            player.play(resource);
-        } else {
-             console.error(`[Music Player] No connection found for guild ${guildId} to play next song.`);
+            if (!player) {
+                player = createAudioPlayer({
+                    behaviors: {
+                        noSubscriber: NoSubscriberBehavior.Pause,
+                    },
+                });
+                this.players.set(guildId, player);
+
+                player.on(AudioPlayerStatus.Idle, () => {
+                    guildQueue.next();
+                    this.playNext(guildId, textChannel);
+                });
+                player.on('error', error => {
+                    console.error(`[Music Player Error] Guild: ${guildId}`, error);
+                    guildQueue.next();
+                    this.playNext(guildId, textChannel);
+                });
+            }
+            
+            const connection = this.connections.get(guildId);
+            if (connection && connection.state.status === VoiceConnectionStatus.Ready) {
+                connection.subscribe(player);
+                player.play(resource);
+            } else {
+                console.error(`[Music Player] No connection found for guild ${guildId} to play next song.`);
+            }
+        } catch (error) {
+            console.error(`Error streaming song ${song.url}:`, error);
+            textChannel.send(`❌ Impossible de lire la chanson : ${song.title}`);
+            guildQueue.next();
+            this.playNext(guildId, textChannel);
         }
     }
 
@@ -139,24 +154,23 @@ class MusicPlayer {
          if (!interaction.guildId) return;
          const guildQueue = musicQueue.get(interaction.guildId);
          if(guildQueue.songs.length === 0) {
-             await interaction.editReply("La file d'attente est vide.");
+             await interaction.reply("La file d'attente est vide.");
              return;
          }
          
          const player = this.players.get(interaction.guildId);
          if(player) {
              player.stop(); // This triggers the 'idle' event, which plays the next song
-             await interaction.editReply("Chanson passée.");
+             await interaction.reply("Chanson passée.");
          } else {
-            await interaction.editReply("Aucune musique n'est en cours de lecture.");
+            await interaction.reply("Aucune musique n'est en cours de lecture.");
          }
     }
 
     async queue(interaction: ChatInputCommandInteraction) {
         if (!interaction.guildId) return;
         const guildQueue = musicQueue.get(interaction.guildId);
-        await interaction.editReply(guildQueue.getFormattedQueue());
+        await interaction.reply(guildQueue.getFormattedQueue());
     }
-
 }
 export const musicPlayer = new MusicPlayer();
