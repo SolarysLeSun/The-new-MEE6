@@ -175,4 +175,5 @@ class MusicPlayer {
         await interaction.reply(guildQueue.getFormattedQueue());
     }
 }
+
 export const musicPlayer = new MusicPlayer();
