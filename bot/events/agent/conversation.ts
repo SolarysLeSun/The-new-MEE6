@@ -1,18 +1,20 @@
 
 
-import { Events, Message, Collection, EmbedBuilder, TextChannel, AttachmentBuilder, User } from 'discord.js';
+import { Events, Message, Collection, EmbedBuilder, TextChannel, AttachmentBuilder, User, Guild, ThreadChannel, ChannelType, ThreadAutoArchiveDuration } from 'discord.js';
 import { getServerConfig, addKnowledgeBaseItem, getUserSanctionHistory, getUserLevel, updateUserXP, recordSanction } from '../../../src/lib/db';
 import { conversationalAgentFlow } from '../../../src/ai/flows/conversational-agent-flow';
 import { knowledgeCreationFlow } from '../../../src/ai/flows/knowledge-creation-flow';
 import { faqFlow } from '../../../src/ai/flows/faq-flow';
 import { generateImage } from '../../../src/ai/flows/content-creation-flow';
 import fetch from 'node-fetch';
+import { memoryFlow } from '@/ai/flows/memory-flow';
+import type { Persona } from '@/types';
 
 const imageMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
 
-// Cache to store conversation history for dedicated channels
+// Cache to store conversation history
 const conversationHistory = new Collection<string, { user: string; content: string }[]>();
-const HISTORY_LIMIT = 10; // Keep the last 10 messages
+const HISTORY_LIMIT = 10;
 
 // Helper to convert image URL to data URI
 async function imageUrlToDataUri(url: string): Promise<string> {
@@ -65,6 +67,44 @@ async function handleFaqScan(message: Message) {
 }
 
 
+export async function getOrCreatePrivateThread(guild: Guild, agent: Persona, user: User): Promise<ThreadChannel | null> {
+    const privateChannelName = `mp-${agent.name.toLowerCase().replace(/\s/g, '-')}`;
+    
+    let channel = guild.channels.cache.find(c => c.name === privateChannelName && c.type === ChannelType.GuildText) as TextChannel;
+    
+    if (!channel) {
+        channel = await guild.channels.create({
+            name: privateChannelName,
+            type: ChannelType.GuildText,
+            topic: `Salon privé pour les conversations avec l'agent ${agent.name}.`,
+            permissionOverwrites: [
+                {
+                    id: guild.id,
+                    deny: ['ViewChannel'],
+                },
+                {
+                    id: guild.members.me!.id,
+                    allow: ['ViewChannel', 'ManageThreads'],
+                },
+            ],
+        }) as TextChannel;
+    }
+
+    const threadName = `MP-${user.username}`;
+    let thread = channel.threads.cache.find(t => t.name === threadName);
+
+    if (!thread) {
+        thread = await channel.threads.create({
+            name: threadName,
+            autoArchiveDuration: ThreadAutoArchiveDuration.OneHour,
+            reason: `Conversation privée avec ${user.tag}`,
+        });
+        await thread.members.add(user.id);
+    }
+    
+    return thread;
+}
+
 async function handleConversationalAgent(message: Message) {
     if (message.author.bot || !message.guild || !message.member) {
         return;
@@ -74,19 +114,20 @@ async function handleConversationalAgent(message: Message) {
     if (!config?.enabled || !config.premium) {
         return;
     }
+    
+    const parentChannel = message.channel.isThread() ? await message.channel.parent?.fetch() : null;
+    const isPrivateMessageThread = parentChannel?.name === `mp-${config.agent_name.toLowerCase().replace(/\s/g, '-')}`;
 
     const isInDedicatedChannel = message.channel.id === config.dedicated_channel_id;
     const isMentioned = message.mentions.has(message.client.user.id);
 
     // --- Determine if the agent should be triggered ---
-    // The agent is triggered if it's mentioned anywhere OR if the message is in its dedicated channel.
-    if (!isMentioned && !isInDedicatedChannel) {
+    if (!isMentioned && !isInDedicatedChannel && !isPrivateMessageThread) {
         return;
     }
     
-    // In a dedicated channel, don't respond to empty messages (e.g., only attachments without text).
     const imageAttachment = message.attachments.find(att => imageMimeTypes.some(mime => att.contentType?.startsWith(mime)));
-    if (isInDedicatedChannel && !message.content && !imageAttachment && !isMentioned) {
+    if (!message.content && !imageAttachment) {
         return;
     }
 
@@ -105,12 +146,11 @@ async function handleConversationalAgent(message: Message) {
         processedMessage = processedMessage.replace(new RegExp(`<@&${role.id}>`, 'g'), `@${role.name}`);
     });
     
-    // Define the interaction context: a direct mention is always treated as such, otherwise it's passive listening in a dedicated channel.
-    const interactionContext = isMentioned 
+    const interactionContext = isPrivateMessageThread 
+        ? 'Message Privé (simulé via fil)' 
+        : isMentioned 
         ? 'Mention dans un groupe' 
-        : isInDedicatedChannel 
-        ? 'Salon dédié actif'
-        : 'Inconnu'; // Should not happen due to initial checks
+        : 'Salon dédié actif';
     
     console.log(`[Agent] Received message from ${message.author.tag} in ${message.guild.name}. Trigger: ${interactionContext}`);
 
@@ -131,21 +171,16 @@ async function handleConversationalAgent(message: Message) {
         const userLevel = config.data_sharing?.share_level ? getUserLevel(message.author.id, message.guild.id) : undefined;
         const userRoles = config.data_sharing?.share_roles ? message.member.roles.cache.map(r => r.name).filter(n => n !== '@everyone') : undefined;
 
-        // Fetch last 5 messages for context, unless it's a dedicated channel (which has its own history)
         let historyForPrompt: { user: string, content: string }[] = [];
-        if (isInDedicatedChannel) {
-            const currentHistory = conversationHistory.get(message.channel.id) || [];
-            historyForPrompt = [...currentHistory]; 
+        const historyKey = message.channel.id;
+        const currentHistory = conversationHistory.get(historyKey) || [];
+        historyForPrompt = [...currentHistory]; 
 
-            currentHistory.push({ user: message.member.displayName, content: processedMessage });
-            if (currentHistory.length > HISTORY_LIMIT) {
-                currentHistory.shift();
-            }
-            conversationHistory.set(message.channel.id, currentHistory);
-        } else {
-             const lastMessages = await message.channel.messages.fetch({ limit: 5, before: message.id });
-             historyForPrompt = lastMessages.map(m => ({ user: m.author.username, content: m.content })).reverse();
+        currentHistory.push({ user: message.member.displayName, content: processedMessage });
+        if (currentHistory.length > HISTORY_LIMIT) {
+            currentHistory.shift();
         }
+        conversationHistory.set(historyKey, currentHistory);
 
         const result = await conversationalAgentFlow({
             serverName: message.guild.name,
@@ -157,9 +192,9 @@ async function handleConversationalAgent(message: Message) {
             agentName: config.agent_name,
             agentRole: config.agent_role,
             agentPersonality: config.agent_personality,
+            persona_prompt: config.human_mode_enabled ? config.persona_prompt : undefined,
             customPrompt: config.custom_prompt,
-            knowledgeBase: config.knowledge_base,
-            conversationHistory: historyForPrompt,
+            knowledgeBase: config.human_mode_enabled ? undefined : config.knowledge_base,
             userSanctionHistory: userSanctionHistory,
             photoDataUri: photoDataUri,
             allow_imagination: config.allow_imagination,
@@ -169,12 +204,6 @@ async function handleConversationalAgent(message: Message) {
             agent_actions: config.agent_actions,
         });
 
-        // The AI can choose not to respond by returning an empty string
-        if (!result.response && !result.image_prompt && !result.action) {
-            console.log(`[Agent] Agent chose not to respond to the message in ${interactionContext}.`);
-            return;
-        }
-        
         // --- Execute Action if present ---
         if (result.action) {
             const targetUser = await message.client.users.fetch(result.action.userId).catch(() => null);
@@ -195,55 +224,61 @@ async function handleConversationalAgent(message: Message) {
             }
         }
 
-
-        let files: AttachmentBuilder[] = [];
-        if (result.image_prompt) {
-            console.log(`[Agent] Generating image with prompt: "${result.image_prompt}"`);
-            try {
-                const imageResult = await generateImage({ prompt: result.image_prompt, allow_nsfw: config.allow_freewheeling });
-                if (imageResult.imageDataUri) {
-                    const imageBuffer = Buffer.from(imageResult.imageDataUri.split(',')[1], 'base64');
-                    files.push(new AttachmentBuilder(imageBuffer, { name: 'agent_image.png' }));
+        // --- Send Response if present ---
+        if (result.response || result.image_prompt) {
+            let files: AttachmentBuilder[] = [];
+            if (result.image_prompt) {
+                console.log(`[Agent] Generating image with prompt: "${result.image_prompt}"`);
+                try {
+                    const imageResult = await generateImage({ prompt: result.image_prompt, allow_nsfw: config.allow_freewheeling });
+                    if (imageResult.imageDataUri) {
+                        const imageBuffer = Buffer.from(imageResult.imageDataUri.split(',')[1], 'base64');
+                        files.push(new AttachmentBuilder(imageBuffer, { name: 'agent_image.png' }));
+                    }
+                } catch (imgError) {
+                    console.error(`[Agent] Image generation failed:`, imgError);
                 }
-            } catch (imgError) {
-                console.error(`[Agent] Image generation failed:`, imgError);
             }
-        }
-        
-        try {
-            // Use channel.send instead of reply to avoid errors if original message is deleted
-            await message.channel.send({ content: result.response || undefined, files: files });
             
-            if (isInDedicatedChannel) {
-                const currentHistory = conversationHistory.get(message.channel.id) || [];
-                currentHistory.push({ user: config.agent_name, content: result.response });
-                if (currentHistory.length > HISTORY_LIMIT) {
-                    currentHistory.shift();
+            try {
+                await message.channel.send({ content: result.response || undefined, files: files });
+                
+                const updatedHistory = conversationHistory.get(historyKey) || [];
+                updatedHistory.push({ user: config.agent_name, content: result.response });
+                if (updatedHistory.length > HISTORY_LIMIT) {
+                    updatedHistory.shift();
                 }
-                conversationHistory.set(message.channel.id, currentHistory);
-            }
+                conversationHistory.set(historyKey, updatedHistory);
 
-            // If the answer was imagined, save it to the knowledge base
-            if (result.imagined_answer) {
-                console.log('[Agent] Imagined answer detected. Creating new knowledge item...');
-                 // No need to await this, it can run in the background
-                knowledgeCreationFlow({ userQuestion: processedMessage, agentResponse: result.response })
-                    .then(newItem => {
-                        addKnowledgeBaseItem(message.guild!.id, newItem);
-                         console.log(`[Agent] New knowledge item created and saved for guild ${message.guild!.id}.`);
-                    })
-                    .catch(err => {
-                         console.error('[Agent] Failed to create or save new knowledge item:', err);
-                    });
-            }
-        } catch (replyError: any) {
-             if (replyError.code === 10008) { // Unknown Message
-                console.warn(`[Agent] Could not reply to message ${message.id} because it was deleted.`);
-            } else {
-                throw replyError; // Re-throw other errors
+                // If the answer was imagined, save it to the knowledge base (if not in human mode)
+                if (result.imagined_answer && !config.human_mode_enabled) {
+                    console.log('[Agent] Imagined answer detected. Creating new knowledge item...');
+                    knowledgeCreationFlow({ userQuestion: processedMessage, agentResponse: result.response })
+                        .then(newItem => {
+                            addKnowledgeBaseItem(message.guild!.id, newItem);
+                            console.log(`[Agent] New knowledge item created and saved for guild ${message.guild!.id}.`);
+                        })
+                        .catch(err => {
+                            console.error('[Agent] Failed to create or save new knowledge item:', err);
+                        });
+                }
+                // In human mode, trigger memory flow
+                else if (config.human_mode_enabled) {
+                     console.log(`[Agent Memory] Triggering memory creation for agent in ${message.guild.name}.`);
+                    memoryFlow({
+                        persona_id: message.guild.id, // Use guild ID as unique persona ID for the agent
+                        conversationTranscript: updatedHistory.map(h => `${h.user}: ${h.content}`).join('\n')
+                    }).catch(err => console.error(`[Agent Memory] Error creating memories:`, err));
+                }
+
+            } catch (replyError: any) {
+                if (replyError.code === 10008) { // Unknown Message
+                    console.warn(`[Agent] Could not reply to message ${message.id} because it was deleted.`);
+                } else {
+                    throw replyError; // Re-throw other errors
+                }
             }
         }
-
     } catch (error: any) {
         console.error('[Agent] Error during conversational agent flow:', error);
         
@@ -252,7 +287,6 @@ async function handleConversationalAgent(message: Message) {
         // --- Handle specific error statuses ---
         if (error.status === 429) { // Quota Exceeded
             errorMessage = "Désolé, j'ai atteint ma limite de requêtes pour aujourd'hui. Veuillez réessayer demain.";
-            // Optionally, notify bot owners
             const ownerIds = ['556529963877138442', '760977578839506985', '800041004400902145'];
             const ownerMessage = `🚨 **Erreur de Quota API Gemini** 🚨\n\nLe bot a atteint sa limite sur le serveur **${message.guild.name}**.`;
             for (const id of ownerIds) {

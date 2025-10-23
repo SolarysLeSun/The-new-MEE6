@@ -1,17 +1,13 @@
 
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, TextChannel, ThreadAutoArchiveDuration } from 'discord.js';
 import type { Command, Persona } from '@/types';
-import { getPersonasForGuild, updatePersona } from '@/lib/db';
-import { getOrCreatePrivateThread } from '../../events/agent/personaInteraction';
+import { getServerConfig, updatePersona } from '@/lib/db';
+import { getOrCreatePrivateThread } from '../../events/agent/conversation';
 
 const ConvMpCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('convmp')
-        .setDescription('Ouvre une conversation privée avec un personnage IA du serveur.')
-        .addUserOption(option =>
-            option.setName('personnage')
-                .setDescription('Le personnage avec qui vous voulez parler (doit avoir le rôle du personnage).')
-                .setRequired(true)),
+        .setDescription("Ouvre une conversation privée avec l'agent IA du serveur."),
 
     async execute(interaction: ChatInputCommandInteraction) {
         if (!interaction.guild || !interaction.member) {
@@ -21,24 +17,36 @@ const ConvMpCommand: Command = {
         
         await interaction.deferReply({ ephemeral: true });
 
-        const targetUser = interaction.options.getUser('personnage', true);
-        const personas = getPersonasForGuild(interaction.guild.id);
-        const targetPersona = personas.find(p => p.role_id && targetUser.id === interaction.client.users.cache.find(u => u.username === p.name)?.id);
-
-        if (!targetPersona) {
-            await interaction.editReply({ content: "Personnage non trouvé ou invalide. Assurez-vous de mentionner un utilisateur qui est un personnage IA."});
+        const agentConfig = await getServerConfig(interaction.guild.id, 'conversational-agent');
+        
+        if (!agentConfig || !agentConfig.enabled) {
+            await interaction.editReply({ content: "L'agent conversationnel est désactivé sur ce serveur."});
             return;
         }
         
         try {
-            const thread = await getOrCreatePrivateThread(interaction.guild, targetPersona, interaction.user);
+            // We pass a "mock" persona object based on the agent's config
+            const agentAsPersona: Persona = {
+                id: interaction.guild.id, // Use guildId as a unique ID for the agent
+                name: agentConfig.agent_name || "Agent",
+                guild_id: interaction.guild.id,
+                persona_prompt: '',
+                creator_id: '',
+                created_at: '',
+                active_channel_id: null,
+                avatar_url: null,
+                role_id: null
+            };
+
+            const thread = await getOrCreatePrivateThread(interaction.guild, agentAsPersona, interaction.user);
+            
             if(thread) {
-                await interaction.editReply({ content: `Votre conversation privée avec **${targetPersona.name}** est prête ici : ${thread.toString()}` });
+                await interaction.editReply({ content: `Votre conversation privée avec **${agentAsPersona.name}** est prête ici : ${thread.toString()}` });
             } else {
                  await interaction.editReply({ content: 'Impossible de créer ou trouver le salon de conversation privée.' });
             }
         } catch (error) {
-            console.error('[ConvMP] Error creating private thread:', error);
+            console.error('[ConvMP] Error creating private thread for agent:', error);
             await interaction.editReply({ content: 'Une erreur est survenue lors de la création de la conversation privée.' });
         }
     },
