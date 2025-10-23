@@ -18,6 +18,14 @@ import { nowPlayingEmbed } from './embeds';
 import { Song } from './queue';
 import { Readable } from 'stream';
 
+// Ensure opus is available
+try {
+    require('opusscript');
+} catch (e) {
+    console.warn("[Music Player] opusscript n'est pas installé. La lecture audio pourrait être instable. `npm install opusscript`");
+}
+
+
 class MusicPlayer {
     public client!: Client;
     private players: Collection<string, AudioPlayer> = new Collection();
@@ -58,7 +66,7 @@ class MusicPlayer {
         }
 
         if (!ytdl.validateURL(url)) {
-             await this.sendReply(interaction, "L'URL fournie n'est pas un lien YouTube valide.", true);
+             await this.sendReply(interaction, "Veuillez fournir une URL YouTube valide (ex: https://www.youtube.com/watch?v=...).", true);
              return;
         }
         
@@ -111,7 +119,7 @@ class MusicPlayer {
             });
 
             const resource = createAudioResource(stream, {
-                inputType: StreamType.Arbitrary,
+                inputType: StreamType.Opus, // Force Opus encoding
             });
 
             const player = createAudioPlayer({
