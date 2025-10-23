@@ -259,52 +259,60 @@ async function handleConversationalAgent(message: Message) {
                 }
             }
             
-            try {
-                await message.channel.send({ content: result.response || undefined, files: files });
-                
-                const updatedHistory = conversationHistory.get(historyKey) || [];
-                updatedHistory.push({ user: config.agent_name, content: result.response });
-                if (updatedHistory.length > HISTORY_LIMIT) {
-                    updatedHistory.shift();
-                }
-                conversationHistory.set(historyKey, updatedHistory);
+            // Only send a message if there is actual content to send
+            if (result.response || files.length > 0) {
+                 try {
+                    await message.channel.send({ content: result.response || undefined, files: files });
+                    
+                    const updatedHistory = conversationHistory.get(historyKey) || [];
+                    updatedHistory.push({ user: config.agent_name, content: result.response });
+                    if (updatedHistory.length > HISTORY_LIMIT) {
+                        updatedHistory.shift();
+                    }
+                    conversationHistory.set(historyKey, updatedHistory);
 
-                // If the answer was imagined, save it to the knowledge base (if not in human mode)
-                if (result.imagined_answer && !config.human_mode_enabled) {
-                    console.log('[Agent] Imagined answer detected. Creating new knowledge item...');
-                    knowledgeCreationFlow({ userQuestion: processedMessage, agentResponse: result.response })
-                        .then(newItem => {
-                            addKnowledgeBaseItem(message.guild!.id, newItem);
-                            console.log(`[Agent] New knowledge item created and saved for guild ${message.guild!.id}.`);
-                        })
-                        .catch(err => {
-                            console.error('[Agent] Failed to create or save new knowledge item:', err);
-                        });
-                }
-                // In human mode, trigger memory flow
-                else if (config.human_mode_enabled) {
-                     console.log(`[Agent Memory] Triggering memory creation for agent in ${message.guild.name}.`);
-                    memoryFlow({
-                        persona_id: message.guild.id, // Use guild ID as unique persona ID for the agent
-                        conversationTranscript: updatedHistory.map(h => `${h.user}: ${h.content}`).join('\n')
-                    }).then(newMemories => {
-                        if (newMemories && newMemories.length > 0) {
-                            newMemories.forEach(mem => createMemory(mem));
-                            console.log(`[Agent Memory] Successfully created ${newMemories.length} new memories.`);
-                        }
-                    }).catch(err => console.error(`[Agent Memory] Error creating memories:`, err));
-                }
+                    // If the answer was imagined, save it to the knowledge base (if not in human mode)
+                    if (result.imagined_answer && !config.human_mode_enabled) {
+                        console.log('[Agent] Imagined answer detected. Creating new knowledge item...');
+                        knowledgeCreationFlow({ userQuestion: processedMessage, agentResponse: result.response })
+                            .then(newItem => {
+                                addKnowledgeBaseItem(message.guild!.id, newItem);
+                                console.log(`[Agent] New knowledge item created and saved for guild ${message.guild!.id}.`);
+                            })
+                            .catch(err => {
+                                console.error('[Agent] Failed to create or save new knowledge item:', err);
+                            });
+                    }
+                    // In human mode, trigger memory flow
+                    else if (config.human_mode_enabled) {
+                         console.log(`[Agent Memory] Triggering memory creation for agent in ${message.guild.name}.`);
+                        memoryFlow({
+                            persona_id: message.guild.id, // Use guild ID as unique persona ID for the agent
+                            conversationTranscript: updatedHistory.map(h => `${h.user}: ${h.content}`).join('\n')
+                        }).then(newMemories => {
+                            if (newMemories && newMemories.length > 0) {
+                                newMemories.forEach(mem => createMemory(mem));
+                                console.log(`[Agent Memory] Successfully created ${newMemories.length} new memories.`);
+                            }
+                        }).catch(err => console.error(`[Agent Memory] Error creating memories:`, err));
+                    }
 
-            } catch (replyError: any) {
-                if (replyError.code === 10008) { // Unknown Message
-                    console.warn(`[Agent] Could not reply to message ${message.id} because it was deleted.`);
-                } else {
-                    throw replyError; // Re-throw other errors
+                } catch (replyError: any) {
+                    if (replyError.code === 10008) { // Unknown Message
+                        console.warn(`[Agent] Could not reply to message ${message.id} because it was deleted.`);
+                    } else {
+                        throw replyError; // Re-throw other errors
+                    }
                 }
             }
         }
     } catch (error: any) {
         console.error('[Agent] Error during conversational agent flow:', error);
+        
+        // Avoid sending an error message if the error was "Cannot send an empty message"
+        if (error.code === 50006) {
+            return;
+        }
         
         let errorMessage = "Désolé, une erreur est survenue pendant que je réfléchissais. Veuillez réessayer.";
 
@@ -338,6 +346,12 @@ export const name = Events.MessageCreate;
 export const once = false;
 export async function execute(message: Message) {
     if (message.author.bot || !message.guild) return;
+    
+    // Handle DM responses for AI onboarding
+    if (message.channel.type === ChannelType.DM) {
+        await handleOnboardingResponse(message);
+        return;
+    }
 
     // The conversational agent logic is now self-contained and decides if it should trigger.
     await handleConversationalAgent(message);
