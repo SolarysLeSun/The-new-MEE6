@@ -7,6 +7,7 @@ import { knowledgeCreationFlow } from '../../../src/ai/flows/knowledge-creation-
 import { faqFlow } from '../../../src/ai/flows/faq-flow';
 import { generateImage } from '../../../src/ai/flows/content-creation-flow';
 import fetch from 'node-fetch';
+import ms from 'ms';
 
 const imageMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
 
@@ -159,6 +160,10 @@ async function handleConversationalAgent(message: Message) {
             allow_freewheeling: config.allow_freewheeling,
             allow_image_generation: config.allow_image_generation,
             interactionContext: interactionContext,
+            agent_actions: {
+                can_give_xp: config.agent_actions?.can_give_xp ?? false,
+                can_apply_sanctions: config.agent_actions?.can_apply_sanctions ?? false,
+            }
         });
 
         // --- Execute Actions from Response ---
@@ -172,8 +177,10 @@ async function handleConversationalAgent(message: Message) {
         if (xpMatch && config.agent_actions?.can_give_xp) {
             const amount = parseInt(xpMatch[1], 10);
             const targetId = xpMatch[2];
-            if (targetId === message.author.id) { // For safety, only allow giving XP to the user who triggered the message
-                updateUserXP(targetId, message.guild.id, amount);
+            // For safety, only allow giving XP to the user who triggered the message or is mentioned
+            const mentionedUsers = Array.from(message.mentions.users.values()).map(u => u.id);
+            if (targetId === message.author.id || mentionedUsers.includes(targetId)) { 
+                updateUserXP(targetId, message.guild.id, amount, 'add');
                 console.log(`[Agent Action] Gave ${amount} XP to user ${targetId}.`);
                 responseText = responseText.replace(xpRegex, '').trim(); // Clean the command from the response
             }
@@ -265,12 +272,7 @@ async function handleConversationalAgent(message: Message) {
 
     } catch (error: any) {
         console.error('[Agent] Error during conversational agent flow:', error);
-        let errorMessage = "Désolé, une erreur est survenue pendant que je réfléchissais. Veuillez réessayer.";
-        try {
-            await message.channel.send(errorMessage);
-        } catch (finalError: any) {
-            console.error('[Agent] Failed to send error message:', finalError);
-        }
+        // Do not send an error message to the channel to avoid spam
     }
 }
 

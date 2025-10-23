@@ -329,21 +329,6 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                            <Label htmlFor="can_apply_sanctions" className="font-semibold flex items-center gap-2"><AlertTriangle/>Appliquer des sanctions</Label>
                            <Switch id="can_apply_sanctions" checked={config.agent_actions?.can_apply_sanctions ?? false} onCheckedChange={(val) => handleAgentActionsChange('can_apply_sanctions', val)} />
                         </div>
-                        <Separator />
-                         <div className="flex items-center justify-between">
-                            <Label htmlFor="can_give_roles" className="font-semibold flex items-center gap-2"><PlusCircle/>Attribuer des rôles</Label>
-                            <Switch id="can_give_roles" checked={config.agent_actions?.can_give_roles ?? false} onCheckedChange={(val) => handleAgentActionsChange('can_give_roles', val)} />
-                        </div>
-                        <Separator />
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="can_change_nickname" className="font-semibold flex items-center gap-2"><UserCog/>Modifier un pseudo</Label>
-                            <Switch id="can_change_nickname" checked={config.agent_actions?.can_change_nickname ?? false} onCheckedChange={(val) => handleAgentActionsChange('can_change_nickname', val)} />
-                        </div>
-                        <Separator />
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="can_send_dms" className="font-semibold flex items-center gap-2"><Send/>Envoyer des messages privés</Label>
-                            <Switch id="can_send_dms" checked={config.agent_actions?.can_send_dms ?? false} onCheckedChange={(val) => handleAgentActionsChange('can_send_dms', val)} />
-                        </div>
                     </CardContent>
                 </Card>
 

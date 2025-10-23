@@ -128,7 +128,6 @@ export const navCategories = [
             { href: 'assistant-moderation-ia', label: 'Assistant Modération IA', icon: Sparkles, isPremium: true, keywords: ['modération ia', 'anti-toxicité'] },
             { href: 'createur-contenu-ia', label: 'Créateur de Contenu IA', icon: Palette, isPremium: true, keywords: ['générer annonce', 'générer règle', 'générer image', 'iacontent'] },
             { href: 'agent-conversationnel', label: 'Agent Conversationnel', icon: MessageCircleQuestion, isPremium: true, keywords: ['chatbot', 'personnalité', 'base de connaissances'] },
-            { href: 'personnages-ia', label: 'Personnages IA (obsolète)', icon: Users, isPremium: true, isDisabled: true, keywords: ['personnalité', 'ia multiples'] },
             { href: 'commandes-testeurs', label: 'Commandes Spéciales', icon: TestTubeDiagonal, isPremium: true, keywords: ['mp', 'webhook', 'givepremium', 'genpremium', 'tester', 'owner'] },
         ]
     },
