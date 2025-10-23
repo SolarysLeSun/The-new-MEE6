@@ -22,7 +22,7 @@ const StoryOutputSchema = z.object({
 });
 
 export type StoryInput = z.infer<typeof StoryInputSchema>;
-export type StoryOutput = z-infer<typeof StoryOutputSchema>;
+export type StoryOutput = z.infer<typeof StoryOutputSchema>;
 
 // The prompt input schema is now different from the flow's input schema
 const StoryPromptInputSchema = StoryInputSchema.extend({
