@@ -1,5 +1,5 @@
 
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, TextChannel, ThreadAutoArchiveDuration } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, TextChannel, ThreadAutoArchiveDuration, GuildMember } from 'discord.js';
 import type { Command, Persona } from '@/types';
 import { getServerConfig, updatePersona } from '@/lib/db';
 import { getOrCreatePrivateThread } from '../../events/agent/conversation';

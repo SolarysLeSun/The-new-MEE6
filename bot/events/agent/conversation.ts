@@ -1,7 +1,7 @@
 
 
 import { Events, Message, Collection, EmbedBuilder, TextChannel, AttachmentBuilder, User, Guild, ThreadChannel, ChannelType, ThreadAutoArchiveDuration } from 'discord.js';
-import { getServerConfig, addKnowledgeBaseItem, getUserSanctionHistory, getUserLevel, updateUserXP, recordSanction } from '../../../src/lib/db';
+import { getServerConfig, addKnowledgeBaseItem, getUserSanctionHistory, getUserLevel, updateUserXP, recordSanction, createMemory } from '../../../src/lib/db';
 import { conversationalAgentFlow } from '../../../src/ai/flows/conversational-agent-flow';
 import { knowledgeCreationFlow } from '../../../src/ai/flows/knowledge-creation-flow';
 import { faqFlow } from '../../../src/ai/flows/faq-flow';
@@ -73,33 +73,43 @@ export async function getOrCreatePrivateThread(guild: Guild, agent: Persona, use
     let channel = guild.channels.cache.find(c => c.name === privateChannelName && c.type === ChannelType.GuildText) as TextChannel;
     
     if (!channel) {
-        channel = await guild.channels.create({
-            name: privateChannelName,
-            type: ChannelType.GuildText,
-            topic: `Salon privé pour les conversations avec l'agent ${agent.name}.`,
-            permissionOverwrites: [
-                {
-                    id: guild.id,
-                    deny: ['ViewChannel'],
-                },
-                {
-                    id: guild.members.me!.id,
-                    allow: ['ViewChannel', 'ManageThreads'],
-                },
-            ],
-        }) as TextChannel;
+        try {
+            channel = await guild.channels.create({
+                name: privateChannelName,
+                type: ChannelType.GuildText,
+                topic: `Salon privé pour les conversations avec l'agent ${agent.name}.`,
+                permissionOverwrites: [
+                    {
+                        id: guild.id,
+                        deny: ['ViewChannel'],
+                    },
+                    {
+                        id: guild.members.me!.id,
+                        allow: ['ViewChannel', 'ManageThreads'],
+                    },
+                ],
+            }) as TextChannel;
+        } catch (error) {
+             console.error(`[PrivateThread] Failed to create private channel for agent ${agent.name} in guild ${guild.id}:`, error);
+             return null;
+        }
     }
 
-    const threadName = `MP-${user.username}`;
+    const threadName = `MP-${user.username.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 50)}`;
     let thread = channel.threads.cache.find(t => t.name === threadName);
 
     if (!thread) {
-        thread = await channel.threads.create({
-            name: threadName,
-            autoArchiveDuration: ThreadAutoArchiveDuration.OneHour,
-            reason: `Conversation privée avec ${user.tag}`,
-        });
-        await thread.members.add(user.id);
+        try {
+            thread = await channel.threads.create({
+                name: threadName,
+                autoArchiveDuration: ThreadAutoArchiveDuration.OneHour,
+                reason: `Conversation privée avec ${user.tag}`,
+            });
+            await thread.members.add(user.id);
+        } catch (error) {
+            console.error(`[PrivateThread] Failed to create private thread for user ${user.tag} in guild ${guild.id}:`, error);
+            return null;
+        }
     }
     
     return thread;
@@ -219,6 +229,19 @@ async function handleConversationalAgent(message: Message) {
                             }
                         }
                         break;
+                    case 'start_dm':
+                        if (config.agent_actions.can_send_dms) {
+                            const agentAsPersona: Persona = {
+                                id: message.guild.id, name: config.agent_name || "Agent", guild_id: message.guild.id,
+                                persona_prompt: '', creator_id: '', created_at: '', active_channel_id: null, avatar_url: null, role_id: null
+                            };
+                            const thread = await getOrCreatePrivateThread(message.guild, agentAsPersona, targetUser);
+                            if (thread && result.action.details.messageContent) {
+                                await thread.send(result.action.details.messageContent);
+                                console.log(`[Agent Action] Started private thread with ${targetUser.tag}`);
+                            }
+                        }
+                        break;
                      // ... other actions can be implemented here in the future
                 }
             }
@@ -268,6 +291,11 @@ async function handleConversationalAgent(message: Message) {
                     memoryFlow({
                         persona_id: message.guild.id, // Use guild ID as unique persona ID for the agent
                         conversationTranscript: updatedHistory.map(h => `${h.user}: ${h.content}`).join('\n')
+                    }).then(newMemories => {
+                        if (newMemories && newMemories.length > 0) {
+                            newMemories.forEach(mem => createMemory(mem));
+                            console.log(`[Agent Memory] Successfully created ${newMemories.length} new memories.`);
+                        }
                     }).catch(err => console.error(`[Agent Memory] Error creating memories:`, err));
                 }
 

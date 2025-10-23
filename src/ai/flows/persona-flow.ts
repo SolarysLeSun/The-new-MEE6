@@ -1,43 +1,15 @@
+
+
 'use server';
 
 /**
- * @fileOverview AI flow for generating and interacting with AI personas.
+ * @fileOverview AI flow for generating AI personas.
  */
 
 import { ai, imageModel, textModelCascade } from '@/ai/genkit';
 import { z } from 'genkit';
-import type { ConversationHistoryItem, PersonaMemory } from '@/types';
 
-
-// --- Persona Avatar Generation ---
-const PersonaAvatarInputSchema = z.object({
-    name: z.string().describe("The name of the character."),
-    persona_prompt: z.string().describe("The detailed persona description."),
-});
-export type PersonaAvatarInput = z.infer<typeof PersonaAvatarInputSchema>;
-
-const PersonaAvatarOutputSchema = z.object({
-    avatarDataUri: z.string().describe("The generated avatar image as a data URI."),
-});
-export type PersonaAvatarOutput = z.infer<typeof PersonaAvatarOutputSchema>;
-
-export async function generatePersonaAvatar(input: PersonaAvatarInput): Promise<PersonaAvatarOutput> {
-    const { media } = await ai.generate({
-        model: imageModel,
-        prompt: `Create a square avatar for a character named "${input.name}". Description: ${input.persona_prompt}. The style should be an anime or digital art portrait, focusing on the face.`,
-        config: {
-            responseModalities: ['IMAGE', 'TEXT'],
-        },
-    });
-
-    if (!media.url) {
-        throw new Error("Avatar generation failed.");
-    }
-    return { avatarDataUri: media.url };
-}
-
-
-// --- Persona Generation ---
+// --- Persona Prompt Generation ---
 
 const PersonaPromptInputSchema = z.object({
   name: z.string().describe("The name of the character to create."),
@@ -81,7 +53,7 @@ Write the final persona prompt now.
 `,
 });
 
-// --- Persona Image Generation (separate flow) ---
+// --- Persona Image Generation (separate flow, can be used by other features) ---
 const PersonaImageInputSchema = z.object({
   prompt: z.string().describe("A detailed description of the image to generate."),
 });
@@ -102,9 +74,11 @@ export async function generatePersonaImage(input: PersonaImageInput): Promise<Pe
         },
     });
 
-    if (media.url) {
+    if (media?.url) {
         return { imageDataUri: media.url };
     }
 
     return { imageDataUri: undefined };
 }
+
+    
