@@ -45,7 +45,7 @@ const CoinFlipCommand: Command = {
         const userLevel = getUserLevel(interaction.user.id, interaction.guild.id);
 
         if (userLevel.totalXp < amount) {
-            await interaction.reply({ content: `Vous n'avez pas assez d'XP pour parier ce montant. Vous avez actuellement ${userLevel.totalXp} XP.`, ephemeral: true });
+            await interaction.reply({ content: `Vous n'avez pas assez d'XP pour parier ce montant. Vous avez actuellement ${userLevel.totalXp.toLocaleString()} XP.`, ephemeral: true });
             return;
         }
         
@@ -53,9 +53,9 @@ const CoinFlipCommand: Command = {
         const win = result === choice;
 
         if (win) {
-            updateUserXP(interaction.user.id, interaction.guild.id, amount);
+            updateUserXP(interaction.user.id, interaction.guild.id, amount, 'add');
         } else {
-            updateUserXP(interaction.user.id, interaction.guild.id, -amount);
+            updateUserXP(interaction.user.id, interaction.guild.id, -amount, 'add');
         }
         
         const newUserLevel = getUserLevel(interaction.user.id, interaction.guild.id);
@@ -66,7 +66,7 @@ const CoinFlipCommand: Command = {
             .setColor(win ? 0x00FF00 : 0xFF0000)
             .addFields({
                 name: win ? '🎉 Victoire ! 🎉' : '💀 Défaite... 💀',
-                value: `Vous avez ${win ? 'gagné' : 'perdu'} **${amount}** XP. Votre nouveau solde est de **${newUserLevel.totalXp}** XP.`
+                value: `Vous avez ${win ? 'gagné' : 'perdu'} **${amount.toLocaleString()}** XP. Votre nouveau solde est de **${newUserLevel.totalXp.toLocaleString()}** XP.`
             });
 
         await interaction.reply({ embeds: [embed] });
