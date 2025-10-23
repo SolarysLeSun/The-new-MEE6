@@ -1,3 +1,4 @@
+
 import {
     AudioPlayer,
     AudioPlayerStatus,
@@ -12,7 +13,7 @@ import {
 import { ChatInputCommandInteraction, Client, Collection, GuildMember, TextBasedChannel } from 'discord.js';
 import play from 'play-dl';
 import { nowPlayingEmbed } from './embeds';
-import { musicQueue, Song } from './queue';
+import { Song } from './queue';
 
 class MusicPlayer {
     public client!: Client;
@@ -52,6 +53,8 @@ class MusicPlayer {
             await this.sendReply(interaction, 'Vous devez être dans un salon vocal pour jouer de la musique.', true);
             return;
         }
+        
+        await this.sendReply(interaction, `🔍 Recherche de \`${query}\`...`);
 
         // Stop any currently playing song in this guild
         if (this.players.has(interaction.guildId)) {
@@ -75,36 +78,27 @@ class MusicPlayer {
             return;
         }
 
-        let searchResults;
-        try {
-            searchResults = await play.search(query, { limit: 1 });
-        } catch (err) {
-            console.error('[Music Player] Erreur search play-dl:', err);
-            await this.sendReply(interaction, "❌ Erreur lors de la recherche.", true);
-            return;
-        }
-
-        if (!searchResults || searchResults.length === 0) {
-            await this.sendReply(interaction, "Je n'ai pas trouvé de vidéo YouTube pour cette recherche.", true);
-            return;
-        }
-
-        const songInfo = searchResults[0];
-
-        const song: Song = {
-            title: songInfo.title || 'Titre inconnu',
-            url: `https://www.youtube.com/watch?v=${songInfo.id}`,
-            duration: songInfo.durationInSec,
-            requestedBy: interaction.user,
-        };
-
-        await this.sendReply(interaction, { embeds: [nowPlayingEmbed(song, 'Joue maintenant')] });
-        this.playSong(song, interaction.guildId, interaction.channel);
+        this.playSong(query, interaction.guildId, interaction.channel, interaction);
     }
     
-    private async playSong(song: Song, guildId: string, textChannel: TextBasedChannel) {
+    private async playSong(query: string, guildId: string, textChannel: TextBasedChannel, interaction?: ChatInputCommandInteraction) {
         try {
-            const stream = await play.stream(song.url);
+            const stream = await play.stream(query, {
+                discordPlayer: true
+            });
+            
+            const videoInfo = (stream as any).video_info;
+
+            if (interaction) {
+                 const song: Song = {
+                    title: videoInfo?.video_details?.title || 'Titre inconnu',
+                    url: videoInfo?.video_details?.url || `https://www.youtube.com/watch?v=${videoInfo?.video_details?.id}`,
+                    duration: videoInfo?.video_details?.durationInSec || 0,
+                    requestedBy: interaction.user,
+                };
+                await this.sendReply(interaction, { embeds: [nowPlayingEmbed(song, 'Joue maintenant')] });
+            }
+
             const resource = createAudioResource(stream.stream, { inputType: stream.type });
 
             const player = createAudioPlayer({
@@ -118,18 +112,24 @@ class MusicPlayer {
                 player.play(resource);
 
                 player.on(AudioPlayerStatus.Idle, () => {
+                    textChannel.send('La lecture est terminée. Je me déconnecte.');
                     this.stop(guildId);
                 });
 
                 player.on('error', error => {
                     console.error(`[Music Player Error] Guild: ${guildId}`, error);
+                     textChannel.send(`❌ Une erreur est survenue pendant la lecture.`);
                     this.stop(guildId);
                 });
             }
 
         } catch (error) {
-            console.error(`Error streaming song ${song.url}:`, error);
-            textChannel.send(`❌ Impossible de lire la chanson : ${song.title}`);
+            console.error(`Error streaming query "${query}":`, error);
+            if (interaction) {
+                 await this.sendReply(interaction, `❌ Je n'ai pas trouvé de vidéo pour \`${query}\`.`);
+            } else {
+                 textChannel.send(`❌ Je n'ai pas trouvé de vidéo pour \`${query}\`.`);
+            }
             this.stop(guildId);
         }
     }
