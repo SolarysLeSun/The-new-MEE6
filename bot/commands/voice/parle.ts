@@ -27,7 +27,8 @@ const ParleCommand: Command = {
                     { name: 'Tranquille', value: 'tranquille' },
                     { name: 'ASMR', value: 'ASMR' },
                     { name: 'En Rage', value: 'en colère' },
-                    { name: 'Sensuel', value: 'sensuel' }
+                    { name: 'Sensuel', value: 'sensuel' },
+                    { name: 'Gueule dans son micro', value: 'gueule dans son micro' }
                 )),
 
     async execute(interaction: ChatInputCommandInteraction) {
