@@ -27,8 +27,6 @@ const JoinCommand: Command = {
             await interaction.reply({ content: 'Le module de contrôle vocal est désactivé.', flags: MessageFlags.Ephemeral });
             return;
         }
-        
-        // TODO: Add permission check based on config.command_permissions.join
 
         try {
             await interaction.deferReply({ ephemeral: true });

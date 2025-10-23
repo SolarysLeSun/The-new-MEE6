@@ -58,8 +58,6 @@ const manualVoiceCommands = [
 const musicCommands = [
     { name: '/play', key: 'play', description: 'Joue une chanson ou l\'ajoute à la file d\'attente.' },
     { name: '/stop', key: 'stop', description: 'Arrête la musique et vide la file d\'attente.' },
-    { name: '/skip', key: 'skip', description: 'Passe à la chanson suivante.' },
-    { name: '/queue', key: 'queue', description: 'Affiche la file d\'attente musicale.' },
 ]
 
 function ManualControlPageSkeleton() {
