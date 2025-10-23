@@ -814,7 +814,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     }
 
     // Pass the music player instance to the command if it's a music command
-    const musicCommands = ['play', 'stop', 'skip', 'queue'];
+    const musicCommands = ['play', 'stop'];
     if (musicCommands.includes(interaction.commandName)) {
         try {
             await (command.execute as any)(interaction, musicPlayer);

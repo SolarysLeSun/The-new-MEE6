@@ -34,6 +34,7 @@ class MusicPlayer {
     public initialize(client: Client) {
         this.client = client;
         this.client.on('voiceStateUpdate', (oldState, newState) => {
+            // If the bot is the last one in the channel, disconnect it.
             if (oldState.channelId && oldState.channel?.members.size === 1 && oldState.channel?.members.has(this.client.user!.id)) {
                 this.stop(oldState.guild.id);
             }

@@ -15,7 +15,6 @@
     "bot:start": "node dist/bot/main.js"
   },
   "dependencies": {
-    "opusscript": "^0.1.1",
     "@discordjs/voice": "0.17.0",
     "@genkit-ai/googleai": "^1.14.1",
     "@genkit-ai/next": "^1.14.1",
@@ -64,6 +63,7 @@
     "node-fetch": "^3.3.2",
     "node-wav": "^0.0.2",
     "ogl": "^1.0.0",
+    "opusscript": "^0.1.1",
     "patch-package": "^8.0.0",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
