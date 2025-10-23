@@ -1,3 +1,4 @@
+
 import {
     AudioPlayer,
     AudioPlayerStatus,
@@ -15,7 +16,7 @@ import { musicQueue, Song } from './queue';
 import { nowPlayingEmbed } from './embeds';
 
 class MusicPlayer {
-    private client!: Client;
+    public client!: Client;
     private players: Collection<string, AudioPlayer> = new Collection();
     private connections: Collection<string, VoiceConnection> = new Collection();
 
@@ -123,7 +124,9 @@ class MusicPlayer {
                 console.error(`[Music Player] URL invalide pour ${song.title}: ${videoPageUrl}`);
                 textChannel.send(`❌ Impossible de lire la chanson : ${song.title} (URL invalide)`);
                 guildQueue.next();
-                return this.playNext(guildId, textChannel);
+                // Utilisation d'un petit délai pour éviter une boucle trop rapide en cas d'erreurs multiples
+                setTimeout(() => this.playNext(guildId, textChannel), 250); 
+                return;
             }
 
             const stream = await play.stream(videoPageUrl);
