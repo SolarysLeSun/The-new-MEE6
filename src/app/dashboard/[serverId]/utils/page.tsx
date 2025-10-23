@@ -19,6 +19,7 @@ const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/ap
 interface UtilsConfig {
   enabled: boolean;
   command_permissions: { [key: string]: string | null };
+  command_enabled: { [key: string]: boolean };
 }
 interface DiscordRole {
     id: string;
@@ -26,11 +27,11 @@ interface DiscordRole {
 }
 
 const utilCommands = [
-    { name: '/save', key: 'save', description: 'Sauvegarde la conversation du salon actuel en fichier HTML.' },
+    { name: '/save', key: 'save', description: 'Sauvegarde la conversation du salon actuel en fichier JSON.' },
     { name: '/patchnote', key: 'patchnote', description: 'Fait corriger ou améliorer un texte par l\'IA.' },
     { name: '/rappel', key: 'rappel', description: 'Définit un rappel personnel.' },
-    { name: '/setprofil', key: 'setprofil', description: 'Définit votre biographie et vos liens de profil.', icon: User },
-    { name: '/profil', key: 'profil', description: 'Affiche le profil d\'un utilisateur.', icon: User },
+    { name: '/setprofil', key: 'setprofil', description: 'Définit votre biographie et vos liens de profil.', icon: User, defaultEveryone: true },
+    { name: '/profil', key: 'profil', description: 'Affiche le profil d\'un utilisateur.', icon: User, defaultEveryone: true },
 ];
 
 function PageSkeleton() {
@@ -50,7 +51,7 @@ function PageSkeleton() {
                 </CardContent>
             </Card>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[...Array(2)].map((_, i) => (
+                {[...Array(4)].map((_, i) => (
                     <Card key={i}>
                         <CardHeader>
                             <Skeleton className="h-6 w-32" />
@@ -132,6 +133,12 @@ export default function UtilsPage() {
         saveConfig({ ...config, command_permissions: newPermissions });
     };
 
+     const handleEnabledChange = (commandKey: string, enabled: boolean) => {
+        if (!config) return;
+        const newEnabled = { ...config.command_enabled, [commandKey]: enabled };
+        saveConfig({ ...config, command_enabled: newEnabled });
+    };
+
     if (loading || !config) {
         return <PageSkeleton />;
     }
@@ -189,6 +196,10 @@ export default function UtilsPage() {
                                 {command.icon ? <command.icon className="w-5 h-5 text-primary" /> : <Wrench className="w-5 h-5 text-primary" />}
                                 <span>{command.name}</span>
                             </div>
+                            <Switch
+                                checked={config.command_enabled?.[command.key] ?? true}
+                                onCheckedChange={(checked) => handleEnabledChange(command.key, checked)}
+                            />
                         </CardTitle>
                         <CardDescription>{command.description}</CardDescription>
                     </CardHeader>
@@ -196,7 +207,7 @@ export default function UtilsPage() {
                         <div className="space-y-2">
                             <Label htmlFor={`role-select-${command.key}`} className="text-sm font-medium">Rôle minimum requis</Label>
                             <Combobox
-                                options={command.key === 'rappel' || command.key === 'profil' || command.key === 'setprofil' ? everyoneRoleOption : roleOptions}
+                                options={command.defaultEveryone ? everyoneRoleOption : roleOptions}
                                 value={config.command_permissions?.[command.key] || 'none'}
                                 onChange={(value) => handlePermissionChange(command.key, value)}
                                 placeholder="Sélectionner un rôle"

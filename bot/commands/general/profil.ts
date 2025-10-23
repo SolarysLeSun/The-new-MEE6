@@ -29,8 +29,8 @@ const ProfilCommand: Command = {
 
             const embed = new EmbedBuilder()
                 .setColor(0x3498DB)
-                .setAuthor({ name: `Profil de ${targetUser.username}`, iconURL: targetUser.displayAvatarURL() })
-                .setThumbnail(targetUser.displayAvatarURL({ size: 256 }));
+                .setAuthor({ name: `Profil de ${targetUser.username}`, iconURL: targetUser.displayAvatarURL() || undefined })
+                .setThumbnail(targetUser.displayAvatarURL({ size: 256 }) || null);
 
             if (profile?.bio) {
                 embed.setDescription(profile.bio);

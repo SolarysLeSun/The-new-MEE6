@@ -1,5 +1,4 @@
 
-
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -260,7 +259,7 @@ const defaultConfigs: DefaultConfigs = {
         suggestion_frequency: 'daily',
         suggestion_channel_id: null,
         suggestion_tags: 'film de science-fiction, jeu de stratégie',
-        suggestion_prompt: 'Sois enthousiaste et donne envie de découvrir ta suggestion !',
+        suggestion_prompt: 'Sois toujours très enthousiaste et utilise des emojis !',
     },
     'auto-moderation': {
         enabled: false,
@@ -459,9 +458,6 @@ const defaultConfigs: DefaultConfigs = {
         agent_actions: {
             can_give_xp: false,
             can_apply_sanctions: false,
-            can_give_roles: false,
-            can_change_nickname: false,
-            can_send_dms: false,
         }
     },
     'suggestions': {
@@ -585,10 +581,16 @@ const defaultConfigs: DefaultConfigs = {
             save: null,
             patchnote: null,
             rappel: null,
-            parrainage: null,
             setprofil: null,
             profil: null,
-        }
+        },
+         command_enabled: {
+            save: true,
+            patchnote: true,
+            rappel: true,
+            setprofil: true,
+            profil: true,
+        },
     },
      'referral': {
         enabled: true,
