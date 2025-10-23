@@ -7,6 +7,7 @@ const RappelCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('rappel')
         .setDescription('Définit un rappel personnel.')
+        .setDMPermission(true)
         .addStringOption(option =>
             option.setName('delai')
                 .setDescription('Le délai avant le rappel (ex: 5m, 1h, 2j).')
@@ -27,7 +28,15 @@ const RappelCommand: Command = {
     async execute(interaction: ChatInputCommandInteraction) {
         const delayStr = interaction.options.getString('delai', true);
         const message = interaction.options.getString('message', true);
-        const destination = interaction.options.getString('destination') || 'mp';
+        
+        // If in DMs, destination can only be 'mp'. If in a guild, it defaults to 'mp' but can be 'salon'.
+        const isGuild = !!interaction.guild;
+        let destination = interaction.options.getString('destination') || 'mp';
+        if (!isGuild && destination === 'salon') {
+            await interaction.reply({ content: 'Vous ne pouvez pas choisir "Salon Actuel" comme destination lorsque vous êtes en message privé.', ephemeral: true });
+            return;
+        }
+
 
         const delayMs = ms(delayStr);
 
