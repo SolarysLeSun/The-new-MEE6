@@ -177,12 +177,13 @@ async function handleConversationalAgent(message: Message) {
         if (xpMatch && config.agent_actions?.can_give_xp) {
             const amount = parseInt(xpMatch[1], 10);
             const targetId = xpMatch[2];
-            // For safety, only allow giving XP to the user who triggered the message or is mentioned
-            const mentionedUsers = Array.from(message.mentions.users.values()).map(u => u.id);
-            if (targetId === message.author.id || mentionedUsers.includes(targetId)) { 
+            const targetUser = await message.client.users.fetch(targetId).catch(() => null);
+
+            if (targetUser) { 
                 updateUserXP(targetId, message.guild.id, amount, 'add');
                 console.log(`[Agent Action] Gave ${amount} XP to user ${targetId}.`);
-                responseText = responseText.replace(xpRegex, '').trim(); // Clean the command from the response
+                responseText = responseText.replace(xpRegex, '').trim();
+                message.channel.send(`> *${targetUser.username} a reçu ${amount} XP.*`).then(msg => setTimeout(() => msg.delete().catch(()=>{}), 5000));
             }
         }
 
@@ -197,16 +198,18 @@ async function handleConversationalAgent(message: Message) {
                     recordSanction({
                         guild_id: message.guild.id,
                         user_id: targetMember.id,
-                        moderator_id: message.client.user.id,
+                        moderator_id: message.client.user.id, // Agent's ID
                         action_type: 'warn',
                         reason: `[IA] ${reason}`
                     });
                      console.log(`[Agent Action] Warned user ${targetMember.id} for: ${reason}`);
+                     message.channel.send(`> *${targetMember.user.username} a été averti(e) par l'agent.*`).then(msg => setTimeout(() => msg.delete().catch(()=>{}), 5000));
                 } else if (action === 'mute') {
                     const duration = ms(reason) || ms('10m'); // Default to 10m if duration is not parsable
                      if (targetMember.moderatable) {
                         await targetMember.timeout(duration, `[IA] ${reason}`);
-                        console.log(`[Agent Action] Muted user ${targetMember.id} for ${duration}ms. Reason: ${reason}`);
+                        console.log(`[Agent Action] Muted user ${targetMember.id} for ${ms(duration)}. Reason: ${reason}`);
+                        message.channel.send(`> *${targetMember.user.username} a été rendu(e) muet par l'agent.*`).then(msg => setTimeout(() => msg.delete().catch(()=>{}), 5000));
                      }
                 }
                 responseText = responseText.replace(sanctionRegex, '').trim(); // Clean the command
