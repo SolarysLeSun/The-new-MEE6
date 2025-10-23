@@ -8,6 +8,7 @@ import { googleAI } from '@genkit-ai/googleai';
 
 const TtsInputSchema = z.object({
   text: z.string().describe('The text to convert to speech.'),
+  tone: z.string().optional().describe('The emotional tone to use for the speech (e.g., "sérieux", "bourré", "ASMR", "en colère").'),
 });
 
 const TtsOutputSchema = z.object({
@@ -28,7 +29,13 @@ export const ttsFlow = ai.defineFlow(
     inputSchema: TtsInputSchema,
     outputSchema: TtsOutputSchema,
   },
-  async ({ text }) => {
+  async ({ text, tone }) => {
+
+    let promptText = text;
+    if (tone && tone !== 'normal') {
+      promptText = `Dis le texte suivant sur un ton ${tone}: "${text}"`;
+    }
+
     const { media } = await ai.generate({
       model: googleAI.model('gemini-2.5-flash-preview-tts'),
       config: {
@@ -39,7 +46,7 @@ export const ttsFlow = ai.defineFlow(
           },
         },
       },
-      prompt: text,
+      prompt: promptText,
     });
 
     if (!media?.url) {

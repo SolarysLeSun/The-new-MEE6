@@ -14,7 +14,21 @@ const ParleCommand: Command = {
         .addStringOption(option => 
             option.setName('texte')
                 .setDescription('Le texte que le bot doit dire.')
-                .setRequired(true)),
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('ton')
+                .setDescription("Le ton à employer pour la voix.")
+                .setRequired(false)
+                .addChoices(
+                    { name: 'Normal', value: 'normal' },
+                    { name: 'Sérieux', value: 'sérieux' },
+                    { name: 'Bourré', value: 'bourré' },
+                    { name: 'Prank', value: 'prank' },
+                    { name: 'Tranquille', value: 'tranquille' },
+                    { name: 'ASMR', value: 'ASMR' },
+                    { name: 'En Rage', value: 'en colère' },
+                    { name: 'Sensuel', value: 'sensuel' }
+                )),
 
     async execute(interaction: ChatInputCommandInteraction) {
         if (!interaction.guild || !(interaction.member instanceof GuildMember)) {
@@ -51,10 +65,11 @@ const ParleCommand: Command = {
 
 
         const textToSpeak = interaction.options.getString('texte', true);
+        const tone = interaction.options.getString('ton') as any || 'normal';
         await interaction.deferReply({ ephemeral: true });
 
         try {
-            const { audioDataUri } = await ttsFlow({ text: textToSpeak });
+            const { audioDataUri } = await ttsFlow({ text: textToSpeak, tone: tone });
             
             const audioBuffer = Buffer.from(audioDataUri.split(',')[1], 'base64');
             const audioStream = new Readable();
