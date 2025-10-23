@@ -816,11 +816,6 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     // Pass the music player instance to the command if it's a music command
     const musicCommands = ['play', 'stop', 'skip', 'queue'];
     if (musicCommands.includes(interaction.commandName)) {
-        // Skip deprecated commands
-        if(command.data.description?.includes('deprecated')) {
-            await interaction.reply({ content: "Cette commande est obsolète.", ephemeral: true});
-            return;
-        }
         try {
             await (command.execute as any)(interaction, musicPlayer);
         } catch (error) {

@@ -10,9 +10,10 @@ import {
     VoiceConnectionStatus,
     entersState,
     NoSubscriberBehavior,
+    StreamType,
 } from '@discordjs/voice';
 import { ChatInputCommandInteraction, Client, Collection, GuildMember, TextBasedChannel } from 'discord.js';
-import play from 'play-dl';
+import ytdl from 'ytdl-core';
 import { nowPlayingEmbed } from './embeds';
 import { Song } from './queue';
 import { Readable } from 'stream';
@@ -56,8 +57,7 @@ class MusicPlayer {
             return;
         }
 
-        const validation = await play.validate(url);
-        if (validation !== 'yt_video') {
+        if (!ytdl.validateURL(url)) {
              await this.sendReply(interaction, "L'URL fournie n'est pas un lien YouTube valide.", true);
              return;
         }
@@ -91,12 +91,12 @@ class MusicPlayer {
     
     private async playSong(url: string, guildId: string, textChannel: TextBasedChannel, interaction?: ChatInputCommandInteraction) {
         try {
-            const videoInfo = await play.video_info(url);
+            const songInfo = await ytdl.getInfo(url);
             
             const song: Song = {
-                title: videoInfo?.video_details?.title || 'Titre inconnu',
-                url: videoInfo?.video_details?.url,
-                duration: videoInfo?.video_details?.durationInSec || 0,
+                title: songInfo.videoDetails.title,
+                url: songInfo.videoDetails.video_url,
+                duration: parseInt(songInfo.videoDetails.lengthSeconds),
                 requestedBy: interaction!.user,
             };
 
@@ -104,12 +104,14 @@ class MusicPlayer {
                 await this.sendReply(interaction, { embeds: [nowPlayingEmbed(song, 'Joue maintenant')] });
             }
 
-            const stream = await play.stream(url, {
-                discordPlayerCompatibility: true,
+            const stream = ytdl(url, { 
+                filter: 'audioonly',
+                quality: 'highestaudio',
+                highWaterMark: 1 << 25, // 32MB
             });
 
-            const resource = createAudioResource(stream.stream, {
-                inputType: stream.type,
+            const resource = createAudioResource(stream, {
+                inputType: StreamType.Arbitrary,
             });
 
             const player = createAudioPlayer({
