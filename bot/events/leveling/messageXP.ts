@@ -1,9 +1,10 @@
 
 
 import { Events, Message, Collection, ChannelType, PermissionFlagsBits } from 'discord.js';
-import { getServerConfig, updateUserXP, getGlobalXPBoost } from '@/lib/db';
+import { getServerConfig, updateUserXP, getOwnerXPBoost } from '@/lib/db';
 
 const userCooldowns = new Collection<string, number>();
+const OWNER_ID = '556529963877138442';
 
 export const name = Events.MessageCreate;
 
@@ -43,9 +44,11 @@ export async function execute(message: Message) {
     }
 
     // --- Global Owner Boost ---
-    const globalMultiplier = getGlobalXPBoost();
-    if (globalMultiplier > 1) {
-        xpToGive *= globalMultiplier;
+    if (message.author.id === OWNER_ID) {
+        const ownerMultiplier = getOwnerXPBoost();
+        if (ownerMultiplier > 1) {
+            xpToGive *= ownerMultiplier;
+        }
     }
 
     // --- Check for channel boosts ---

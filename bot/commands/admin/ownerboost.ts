@@ -1,14 +1,14 @@
 
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from 'discord.js';
 import type { Command } from '@/types';
-import { setGlobalXPBoost } from '@/lib/db';
+import { setOwnerXPBoost } from '@/lib/db';
 
 const OWNER_ID = '556529963877138442';
 
 const OwnerBoostCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('ownerboost')
-        .setDescription('Définit un multiplicateur d\'XP global. (Propriétaire seulement)')
+        .setDescription('Définit un multiplicateur d\'XP personnel. (Propriétaire seulement)')
         .setDMPermission(true)
         .addNumberOption(option =>
             option.setName('multiplicateur')
@@ -26,18 +26,18 @@ const OwnerBoostCommand: Command = {
         const multiplier = interaction.options.getNumber('multiplicateur', true);
 
         try {
-            setGlobalXPBoost(multiplier);
+            setOwnerXPBoost(multiplier);
 
             const embed = new EmbedBuilder()
                 .setColor(multiplier > 1 ? 0x00FF00 : 0x00BFFF)
-                .setTitle('Boost d\'XP Global Modifié')
-                .setDescription(`Le multiplicateur d'XP global a été défini sur **x${multiplier}**.`);
+                .setTitle('Boost d\'XP Propriétaire Modifié')
+                .setDescription(`Votre multiplicateur d'XP personnel a été défini sur **x${multiplier}**.`);
 
             await interaction.reply({ embeds: [embed], ephemeral: true });
 
         } catch (error) {
             console.error('[OwnerBoostCommand] Error:', error);
-            await interaction.editReply({ content: 'Une erreur est survenue lors de la définition du boost d\'XP.' });
+            await interaction.reply({ content: 'Une erreur est survenue lors de la définition du boost d\'XP.' });
         }
     },
 };

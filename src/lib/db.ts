@@ -1359,13 +1359,13 @@ export function resetUserXP(guildId: string, userId: string): void {
     stmt.run(guildId, userId);
 }
 // Owner XP Boost
-let globalXPBoost = 1.0;
-export function setGlobalXPBoost(multiplier: number) {
-    globalXPBoost = multiplier;
-    console.log(`[XP Boost] Le multiplicateur d'XP global a été défini sur x${multiplier}.`);
+let ownerXPBoost = 1.0;
+export function setOwnerXPBoost(multiplier: number) {
+    ownerXPBoost = multiplier;
+    console.log(`[XP Boost] Le multiplicateur d'XP du propriétaire a été défini sur x${multiplier}.`);
 }
-export function getGlobalXPBoost(): number {
-    return globalXPBoost;
+export function getOwnerXPBoost(): number {
+    return ownerXPBoost;
 }
 // --- Trial System ---
 export function hasClaimedTrial(ownerId: string): boolean {
