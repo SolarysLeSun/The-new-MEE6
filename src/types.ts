@@ -84,6 +84,7 @@ export interface Persona {
     avatar_url: string | null;
     role_id: string | null;
     bot_token?: string | null;
+    dm_channel_id?: string | null; // NEW
 }
 
 export interface ConversationHistoryItem {
@@ -286,4 +287,10 @@ export interface UserProfile {
     user_id: string;
     bio: string | null;
     links: ProfileLink[];
+}
+
+export interface AiPersonasConfig {
+    enabled: boolean;
+    premium: boolean;
+    command_permissions: { [key: string]: string | null };
 }

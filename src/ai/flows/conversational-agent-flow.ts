@@ -11,7 +11,7 @@ import { z } from 'genkit';
 import type { KnowledgeBaseItem } from '@/types';
 
 const AgentActionSchema = z.object({
-  type: z.enum(["give_xp", "apply_sanction", "give_role", "change_nickname", "send_dm"]),
+  type: z.enum(["give_xp", "apply_sanction", "give_role", "change_nickname", "send_dm", "start_dm"]),
   userId: z.string().describe("The ID of the user to apply the action on."),
   details: z.object({
     amount: z.number().optional().describe("Amount of XP to give."),
@@ -182,6 +182,10 @@ Your Task & Context:
 - You MUST analyze the user's message and decide if it's relevant to you. If the message is a private conversation between other users that doesn't concern you, you MUST return an empty string for the 'response' field.
 {{/ifEquals}}
 
+{{#ifEquals interactionContext "Message Privé (simulé via fil)"}}
+- This is a private conversation. You can be more direct or personal.
+{{/ifEquals}}
+
 {{#if allow_image_generation}}
 - You can generate an image if it adds significant value to the conversation (e.g., to show a strong emotion, illustrate a point, for a joke).
 - If you decide to generate an image, provide a rich, descriptive prompt in the 'image_prompt' field. Otherwise, leave it empty.
@@ -205,13 +209,15 @@ Your Task: Decide if an action is required based on the conversation.
 - Apply Sanctions: {{{agent_actions.can_apply_sanctions}}}
 - Give Roles: {{{agent_actions.can_give_roles}}}
 - Change Nickname: {{{agent_actions.can_change_nickname}}}
-- Send DM: {{{agent_actions.can_send_dms}}}
+- Send DM (pour des notifications UNIQUES, pas une conversation): {{{agent_actions.can_send_dms}}}
+- Start DM (pour initier une conversation PRIVÉE dans un fil dédié): {{{agent_actions.can_send_dms}}}
 
 The user has sent the following message: "{{{userMessage}}}"
 
 Analyze the context. If an action is appropriate, define it in the 'action' field. Otherwise, leave 'action' null. Do NOT generate any conversational text, only the action object.
 For example, to give 50 XP, set 'action' to: { "type": "give_xp", "userId": "{{{userId}}}", "details": { "amount": 50 } }.
-To send a DM, set it to: { "type": "send_dm", "userId": "{{{userId}}}", "details": { "messageContent": "Ton message privé ici." } }
+To send a DM notification, set it to: { "type": "send_dm", "userId": "{{{userId}}}", "details": { "messageContent": "Ton message privé ici." } }
+To start a private conversation, set it to: { "type": "start_dm", "userId": "{{{userId}}}", "details": { "messageContent": "Le premier message à envoyer pour démarrer la discussion." } }
 If no action is needed, return { "action": null }.
 `,
 });
