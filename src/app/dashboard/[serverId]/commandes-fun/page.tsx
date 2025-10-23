@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import { Dice5, MessageCircle, Flag, Ban, RussianRuble } from 'lucide-react';
+import { Dice5, MessageCircle, Flag, Ban, RussianRuble, HandCoins } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Combobox } from '@/components/ui/combobox';
@@ -35,6 +35,7 @@ const funCommands = [
     { name: '/reactbomb', key: 'reactbomb', description: 'Bombarde un message de réactions aléatoires.', defaultEveryone: false, icon: MessageCircle },
     { name: '/react', key: 'react', description: 'Réagit à un message avec un emoji spécifique.', defaultEveryone: false, icon: MessageCircle },
     { name: '/randomnickname', key: 'randomnickname', description: 'Donne un surnom aléatoire à un ou plusieurs utilisateurs.', defaultEveryone: false, icon: MessageCircle },
+    { name: '/payer', key: 'payer', description: 'Donne une partie de votre XP à un autre utilisateur.', isLevel: true, defaultEveryone: true, icon: HandCoins },
     { name: '/pileouface', key: 'pileouface', description: 'Pariez votre XP sur un lancer de pièce.', isLevel: true, defaultEveryone: true, icon: Dice5 },
     { name: '/slots', key: 'slots', description: 'Jouez à la machine à sous avec votre XP.', isLevel: true, defaultEveryone: true, icon: Dice5 },
     { name: '/de', key: 'de', description: 'Lance un ou plusieurs dés.', defaultEveryone: true, icon: Dice5 },
