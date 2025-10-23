@@ -113,24 +113,6 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
         handleValueChange('agent_actions', newAgentActions);
     }
 
-    const handleKnowledgeBaseChange = (index: number, field: 'question' | 'answer', value: string) => {
-        if (!config) return;
-        const newKnowledgeBase = [...config.knowledge_base];
-        newKnowledgeBase[index] = { ...newKnowledgeBase[index], [field]: value };
-        handleValueChange('knowledge_base', newKnowledgeBase);
-    };
-
-    const addKnowledgeBaseItem = () => {
-        if (!config) return;
-        const newItem: KnowledgeBaseItem = { id: uuidv4(), question: '', answer: '' };
-        handleValueChange('knowledge_base', [...config.knowledge_base, newItem]);
-    };
-
-    const removeKnowledgeBaseItem = (id: string) => {
-        if (!config) return;
-        handleValueChange('knowledge_base', config.knowledge_base.filter(item => item.id !== id));
-    };
-
     if (loading || !config) {
         return <PageSkeleton />;
     }
@@ -175,6 +157,19 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                     </CardContent>
                 </Card>
                 
+                {/* Section Mode Humain */}
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <CardTitle>Mode Humain</CardTitle>
+                            <Switch id="enable-human-mode" checked={config.human_mode_enabled ?? false} onCheckedChange={(val) => handleValueChange('human_mode_enabled', val)} />
+                        </div>
+                        <CardDescription>
+                            Transforme l'agent en une IA persistante avec sa propre personnalité, mémoire et relations.
+                        </CardDescription>
+                    </CardHeader>
+                </Card>
+
                 {/* Section Personnalité */}
                 <Card>
                     <CardHeader>
@@ -350,37 +345,13 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
 
                 {/* Section Base de connaissances */}
                 <div className="space-y-4">
-                    <Card>
+                    <Card className="opacity-50 pointer-events-none">
                         <CardHeader>
                             <CardTitle>Base de connaissances</CardTitle>
                             <CardDescription>
-                                C'est la mémoire de votre agent. Fournissez-lui ici toutes les informations, faits et réponses qu'il doit connaître et pouvoir réciter.
+                                Cette section est désactivée en "Mode Humain". Les mémoires sont gérées automatiquement par l'IA.
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            {config.knowledge_base.map((item, index) => (
-                                <div key={item.id} className="p-4 border rounded-lg bg-card-foreground/5 space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <Label className="font-semibold">Fait / Question {index + 1}</Label>
-                                        <Button variant="ghost" size="icon" onClick={() => removeKnowledgeBaseItem(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                                    </div>
-                                    <Input 
-                                        placeholder="Sujet ou question clé (ex: 'règles du serveur', 'comment rejoindre l'équipe')" 
-                                        defaultValue={item.question}
-                                        onBlur={(e) => handleKnowledgeBaseChange(index, 'question', e.target.value)}
-                                    />
-                                    <Textarea 
-                                        placeholder="Informations et réponse que l'agent doit fournir sur ce sujet." 
-                                        defaultValue={item.answer}
-                                        onBlur={(e) => handleKnowledgeBaseChange(index, 'answer', e.target.value)}
-                                    />
-                                </div>
-                            ))}
-                             <Button variant="outline" className="w-full" onClick={addKnowledgeBaseItem}>
-                                <PlusCircle className="mr-2" />
-                                Ajouter un élément de connaissance
-                            </Button>
-                        </CardContent>
                     </Card>
                 </div>
             </PageTransitionWrapper>

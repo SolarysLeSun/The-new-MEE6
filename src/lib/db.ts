@@ -181,6 +181,22 @@ const upgradeSchema = () => {
         `);
         console.log('[Database] La table "owner_trials" est prête.');
 
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS persona_memories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                persona_id TEXT NOT NULL,
+                user_id TEXT,
+                memory_type TEXT NOT NULL CHECK(memory_type IN ('fact', 'relationship', 'interaction_summary', 'preference')),
+                content TEXT NOT NULL,
+                salience_score INTEGER NOT NULL DEFAULT 5 CHECK(salience_score BETWEEN 1 AND 10),
+                last_accessed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_persona_memories_persona_id ON persona_memories (persona_id);`);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_persona_memories_user_id ON persona_memories (user_id);`);
+        console.log('[Database] La table "persona_memories" est prête.');
+
 
     } catch (error) {
         console.error('[Database] Erreur lors de la mise à jour du schéma:', error);
@@ -437,6 +453,7 @@ const defaultConfigs: DefaultConfigs = {
     'conversational-agent': {
         enabled: false,
         premium: true,
+        human_mode_enabled: false,
         agent_name: 'Marcus',
         agent_role: '',
         agent_personality: '',
@@ -1426,5 +1443,6 @@ export function getCombinedUserLevel(userId: string): number {
     const rows = stmt.all(userId) as { level: number }[];
     return rows.reduce((sum, row) => sum + row.level, 0);
 }
+
 
 

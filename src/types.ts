@@ -205,11 +205,12 @@ export interface WelcomeConfig {
 export interface ConversationalAgentConfig {
     enabled: boolean;
     premium: boolean;
+    human_mode_enabled?: boolean; // Nouveau champ pour le mode humain
     agent_name: string;
     agent_role: string;
     agent_personality: string;
     custom_prompt: string;
-    knowledge_base: KnowledgeBaseItem[];
+    knowledge_base: KnowledgeBaseItem[]; // Conservé pour la rétrocompatibilité
     dedicated_channel_id: string | null;
     allow_imagination: boolean;
     allow_freewheeling: boolean;
