@@ -104,7 +104,7 @@ function AgentPersonalityGenerator({ config, onUpdate }: { config: Conversationa
                     </div>
                     <Button onClick={handleGenerate} disabled={isLoading} className="w-full">
                         {isLoading ? <Loader2 className="animate-spin" /> : <RefreshCw className="mr-2"/>}
-                        {config.persona_prompt ? 'Régénérer l'identité' : 'Générer une identité'}
+                        {config.persona_prompt ? 'Régénérer l identité' : 'Générer une identité'}
                     </Button>
                 </CardContent>
             </Card>
