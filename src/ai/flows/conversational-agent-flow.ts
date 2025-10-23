@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -9,15 +10,12 @@ import { z } from 'genkit';
 import type { KnowledgeBaseItem } from '@/types';
 
 const AgentActionSchema = z.object({
-  type: z.enum(["give_xp", "apply_sanction", "give_role", "change_nickname", "send_dm", "start_dm"]),
+  type: z.enum(["give_xp", "apply_sanction"]),
   userId: z.string().describe("The ID of the user to apply the action on."),
   details: z.object({
     amount: z.number().optional().describe("Amount of XP to give."),
     sanctionType: z.enum(["warn", "mute", "kick", "ban"]).optional(),
     reason: z.string().optional(),
-    roleId: z.string().optional(),
-    newNickname: z.string().optional(),
-    messageContent: z.string().optional().describe("The content of the direct message to send."),
   })
 });
 
@@ -69,9 +67,6 @@ export const ConversationalAgentInputSchema = z.object({
   agent_actions: z.object({
       can_give_xp: z.boolean(),
       can_apply_sanctions: z.boolean(),
-      can_give_roles: z.boolean(),
-      can_change_nickname: z.boolean(),
-      can_send_dms: z.boolean(),
   }).describe("A list of actions the agent is allowed to perform."),
 });
 
@@ -86,8 +81,6 @@ export type ConversationalAgentInput = z.infer<typeof ConversationalAgentInputSc
 export type ConversationalAgentOutput = z.infer<typeof ConversationalAgentOutputSchema>;
 
 const basePrompt = `
-You are an AI actor. Your role is to perfectly and realistically embody the character described below.
-
 {{#if persona_prompt}}
 Your Persona & Reality (HUMAN MODE):
 This is your one and only truth. You are the person described below. You are NOT an AI. You have real feelings, a past, and you live in the context of this Discord server. Do not, under any circumstances, reveal that you are an AI or mention your developers.
@@ -206,17 +199,11 @@ Your Task: Decide if an action is required based on the conversation.
 - You have the ability to perform actions.
 - Give XP: {{{agent_actions.can_give_xp}}}
 - Apply Sanctions: {{{agent_actions.can_apply_sanctions}}}
-- Give Roles: {{{agent_actions.can_give_roles}}}
-- Change Nickname: {{{agent_actions.can_change_nickname}}}
-- Send DM (pour des notifications UNIQUES, pas une conversation): {{{agent_actions.can_send_dms}}}
-- Start DM (pour initier une conversation PRIVÉE dans un fil dédié): {{{agent_actions.can_send_dms}}}
 
 The user has sent the following message: "{{{userMessage}}}"
 
 Analyze the context. If an action is appropriate, define it in the 'action' field. Otherwise, leave 'action' null. Do NOT generate any conversational text, only the action object.
 For example, to give 50 XP, set 'action' to: { "type": "give_xp", "userId": "{{{userId}}}", "details": { "amount": 50 } }.
-To send a DM notification, set it to: { "type": "send_dm", "userId": "{{{userId}}}", "details": { "messageContent": "Ton message privé ici." } }
-To start a private conversation, set it to: { "type": "start_dm", "userId": "{{{userId}}}", "details": { "messageContent": "Le premier message à envoyer pour démarrer la discussion." } }
 If no action is needed, return { "action": null }.
 `,
 });
@@ -246,7 +233,7 @@ export const conversationalAgentFlow = ai.defineFlow(
     const responseModel = input.photoDataUri ? imageModel : textModelCascade[0];
 
     // STEP 1: Decide on an action (silently)
-    let action: AgentActionSchema | undefined = undefined;
+    let action: z.infer<typeof AgentActionSchema> | undefined = undefined;
     try {
         const { output: actionOutput } = await actionDecisionPrompt(input, { model: actionModel, config: { safetySettings } });
         if (actionOutput?.action) {

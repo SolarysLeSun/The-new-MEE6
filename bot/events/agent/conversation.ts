@@ -9,6 +9,7 @@ import { generateImage } from '../../../src/ai/flows/content-creation-flow';
 import fetch from 'node-fetch';
 import { memoryFlow } from '@/ai/flows/memory-flow';
 import type { Persona } from '@/types';
+import ms from 'ms';
 
 const imageMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
 
@@ -216,33 +217,28 @@ async function handleConversationalAgent(message: Message) {
 
         // --- Execute Action if present ---
         if (result.action) {
-            const targetUser = await message.client.users.fetch(result.action.userId).catch(() => null);
-            if (targetUser) {
-                switch(result.action.type) {
-                    case 'send_dm':
-                        if (config.agent_actions.can_send_dms && result.action.details.messageContent) {
-                            try {
-                                await targetUser.send(result.action.details.messageContent);
-                                console.log(`[Agent Action] Sent DM to ${targetUser.tag}`);
-                            } catch (e) {
-                                console.error(`[Agent Action] Failed to send DM to ${targetUser.tag}`);
-                            }
+            const targetMember = await message.guild.members.fetch(result.action.userId).catch(() => null);
+            if (targetMember) {
+                 switch(result.action.type) {
+                    case 'give_xp':
+                        if (config.agent_actions.can_give_xp && result.action.details.amount) {
+                           updateUserXP(targetMember.id, message.guild.id, result.action.details.amount);
+                           console.log(`[Agent Action] Gave ${result.action.details.amount} XP to ${targetMember.user.tag}`);
                         }
                         break;
-                    case 'start_dm':
-                        if (config.agent_actions.can_send_dms) {
-                            const agentAsPersona: Persona = {
-                                id: message.guild.id, name: config.agent_name || "Agent", guild_id: message.guild.id,
-                                persona_prompt: '', creator_id: '', created_at: '', active_channel_id: null, avatar_url: null, role_id: null
-                            };
-                            const thread = await getOrCreatePrivateThread(message.guild, agentAsPersona, targetUser);
-                            if (thread && result.action.details.messageContent) {
-                                await thread.send(result.action.details.messageContent);
-                                console.log(`[Agent Action] Started private thread with ${targetUser.tag}`);
-                            }
+                    case 'apply_sanction':
+                         if (config.agent_actions.can_apply_sanctions && result.action.details.sanctionType && result.action.details.reason) {
+                            const reason = `[Agent] ${result.action.details.reason}`;
+                            recordSanction({
+                                guild_id: message.guild.id,
+                                user_id: targetMember.id,
+                                moderator_id: message.client.user.id,
+                                action_type: result.action.details.sanctionType,
+                                reason: reason
+                            });
+                             console.log(`[Agent Action] Applied sanction '${result.action.details.sanctionType}' to ${targetMember.user.tag}`);
                         }
                         break;
-                     // ... other actions can be implemented here in the future
                 }
             }
         }

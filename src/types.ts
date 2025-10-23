@@ -224,9 +224,6 @@ export interface ConversationalAgentConfig {
     agent_actions: {
         can_give_xp: boolean;
         can_apply_sanctions: boolean;
-        can_give_roles: boolean;
-        can_change_nickname: boolean;
-        can_send_dms: boolean;
     };
 }
 
