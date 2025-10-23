@@ -5,7 +5,7 @@
  * @fileOverview An AI agent that analyzes conversation transcripts to create long-term memories for a persona.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, textModelCascade } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const NewMemorySchema = z.object({
@@ -32,7 +32,7 @@ const MemoryFlowOutputSchema = z.array(
 );
 
 export async function memoryFlow(input: MemoryFlowInputSchema): Promise<z.infer<typeof MemoryFlowOutputSchema>> {
-    const { output } = await memoryCreationPrompt(input);
+    const { output } = await memoryCreationPrompt(input, { model: textModelCascade[0] });
     
     if (!output) {
         return [];
@@ -70,4 +70,3 @@ Analyze the following conversation transcript now and create new, detailed memor
 --- END OF TRANSCRIPT ---
 `,
 });
-
