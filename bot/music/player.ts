@@ -1,4 +1,5 @@
 
+
 import {
     AudioPlayer,
     AudioPlayerStatus,
@@ -14,6 +15,7 @@ import { ChatInputCommandInteraction, Client, Collection, GuildMember, TextBased
 import play from 'play-dl';
 import { nowPlayingEmbed } from './embeds';
 import { Song } from './queue';
+import { Readable } from 'stream';
 
 class MusicPlayer {
     public client!: Client;
@@ -91,18 +93,24 @@ class MusicPlayer {
         try {
             const videoInfo = await play.video_info(url);
             
+            const song: Song = {
+                title: videoInfo?.video_details?.title || 'Titre inconnu',
+                url: videoInfo?.video_details?.url,
+                duration: videoInfo?.video_details?.durationInSec || 0,
+                requestedBy: interaction!.user,
+            };
+
             if (interaction) {
-                 const song: Song = {
-                    title: videoInfo?.video_details?.title || 'Titre inconnu',
-                    url: videoInfo?.video_details?.url,
-                    duration: videoInfo?.video_details?.durationInSec || 0,
-                    requestedBy: interaction.user,
-                };
                 await this.sendReply(interaction, { embeds: [nowPlayingEmbed(song, 'Joue maintenant')] });
             }
 
-            const stream = await play.stream(url);
-            const resource = createAudioResource(stream.stream, { inputType: stream.type });
+            const stream = await play.stream(url, {
+                discordPlayerCompatibility: true,
+            });
+
+            const resource = createAudioResource(stream.stream, {
+                inputType: stream.type,
+            });
 
             const player = createAudioPlayer({
                 behaviors: { noSubscriber: NoSubscriberBehavior.Stop },
@@ -129,7 +137,7 @@ class MusicPlayer {
         } catch (error) {
             console.error(`Error streaming url "${url}":`, error);
             if (interaction) {
-                 await this.sendReply(interaction, `❌ Je n'ai pas pu lire la vidéo depuis cette URL.`);
+                 await this.sendReply(interaction, { content: `❌ Je n'ai pas pu lire la vidéo depuis cette URL.` });
             } else {
                  textChannel.send(`❌ Je n'ai pas pu lire la vidéo depuis cette URL.`);
             }
