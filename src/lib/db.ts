@@ -1,4 +1,5 @@
 
+
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -458,6 +459,9 @@ const defaultConfigs: DefaultConfigs = {
         agent_actions: {
             can_give_xp: false,
             can_apply_sanctions: false,
+            can_give_roles: false,
+            can_change_nickname: false,
+            can_send_dms: false,
         }
     },
     'suggestions': {
@@ -514,7 +518,11 @@ const defaultConfigs: DefaultConfigs = {
         command_permissions: {
             join: null,
             leave: null,
-            parle: null
+            parle: null,
+            play: null,
+            stop: null,
+            skip: null,
+            queue: null,
         }
     },
     'announcements': {

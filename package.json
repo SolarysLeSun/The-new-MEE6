@@ -15,6 +15,7 @@
     "bot:start": "node dist/bot/main.js"
   },
   "dependencies": {
+    "opusscript": "^0.1.1",
     "@discordjs/voice": "0.17.0",
     "@genkit-ai/googleai": "^1.14.1",
     "@genkit-ai/next": "^1.14.1",
@@ -53,6 +54,7 @@
     "dotenv": "^16.5.0",
     "embla-carousel-react": "^8.6.0",
     "express": "^4.19.2",
+    "ffmpeg-static": "^5.2.0",
     "firebase": "^11.9.1",
     "framer-motion": "^11.2.12",
     "genkit": "^1.14.1",
@@ -68,10 +70,12 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.54.2",
     "recharts": "^2.15.1",
+    "sodium-native": "^4.1.1",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^9.0.1",
     "wav": "^1.0.2",
+    "ytdl-core": "^4.11.5",
     "zod": "^3.24.2"
   },
   "devDependencies": {

@@ -18,6 +18,7 @@ import { handleOnboardingResponse } from './events/onboarding/aiOnboarding';
 import { patchNoteFlow } from '@/ai/flows/patchnote-flow';
 import ms from 'ms';
 import { startAntiAfkInterval } from './events/moderation/antiAfk';
+import { musicPlayer } from './music/player';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -808,6 +809,17 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         return;
     }
 
+    // Pass the music player instance to the command if it's a music command
+    const musicCommands = ['play', 'stop', 'skip', 'queue'];
+    if (musicCommands.includes(interaction.commandName)) {
+        try {
+            await (command.execute as any)(interaction, musicPlayer);
+        } catch (error) {
+            console.error(`[Music Command Error] Error executing command '${interaction.commandName}':`, error);
+        }
+        return;
+    }
+    
     try {
         await command.execute(interaction as any);
     } catch (error) {
@@ -859,3 +871,4 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
+(global as any).musicPlayer = musicPlayer;
