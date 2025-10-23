@@ -68,7 +68,7 @@ class MusicPlayer {
 
         const song = {
             title: songInfo.title || 'Titre inconnu',
-            url: songInfo.url,
+            url: songInfo.url ?? `https://www.youtube.com/watch?v=${songInfo.id}`,
             duration: songInfo.durationInSec,
             requestedBy: interaction.user,
         };
