@@ -15,10 +15,12 @@ import { musicQueue } from './queue';
 import { nowPlayingEmbed } from './embeds';
 
 class MusicPlayer {
+    private client!: Client;
     private players: Collection<string, AudioPlayer> = new Collection();
     private connections: Collection<string, VoiceConnection> = new Collection();
 
-    constructor(private client: Client) {
+    initialize(client: Client) {
+        this.client = client;
         this.client.on('voiceStateUpdate', (oldState, newState) => {
             // Auto-disconnect if bot is alone in channel
             if (oldState.channelId && oldState.channel?.members.size === 1 && oldState.channel?.members.has(this.client.user!.id)) {
@@ -157,4 +159,4 @@ class MusicPlayer {
     }
 
 }
-export const musicPlayer = new MusicPlayer((global as any).discordClient);
+export const musicPlayer = new MusicPlayer();

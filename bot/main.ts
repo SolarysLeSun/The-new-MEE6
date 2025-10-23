@@ -67,6 +67,10 @@ client.commands = new Collection<string, Command>();
 // Pass client instance to the database module for event emitting
 setClientInstance(client);
 
+// Initialize the music player with the client instance
+musicPlayer.initialize(client);
+
+
 // Load Event Handlers
 const loadEvents = (client: Client) => {
     const eventsPath = path.join(__dirname, 'events');
@@ -765,7 +769,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
             if (!interaction.guild) return;
             const config = await getServerConfig(interaction.guild.id, 'private-rooms');
             if (!config || !config.enabled) {
-                await interaction.reply({ content: "Le système de salons privés est désactivé.", flags: MessageFlags.Ephemeral });
+                await interaction.reply({ content: "Le système de salons privés est désactivé.", ephemeral: true });
                 return;
             }
 
