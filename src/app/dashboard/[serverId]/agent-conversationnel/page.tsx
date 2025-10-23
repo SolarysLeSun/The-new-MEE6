@@ -112,6 +112,25 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
         const newAgentActions = { ...config.agent_actions, [key]: value };
         handleValueChange('agent_actions', newAgentActions);
     }
+    
+    const handleKnowledgeBaseChange = (index: number, field: 'question' | 'answer', value: string) => {
+        if (!config) return;
+        const newKnowledgeBase = [...config.knowledge_base];
+        newKnowledgeBase[index] = { ...newKnowledgeBase[index], [field]: value };
+        handleValueChange('knowledge_base', newKnowledgeBase);
+    };
+
+    const addKnowledgeBaseItem = () => {
+        if (!config) return;
+        const newItem: KnowledgeBaseItem = { id: uuidv4(), question: '', answer: '' };
+        handleValueChange('knowledge_base', [...config.knowledge_base, newItem]);
+    };
+
+    const removeKnowledgeBaseItem = (id: string) => {
+        if (!config) return;
+        handleValueChange('knowledge_base', config.knowledge_base.filter(item => item.id !== id));
+    };
+
 
     if (loading || !config) {
         return <PageSkeleton />;
@@ -213,6 +232,56 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                         />
                     </CardContent>
                 </Card>
+                
+                 {/* Section Base de connaissances */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Base de connaissances</CardTitle>
+                        <CardDescription>
+                            {config.human_mode_enabled 
+                                ? "En Mode Humain, les mémoires de l'IA sont gérées automatiquement par ses interactions." 
+                                : "Fournissez à l'IA des informations spécifiques sur votre serveur pour qu'elle puisse répondre aux questions des utilisateurs."
+                            }
+                        </CardDescription>
+                    </CardHeader>
+                    {config.human_mode_enabled ? (
+                         <CardContent>
+                            <Alert variant="default" className="border-blue-500/30">
+                                <BrainCircuit className="h-4 w-4" />
+                                <AlertTitle>Mode Mémoire Automatique</AlertTitle>
+                                <AlertDescription>
+                                    La gestion manuelle est désactivée. L'IA apprend et se souvient des conversations pour construire sa propre base de connaissances.
+                                </AlertDescription>
+                            </Alert>
+                         </CardContent>
+                    ) : (
+                        <CardContent className="space-y-4">
+                            {(config.knowledge_base || []).map((item, index) => (
+                                <div key={item.id} className="p-4 border rounded-lg bg-card-foreground/5 space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <Label className="font-semibold">Fait / Question {index + 1}</Label>
+                                        <Button variant="ghost" size="icon" onClick={() => removeKnowledgeBaseItem(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                                    </div>
+                                    <Input 
+                                        placeholder="Sujet ou question clé (ex: 'règles du serveur', 'comment rejoindre l'équipe')" 
+                                        defaultValue={item.question}
+                                        onBlur={(e) => handleKnowledgeBaseChange(index, 'question', e.target.value)}
+                                    />
+                                    <Textarea 
+                                        placeholder="Informations et réponse que l'agent doit fournir sur ce sujet." 
+                                        defaultValue={item.answer}
+                                        onBlur={(e) => handleKnowledgeBaseChange(index, 'answer', e.target.value)}
+                                    />
+                                </div>
+                            ))}
+                             <Button variant="outline" className="w-full" onClick={addKnowledgeBaseItem}>
+                                <PlusCircle className="mr-2" />
+                                Ajouter un élément de connaissance
+                            </Button>
+                        </CardContent>
+                    )}
+                </Card>
+
 
                 {/* Section Partage de Données */}
                 <Card>
@@ -341,19 +410,6 @@ function AgentPageContent({ isPremium, serverId }: { isPremium: boolean, serverI
                         </div>
                     </CardContent>
                 </Card>
-
-
-                {/* Section Base de connaissances */}
-                <div className="space-y-4">
-                    <Card className="opacity-50 pointer-events-none">
-                        <CardHeader>
-                            <CardTitle>Base de connaissances</CardTitle>
-                            <CardDescription>
-                                Cette section est désactivée en "Mode Humain". Les mémoires sont gérées automatiquement par l'IA.
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
-                </div>
             </PageTransitionWrapper>
         </PremiumFeatureWrapper>
     );
