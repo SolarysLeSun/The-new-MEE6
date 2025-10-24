@@ -8,7 +8,7 @@ import path from 'path';
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const WATCHDOG_PORT = 4400;
-const TARGET_API_URL = `http://127.0.0.1:${process.env.BOT_API_PORT || 3630}/api/ping`;
+const TARGET_API_URL = `https://marcusbot.fr/api/ping`;
 const CHECK_INTERVAL_MS = 60 * 1000; // 60 secondes
 
 let isRestarting = false;
