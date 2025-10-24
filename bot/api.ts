@@ -3,7 +3,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType, DiscordAPIError } from 'discord.js';
-import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard } from '@/lib/db';
+import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem } from '@/lib/db';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { updateGuildCommands } from './handlers/commandHandler';
@@ -17,6 +17,8 @@ const API_PORT = process.env.BOT_API_PORT || 3630; // toujour le port 3630 !!
 const OWNER_ID = '556529963877138442';
 const WEBHOOK_NAME = "Marcus";
 const MARCUS_EMOJI_GUILD_ID = '1245654161282826260';
+const ADMIN_PASSWORD = 'cresus';
+
 
 // --- Panel User Authentication ---
 
@@ -114,6 +116,16 @@ export function startApi(client: Client) {
             });
         }
     };
+    
+    // --- Admin Auth Middleware ---
+    const checkAdminPassword = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+        const providedPassword = req.body.password || req.headers['x-admin-password'];
+        if (providedPassword !== ADMIN_PASSWORD) {
+            return res.status(401).json({ error: 'Mot de passe administrateur invalide.' });
+        }
+        next();
+    };
+
 
     app.get('/api/ping', (req, res) => {
         res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -609,13 +621,45 @@ export function startApi(client: Client) {
             res.status(500).json({ error: 'Internal server error.' });
         }
     });
-
-    app.post('/api/restart-bot', (req, res) => {
-        const { password } = req.body;
-        if (password !== 'cresus') {
-            return res.status(401).json({ error: 'Mot de passe invalide.' });
+    
+    // --- Roadmap API ---
+    app.get('/api/roadmap/items', (req, res) => {
+        try {
+            const items = getRoadmapItems();
+            res.status(200).json(items);
+        } catch (error) {
+            res.status(500).json({ error: 'Failed to fetch roadmap items.' });
         }
+    });
 
+    app.post('/api/roadmap/add', checkAdminPassword, (req, res) => {
+        try {
+            addRoadmapItem(req.body);
+            res.status(201).json({ success: true });
+        } catch (error) {
+            res.status(500).json({ error: 'Failed to add roadmap item.' });
+        }
+    });
+
+    app.put('/api/roadmap/update', checkAdminPassword, (req, res) => {
+        try {
+            updateRoadmapItem(req.body);
+            res.status(200).json({ success: true });
+        } catch (error) {
+            res.status(500).json({ error: 'Failed to update roadmap item.' });
+        }
+    });
+
+    app.delete('/api/roadmap/delete/:id', checkAdminPassword, (req, res) => {
+        try {
+            deleteRoadmapItem(req.params.id);
+            res.status(200).json({ success: true });
+        } catch (error) {
+            res.status(500).json({ error: 'Failed to delete roadmap item.' });
+        }
+    });
+
+    app.post('/api/restart-bot', checkAdminPassword, (req, res) => {
         console.log('[API] Commande de redémarrage reçue. Exécution de "pm2 restart bot"...');
 
         exec('pm2 restart bot', (error, stdout, stderr) => {

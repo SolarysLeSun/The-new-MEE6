@@ -1,3 +1,4 @@
+
 {
   "name": "nextn",
   "version": "0.1.0",
@@ -12,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "bot:dev": "tsx --watch bot/main.ts",
     "bot:build": "tsc -p bot/tsconfig.json",
-    "bot:start": "node dist/bot/main.js"
+    "bot:start": "node dist/bot/main.js",
+    "bot:prod": "pm2 start ecosystem.config.js"
   },
   "dependencies": {
     "@discordjs/voice": "0.17.0",

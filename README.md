@@ -66,6 +66,7 @@ Le bot utilise des emojis personnalisés pour une meilleure expérience visuelle
 - **Compte Discord & Application Bot** : Vous devez créer une application sur le [Portail des Développeurs Discord](https://discord.com/developers/applications).
     - Activez les "Privileged Gateway Intents" (`SERVER MEMBERS INTENT`, `MESSAGE CONTENT INTENT`) pour votre bot.
 - **API Google AI** : Pour les fonctionnalités IA, vous aurez besoin d'une clé API depuis [Google AI Studio](https://aistudio.google.com/app/apikey).
+- **PM2** : Un gestionnaire de processus pour Node.js. Installez-le globalement avec `npm install -g pm2`.
 
 ### 2. Installation
 
@@ -103,9 +104,11 @@ PANEL_BASE_URL="http://localhost:9002"
 BOT_API_URL="http://localhost:3001/api"
 ```
 
-### 4. Lancer l'application
+### 4. Lancer l'Application
 
-Le projet nécessite de lancer deux processus en parallèle : le **bot** et le **panel web**.
+#### En Mode Développement
+
+Pour le développement, vous pouvez lancer les deux processus séparément.
 
 - **Pour lancer le bot** (gère la logique Discord) :
   ```bash
@@ -118,6 +121,38 @@ Le projet nécessite de lancer deux processus en parallèle : le **bot** et le *
   npm run dev
   ```
   Le panel sera accessible à l'adresse `http://localhost:9002`.
+
+#### En Mode Production (Recommandé)
+
+Pour la production, utilisez **PM2** pour une meilleure stabilité et performance. PM2 lancera plusieurs instances du bot (une par cœur de CPU) pour garantir qu'il reste en ligne même en cas de crash d'une instance.
+
+1.  **Compilez le bot :**
+    ```bash
+    npm run bot:build
+    ```
+    Cette commande compile le code TypeScript du bot en JavaScript dans le dossier `dist`.
+
+2.  **Lancez le bot avec PM2 :**
+    ```bash
+    npm run bot:prod
+    ```
+    Cette commande utilise le fichier `ecosystem.config.js` pour lancer le bot en mode cluster.
+
+3.  **Lancez le panel web en production :**
+    ```bash
+    # Compilez d'abord le panel
+    npm run build
+    
+    # Lancez le serveur Next.js (vous pouvez aussi le gérer avec PM2)
+    npm run start
+    ```
+
+**Commandes PM2 utiles :**
+- `pm2 list` : Voir le statut de tous les processus.
+- `pm2 logs bot` : Afficher les logs du bot en temps réel.
+- `pm2 restart bot` : Redémarrer toutes les instances du bot.
+- `pm2 stop bot` : Arrêter le bot.
+- `pm2 delete bot` : Supprimer le bot de la liste de PM2.
 
 ---
 
