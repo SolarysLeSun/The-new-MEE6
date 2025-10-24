@@ -586,6 +586,7 @@ const defaultConfigs: DefaultConfigs = {
             de: null,
             pileouface: null,
             slots: null,
+            payer: null,
         }
     },
     'admin': {
@@ -1045,46 +1046,50 @@ export async function applyReferral(referralCode: string, referredGuildId: strin
         return { success: false, message: "Vous ne pouvez pas parrainer un autre de vos serveurs avec ce code." };
     }
 
+    // --- Promotion de Départ Marcus ---
+    try {
+        const guild = await client.guilds.fetch(referringGuildId);
+        if (guild.memberCount >= 30) {
+            const countStmt = db.prepare("SELECT COUNT(DISTINCT referred_owner_id) as count FROM referrals WHERE referring_guild_id = ?");
+            const { count } = countStmt.get(referringGuildId) as { count: number };
+
+            if (count + 1 >= 2) { // The current referral makes it 2
+                const owner = await guild.fetchOwner();
+                
+                // Grant 1 month premium to the server
+                const premiumExpiry = new Date(Date.now() + ms('30d'));
+                setPremiumStatus(referringGuildId, true, premiumExpiry);
+
+                // Grant 1 year tester to owner
+                const testerExpiry = new Date(Date.now() + ms('1y'));
+                giveTesterStatus(owner.id, referringGuildId, testerExpiry);
+
+                await owner.send({
+                    embeds: [
+                        new EmbedBuilder()
+                        .setColor(0xFFD700)
+                        .setTitle("🎉 Récompense Promotion de Départ !")
+                        .setDescription(`Félicitations ! Votre serveur **${guild.name}** a rempli les conditions pour notre programme de promotion.\n\nVous avez reçu **1 an de statut Testeur** et votre serveur a reçu **1 mois de Premium** !`)
+                        .setFooter({text: "Merci pour votre soutien à la croissance de Marcus !"})
+                    ]
+                });
+            }
+        }
+    } catch(e) {
+        console.error("[Promotion] Failed to check or grant promotion rewards:", e);
+    }
+    // --- Fin de la promotion ---
+
+
     const insertStmt = db.prepare("INSERT INTO referrals (referring_guild_id, referred_guild_id, referred_owner_id) VALUES (?, ?, ?)");
     insertStmt.run(referringGuildId, referredGuildId, referredOwnerId);
 
-    // Check for reward
+    // Update count in config
     const countStmt = db.prepare("SELECT COUNT(DISTINCT referred_owner_id) as count FROM referrals WHERE referring_guild_id = ?");
     const { count } = countStmt.get(referringGuildId) as { count: number };
-    
-    // Update count in config
     const referralConfig = getServerConfig(referringGuildId, 'referral');
     if (referralConfig) {
         updateServerConfig(referringGuildId, 'referral', { ...referralConfig, referral_count: count });
-    }
-
-    if (count >= 10) {
-        try {
-            const guild = await client.guilds.fetch(referringGuildId);
-            const owner = await guild.fetchOwner();
-            const premiumKey = createPremiumKey(`referral_reward_${referringGuildId}`, new Date(Date.now() + ms('30d')));
-
-            const embed = new EmbedBuilder()
-                .setColor(0xFFD700)
-                .setTitle('🎉 Récompense de Parrainage !')
-                .setDescription(`Félicitations ! Vous avez parrainé 10 serveurs uniques. En récompense, voici une clé premium de 30 jours pour le serveur de votre choix.`)
-                .addFields({ name: "Votre Clé", value: `\`\`\`${premiumKey}\`\`\`` });
-
-            await owner.send({ embeds: [embed] });
-
-            // Reset referrals for this guild to prevent spamming rewards
-            const deleteReferralsStmt = db.prepare("DELETE FROM referrals WHERE referring_guild_id = ?");
-            deleteReferralsStmt.run(referringGuildId);
-            if (referralConfig) {
-                updateServerConfig(referringGuildId, 'referral', { ...referralConfig, referral_count: 0 });
-            }
-            
-            return { success: true, message: "Parrainage appliqué avec succès ! Une récompense a été envoyée au propriétaire du serveur parrain." };
-
-        } catch (e) {
-             console.error("[Referral Reward] Failed to send reward DM:", e);
-             return { success: true, message: "Parrainage appliqué avec succès ! La récompense n'a pas pu être envoyée par MP." };
-        }
     }
 
     return { success: true, message: "Merci ! Votre parrainage a bien été pris en compte." };
