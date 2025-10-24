@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 
 
 const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
+const WATCHDOG_API_URL = '/health'; // Use relative path for proxy
 
 type ServiceStatus = 'operational' | 'degraded' | 'outage' | 'loading';
 
@@ -200,7 +201,6 @@ export default function StatusPage() {
 
     const checkStatuses = useCallback(async () => {
         const newServices: StatusItem[] = [...services];
-        const WATCHDOG_API_URL = `${window.location.protocol}//${window.location.hostname}:4400`;
 
         // 1. User -> Web Panel
         const userPanelService = newServices.find(s => s.name === "Votre Connexion > Panel")!;
@@ -263,7 +263,7 @@ export default function StatusPage() {
         const watchdogService = newServices.find(s => s.name === "Service de Surveillance (Watchdog)")!;
         try {
             const startTime = performance.now();
-            const response = await fetch(`${WATCHDOG_API_URL}/health`);
+            const response = await fetch(WATCHDOG_API_URL);
             const endTime = performance.now();
             if (!response.ok) throw new Error();
             watchdogService.latency = Math.round(endTime - startTime);
