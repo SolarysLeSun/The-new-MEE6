@@ -4,7 +4,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile } from '../types';
+import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile, RoadmapItem } from '../types';
 import { randomBytes } from 'crypto';
 import ms from 'ms';
 
@@ -180,6 +180,19 @@ const upgradeSchema = () => {
             );
         `);
         console.log('[Database] La table "owner_trials" est prête.');
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS roadmap_items (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL,
+                icon TEXT NOT NULL,
+                status TEXT NOT NULL,
+                sort_order INTEGER
+            );
+        `);
+        console.log('[Database] Table "roadmap_items" is ready.');
+
 
         // Drop deprecated tables
         db.exec(`DROP TABLE IF EXISTS ai_personas;`);
@@ -635,6 +648,36 @@ export function initializeDatabase() {
     upgradeSchema(); // Ensure all tables are created/updated
     console.log('[Database] Initialisation de la base de données terminée.');
 }
+
+// --- Roadmap Functions ---
+export function getRoadmapItems(): RoadmapItem[] {
+    const stmt = db.prepare('SELECT * FROM roadmap_items ORDER BY sort_order ASC');
+    return stmt.all() as RoadmapItem[];
+}
+
+export function updateRoadmapItem(item: RoadmapItem) {
+    const stmt = db.prepare(`
+        UPDATE roadmap_items 
+        SET title = ?, description = ?, icon = ?, status = ?, sort_order = ?
+        WHERE id = ?
+    `);
+    stmt.run(item.title, item.description, item.icon, item.status, item.sort_order, item.id);
+}
+
+export function addRoadmapItem(item: RoadmapItem) {
+    const stmt = db.prepare(`
+        INSERT INTO roadmap_items (id, title, description, icon, status, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(item.id, item.title, item.description, item.icon, item.status, item.sort_order);
+}
+
+export function deleteRoadmapItem(id: string) {
+    const stmt = db.prepare('DELETE FROM roadmap_items WHERE id = ?');
+    stmt.run(id);
+}
+
+
 
 // --- Bot Ban System ---
 
@@ -1411,3 +1454,5 @@ export function getCombinedUserLevel(userId: string): number {
     const rows = stmt.all(userId) as { level: number }[];
     return rows.reduce((sum, row) => sum + row.level, 0);
 }
+
+  

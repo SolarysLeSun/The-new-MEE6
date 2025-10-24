@@ -169,6 +169,15 @@ export interface PanelMessage {
     active: boolean;
 }
 
+export interface RoadmapItem {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  status: string;
+  sort_order: number;
+}
+
 export interface LevelingConfig {
     enabled: boolean;
     difficulty: 'easy' | 'medium' | 'hard' | 'arcade';
@@ -285,3 +294,5 @@ export interface UserProfile {
     bio: string | null;
     links: ProfileLink[];
 }
+
+  

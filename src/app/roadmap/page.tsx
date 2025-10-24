@@ -5,18 +5,47 @@ import { AppHeader } from '@/components/app-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import RippleGrid from '@/components/ripple-grid';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
-import { GitBranch, ListTodo, Sparkles, Rocket } from 'lucide-react';
+import { GitBranch, ListTodo, Sparkles, Rocket, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
-const roadmapItems = [
-    { title: "Commandes Personnalisées", description: "Interface no-code pour créer vos propres commandes avec des déclencheurs et des actions.", icon: Sparkles, status: "En conception" },
-    { title: "Système de 'Création d'Amitié'", description: "Analyse des interactions pour visualiser les affinités entre membres.", icon: GitBranch, status: "En recherche" },
-    { title: "Traduction Vocale en Temps Réel", description: "Traduction instantanée des conversations vocales entre plusieurs langues.", icon: Sparkles, status: "En recherche" },
-    { title: "Générateur de Serveur IA v2", description: "Amélioration de l'outil de création et d'édition de serveur.", icon: ListTodo, status: "Prévu" },
-    { title: "Tableau de Bord des Statistiques", description: "Visualisation de l'activité du serveur et de l'utilisation du bot.", icon: ListTodo, status: "Prévu" },
-];
+const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
+
+interface RoadmapItem {
+    id: string;
+    title: string;
+    description: string;
+    icon: string;
+    status: string;
+}
+
+const iconMap: { [key: string]: React.ElementType } = {
+    Sparkles,
+    GitBranch,
+    ListTodo,
+    Rocket,
+};
 
 export default function RoadmapPage() {
+    const [roadmapItems, setRoadmapItems] = useState<RoadmapItem[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchRoadmap = async () => {
+            try {
+                const res = await fetch(`${API_URL}/roadmap/items`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setRoadmapItems(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch roadmap items", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchRoadmap();
+    }, []);
 
     return (
         <div className="relative min-h-screen w-full bg-background text-foreground">
@@ -50,10 +79,17 @@ export default function RoadmapPage() {
                             <CardDescription>Cette liste est sujette à changement et les priorités peuvent évoluer.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {roadmapItems.map((item, index) => (
-                                <div key={index} className="flex items-start gap-4 p-4 rounded-lg bg-background/50 hover:bg-background/80 transition-colors">
+                             {loading ? (
+                                <div className="flex justify-center items-center h-48">
+                                    <Loader2 className="w-8 h-8 animate-spin text-primary"/>
+                                </div>
+                            ) : (
+                                roadmapItems.map((item) => {
+                                const Icon = iconMap[item.icon] || Sparkles;
+                                return (
+                                <div key={item.id} className="flex items-start gap-4 p-4 rounded-lg bg-background/50 hover:bg-background/80 transition-colors">
                                     <div className="p-3 bg-primary/10 rounded-full">
-                                        <item.icon className="w-6 h-6 text-primary" />
+                                        <Icon className="w-6 h-6 text-primary" />
                                     </div>
                                     <div className="flex-1">
                                         <h3 className="font-semibold text-white">{item.title}</h3>
@@ -61,7 +97,8 @@ export default function RoadmapPage() {
                                     </div>
                                     <div className="ml-auto text-xs font-semibold text-muted-foreground whitespace-nowrap bg-muted px-2 py-1 rounded-full">{item.status}</div>
                                 </div>
-                            ))}
+                            )})
+                            )}
                         </CardContent>
                     </Card>
                 </PageTransitionWrapper>
@@ -70,3 +107,4 @@ export default function RoadmapPage() {
     );
 }
 
+  
