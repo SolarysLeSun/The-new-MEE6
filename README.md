@@ -32,14 +32,12 @@ Le propriétaire du bot a accès à des commandes globales spéciales pour la ge
 - `/adminannounce` : Envoie une annonce à **tous les serveurs** où le bot est présent.
 - `/devadminannounce` : Envoie une annonce uniquement aux serveurs marqués comme "développement".
 - `/devserver` : Gère la liste des serveurs de développement.
-    - `add` : Ajoute un serveur à la liste.
-    - `remove` : Retire un serveur de la liste.
-    - `list` : Affiche tous les serveurs de la liste.
 - `/delegate` : Délègue des permissions restreintes (comme `/genpremium`) à d'autres utilisateurs de confiance.
 - `/genpremium` : Génère des clés d'activation pour le mode Premium.
 - `/givepremium` : Active ou désactive manuellement le statut Premium pour un serveur.
 - `/panelmessage` : Affiche un message d'alerte global sur le panel web.
 - `/restart` : Redémarre le processus du bot.
+- `/system` : Affiche le statut des processus du bot (cluster PM2).
 - `/status` : Change le statut personnalisé du bot ("Joue à...").
 - `/disableia` & `/enableia` : Active ou désactive globalement toutes les fonctionnalités d'IA en cas de problème.
 
@@ -132,27 +130,22 @@ Pour la production, utilisez **PM2** pour une meilleure stabilité et performanc
     ```
     Cette commande compile le code TypeScript du bot en JavaScript dans le dossier `dist`.
 
-2.  **Lancez le bot avec PM2 :**
+2.  **Lancez le bot, le panel et le watchdog avec PM2 :**
     ```bash
-    npm run bot:prod
+    pm2 start ecosystem.config.js
     ```
-    Cette commande utilise le fichier `ecosystem.config.js` pour lancer le bot en mode cluster.
-
-3.  **Lancez le panel web en production :**
-    ```bash
-    # Compilez d'abord le panel
-    npm run build
-    
-    # Lancez le serveur Next.js (vous pouvez aussi le gérer avec PM2)
-    npm run start
-    ```
+    Cette commande unique utilise le fichier `ecosystem.config.js` pour lancer et gérer tous les processus nécessaires.
 
 **Commandes PM2 utiles :**
-- `pm2 list` : Voir le statut de tous les processus.
+- `pm2 list` : Voir le statut de tous les processus (`bot`, `panel`, `watchdog`).
 - `pm2 logs bot` : Afficher les logs du bot en temps réel.
+- `pm2 logs panel` : Afficher les logs du panel web.
+- `pm2 logs watchdog`: Afficher les logs du service de surveillance.
 - `pm2 restart bot` : Redémarrer toutes les instances du bot.
-- `pm2 stop bot` : Arrêter le bot.
-- `pm2 delete bot` : Supprimer le bot de la liste de PM2.
+- `pm2 stop all` : Arrêter tous les processus gérés par PM2.
+- `pm2 delete all` : Supprimer tous les processus de la liste de PM2.
+
+**Note sur les logs :** Les chemins de logs (`/home/enzo_prados/.pm2/logs/...`) sont spécifiques à votre environnement serveur. `/mnt/marcus` correspond à la racine de votre projet.
 
 ---
 

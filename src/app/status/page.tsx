@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import React, { useState, useCallback, useEffect } from "react";
 import { AppHeader } from "@/components/app-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Loader2, ServerCrash, XCircle, AlertTriangle, MessageSquareWarning } from "lucide-react";
+import { CheckCircle, Loader2, ServerCrash, XCircle, AlertTriangle, MessageSquareWarning, Cpu, Memory, Power } from "lucide-react";
 import RippleGrid from "@/components/ripple-grid";
 import { PageTransitionWrapper } from "@/components/page-transition-wrapper";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,13 @@ interface StatusItem {
     status: ServiceStatus;
     description: string;
     latency: number | null;
+}
+
+interface ClusterStatus {
+    id: number;
+    status: string;
+    cpu: number;
+    memory: string;
 }
 
 const LATENCY_DEGRADED_THRESHOLD = 500; // ms
@@ -188,6 +196,7 @@ export default function StatusPage() {
         { name: "Genkit & Services IA", status: 'loading', description: "État des services d'IA (Google Gemini).", latency: null },
         { name: "Service de Surveillance (Watchdog)", status: 'loading', description: "Surveille l'état de l'API du bot et la redémarre si nécessaire.", latency: null },
     ]);
+    const [clusterStatus, setClusterStatus] = useState<ClusterStatus[]>([]);
     const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
     const checkStatuses = useCallback(async () => {
@@ -263,6 +272,16 @@ export default function StatusPage() {
         } catch (e) {
             watchdogService.status = 'outage';
             watchdogService.latency = null;
+        }
+
+        // 5. Bot Cluster Status
+        try {
+            const response = await fetch(`${BOT_API_URL}/system-status`);
+            if (!response.ok) throw new Error("Could not fetch cluster status");
+            const data: ClusterStatus[] = await response.json();
+            setClusterStatus(data);
+        } catch (e) {
+            setClusterStatus([]);
         }
 
 
@@ -346,6 +365,41 @@ export default function StatusPage() {
             ))}
           </CardContent>
         </Card>
+        
+        {/* Cluster Status Card */}
+        {clusterStatus.length > 0 && (
+            <Card className="max-w-4xl mx-auto bg-card/60 backdrop-blur-sm border-white/10 mt-8">
+                <CardHeader>
+                    <CardTitle>Statut du Cluster de Bot</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {clusterStatus.map((cluster) => (
+                        <Card key={cluster.id} className="bg-background/50">
+                            <CardHeader>
+                                <CardTitle className="flex items-center justify-between text-base">
+                                    <span>Cluster #{cluster.id}</span>
+                                    <span className={cn("flex items-center gap-1.5 text-xs", cluster.status === 'online' ? 'text-green-400' : 'text-destructive')}>
+                                        <Power className="w-3 h-3"/>
+                                        {cluster.status}
+                                    </span>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex justify-around text-sm">
+                                <div className="flex items-center gap-2">
+                                    <Cpu className="w-4 h-4 text-muted-foreground" />
+                                    <span>{cluster.cpu}%</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Memory className="w-4 h-4 text-muted-foreground" />
+                                    <span>{cluster.memory} Mo</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </CardContent>
+            </Card>
+        )}
+
         <div className="max-w-4xl mx-auto text-center mt-8">
             <ReportIssueDialog />
         </div>

@@ -3,7 +3,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType, DiscordAPIError } from 'discord.js';
-import { updateServerConfig, getServerConfig, getAllBotServers, getPersonasForGuild, updatePersona, deletePersona, createPersona, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem } from '@/lib/db';
+import { updateServerConfig, getServerConfig, getAllBotServers, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem } from '@/lib/db';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { updateGuildCommands } from './handlers/commandHandler';
@@ -388,7 +388,6 @@ export function startApi(client: Client) {
     // --- AI Personas API ---
 
     app.get('/api/personas/:guildId', (req, res) => {
-        const { guildId } = req.params;
         try {
             const personas = getPersonasForGuild(guildId);
             res.json(personas);
@@ -756,7 +755,34 @@ export function startApi(client: Client) {
         }
     });
 
-    app.listen(API_PORT, () => {
+    app.get('/api/system-status', (req, res) => {
+        exec('pm2 jlist', (error, stdout, stderr) => {
+            if (error || stderr) {
+                console.error(`[API /system-status] Error executing pm2 jlist:`, error || stderr);
+                return res.status(500).json({ error: "Impossible de récupérer le statut des processus." });
+            }
+
+            try {
+                const processes = JSON.parse(stdout);
+                const botProcesses = processes
+                    .filter((p: any) => p.name === 'bot')
+                    .map((proc: any) => ({
+                        id: proc.pm_id,
+                        status: proc.pm2_env.status,
+                        cpu: proc.monit.cpu || 0,
+                        memory: (proc.monit.memory / 1024 / 1024).toFixed(1), // In MB
+                    }));
+
+                res.status(200).json(botProcesses);
+
+            } catch (parseError) {
+                console.error('[API /system-status] Erreur lors du parsing du JSON de pm2:', parseError);
+                res.status(500).json({ error: "Impossible de lire la sortie de la commande de statut." });
+            }
+        });
+    });
+
+    app.listen(API_PORT, '0.0.0.0', () => {
         console.log(`[Bot API] Le serveur API interne écoute sur le port ${API_PORT}`);
     });
 }
