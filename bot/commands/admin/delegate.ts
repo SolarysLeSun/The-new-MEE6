@@ -4,7 +4,7 @@ import type { Command } from '@/types';
 import { grantPermission, revokePermission, hasPermission, getDelegatedUsersForPermission } from '@/lib/db';
 
 const OWNER_ID = '556529963877138442';
-const AVAILABLE_PERMISSIONS = ['genpremium', 'botrestart'];
+const AVAILABLE_PERMISSIONS = ['genpremium', 'system'];
 
 const DelegateCommand: Command = {
     data: new SlashCommandBuilder()
@@ -70,7 +70,7 @@ const DelegateCommand: Command = {
         await interaction.deferReply({ ephemeral: true });
 
         const subcommand = interaction.options.getSubcommand();
-        const permission = interaction.options.getString('permission', true) as 'genpremium' | 'botrestart';
+        const permission = interaction.options.getString('permission', true) as 'genpremium' | 'system';
         const targetUser = interaction.options.getUser('user');
 
         try {
