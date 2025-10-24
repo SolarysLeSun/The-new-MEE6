@@ -61,7 +61,8 @@ export type Module =
     | 'gif-filter'
     | 'faq-navigation'
     | 'anti-afk'
-    | 'integrations';
+    | 'integrations'
+    | 'stats-channels';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale

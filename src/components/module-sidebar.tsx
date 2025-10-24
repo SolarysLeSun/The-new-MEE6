@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -44,6 +45,7 @@ import {
   PencilRuler,
   UserX,
   Rss,
+  BarChart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -102,6 +104,7 @@ export const navCategories = [
             { href: 'salons-prives', label: 'Tickets', icon: Ticket, keywords: ['tickets', 'support', 'groupes', 'addticket', 'privateresum', 'salons privés'] },
             { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, keywords: ['events', 'planning', 'organisation', 'event-create', 'event-list'] },
             { href: 'accueil-integration', label: 'Accueil & Intégration', icon: UserPlus, keywords: ['bienvenue', 'welcome', 'autorole', 'questionnaire'] },
+            { href: 'statistiques', label: 'Salons de Statistiques', icon: BarChart, keywords: ['stats', 'compteur', 'membres', 'vocal', 'boosts'] },
         ]
     },
      {

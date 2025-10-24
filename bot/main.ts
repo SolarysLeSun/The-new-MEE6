@@ -19,6 +19,7 @@ import { patchNoteFlow } from '@/ai/flows/patchnote-flow';
 import ms from 'ms';
 import { startAntiAfkInterval } from './events/moderation/antiAfk';
 import { musicPlayer } from './music/player';
+import { startStatsChannelInterval } from './events/system/statsChannels';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -133,6 +134,9 @@ client.once(Events.ClientReady, async (readyClient) => {
     
     // Start interval for Anti-AFK check
     startAntiAfkInterval(client);
+
+    // Start interval for Stats Channels
+    startStatsChannelInterval(client);
 
     // Start the API for the web panel
     startApi(client);
