@@ -296,4 +296,24 @@ export interface UserProfile {
     links: ProfileLink[];
 }
 
+export interface TicketsConfig {
+    enabled: boolean;
+    creation_channel: string | null;
+    category_id: string | null;
+    log_channel_id: string | null;
+    moderator_roles: string[];
+    mention_moderators: boolean;
+    modal_title: string;
+    embed_message: string;
+    channel_name_format: string;
+    custom_fields: CustomField[];
+    validation_enabled: boolean;
+    validation_channel_id: string | null;
+    confirmation_message: string;
+    private_thread_enabled: boolean;
+    private_thread_name_format: string;
+    archive_summary: boolean;
+    auto_delete_on_close: boolean;
+    command_permissions: { [key: string]: string | null };
+}
   

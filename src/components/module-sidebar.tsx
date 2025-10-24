@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -100,7 +99,7 @@ export const navCategories = [
         name: 'Automatisation',
         items: [
             { href: 'commandes-personnalisees', label: 'Commandes Personnalisées', icon: Code, isPremium: true, isDisabled: true, keywords: ['custom commands', 'créer commande'] },
-            { href: 'salons-prives', label: 'Salons Privés', icon: Ticket, keywords: ['tickets', 'support', 'groupes', 'addprivate', 'privateresum'] },
+            { href: 'salons-prives', label: 'Tickets', icon: Ticket, keywords: ['tickets', 'support', 'groupes', 'addticket', 'privateresum', 'salons privés'] },
             { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, keywords: ['events', 'planning', 'organisation', 'event-create', 'event-list'] },
             { href: 'accueil-integration', label: 'Accueil & Intégration', icon: UserPlus, keywords: ['bienvenue', 'welcome', 'autorole', 'questionnaire'] },
         ]

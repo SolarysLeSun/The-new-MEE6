@@ -6,8 +6,8 @@ import { getServerConfig } from '../../../src/lib/db';
 
 const AddPrivateCommand: Command = {
     data: new SlashCommandBuilder()
-        .setName('addprivate')
-        .setDescription('Envoie le panneau de création de salon privé dans le salon configuré.')
+        .setName('addticket')
+        .setDescription('Envoie le panneau de création de ticket dans le salon configuré.')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction: ChatInputCommandInteraction) {
@@ -21,7 +21,7 @@ const AddPrivateCommand: Command = {
         const privateRoomsConfig = await getServerConfig(interaction.guild.id, 'private-rooms');
 
         if (!privateRoomsConfig?.enabled) {
-            await interaction.editReply({ content: "Le module de salons privés est désactivé sur ce serveur." });
+            await interaction.editReply({ content: "Le module de tickets est désactivé sur ce serveur." });
             return;
         }
         
@@ -39,24 +39,24 @@ const AddPrivateCommand: Command = {
 
             const embed = new EmbedBuilder()
                 .setColor(0x3498DB)
-                .setTitle('Créer un salon privé')
-                .setDescription(privateRoomsConfig.embed_message || 'Cliquez sur le bouton ci-dessous pour créer un salon privé.')
+                .setTitle(privateRoomsConfig.modal_title || 'Ouvrir un ticket')
+                .setDescription(privateRoomsConfig.embed_message || 'Cliquez sur le bouton ci-dessous pour ouvrir un ticket.')
                 .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() || undefined });
 
             const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
                 new ButtonBuilder()
                     .setCustomId('create_private_room')
-                    .setLabel('Créer un salon')
+                    .setLabel('Ouvrir un ticket')
                     .setStyle(ButtonStyle.Success)
                     .setEmoji('➕')
             );
             
             await channel.send({ embeds: [embed], components: [row] });
 
-            await interaction.editReply({ content: `✅ Le panneau de création de salon privé a été envoyé avec succès dans ${channel}.` });
+            await interaction.editReply({ content: `✅ Le panneau de création de ticket a été envoyé avec succès dans ${channel}.` });
 
         } catch (error) {
-            console.error('[AddPrivate] Error sending private room panel:', error);
+            console.error('[AddPrivate] Error sending ticket panel:', error);
             await interaction.editReply({ content: 'Une erreur est survenue lors de l\'envoi du panneau.' });
         }
     },
