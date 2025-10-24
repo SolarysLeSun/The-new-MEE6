@@ -61,6 +61,12 @@ export const ConversationalAgentInputSchema = z.object({
   }).describe("A list of actions the agent is allowed to perform."),
 });
 
+// We need a slightly different input for the final prompt, which may include the image analysis.
+const FinalPromptInputSchema = ConversationalAgentInputSchema.extend({
+  imageAnalysis: z.string().optional().describe("A textual analysis of the image provided by the user."),
+});
+
+
 export const ConversationalAgentOutputSchema = z.object({
   response: z.string().describe("The agent's generated response to the user's message. Can be an empty string if the character decides not to speak. Can contain special commands for the bot to execute."),
   imagined_answer: z.boolean().describe("True if the answer was imagined because it was not in the knowledge base."),
@@ -128,9 +134,8 @@ Here are the last few messages in this conversation for context.
 {{/each}}
 {{/if}}
 
-{{#if photoDataUri}}
-The user has also included an image in their message. Analyze the image as part of the context.
-Image: {{media url=photoDataUri}}
+{{#if imageAnalysis}}
+An image was provided. Here is the analysis of its content: "{{{imageAnalysis}}}"
 {{/if}}
 
 ---
@@ -139,7 +144,7 @@ Image: {{media url=photoDataUri}}
 // Define the Genkit prompt for generating the main response
 const responseGenerationPrompt = ai.definePrompt({
   name: 'conversationalAgentResponsePrompt',
-  input: { schema: ConversationalAgentInputSchema },
+  input: { schema: FinalPromptInputSchema }, // Use the extended schema
   output: { schema: ConversationalAgentOutputSchema },
   prompt: `${basePrompt}
 Your Task & Context:
@@ -181,8 +186,39 @@ export const conversationalAgentFlow = ai.defineFlow(
     outputSchema: ConversationalAgentOutputSchema,
   },
   async (input) => {
+    let imageAnalysis: string | undefined = undefined;
+
+    // 1. If an image is provided, analyze it first with the image model.
+    if (input.photoDataUri) {
+      console.log(`[Agent Image Analysis] Analyzing image with ${imageModel}...`);
+      const analysisRequest = {
+        prompt: `Analyze this image and describe its content in one sentence. This description will be used as context for a conversational AI. Image:`,
+        media: [{ url: input.photoDataUri }],
+      };
+      try {
+        const { text } = await ai.generate({
+          model: imageModel,
+          prompt: [
+              { media: { url: input.photoDataUri } },
+              { text: "Analyze this image and describe its content in one sentence. This description will be used as context for a conversational AI." }
+          ],
+        });
+        imageAnalysis = text;
+        console.log(`[Agent Image Analysis] Analysis result: "${imageAnalysis}"`);
+      } catch (error) {
+        console.error('[Agent Image Analysis] Failed to analyze image:', error);
+        // Don't fail the whole flow, just proceed without analysis.
+        imageAnalysis = "L'analyse de l'image a échoué.";
+      }
+    }
+
+    // 2. Prepare the input for the final text-based model.
+    const finalPromptInput: z.infer<typeof FinalPromptInputSchema> = {
+      ...input,
+      imageAnalysis,
+    };
+
     let lastError: any;
-    
     const safetySettings = input.allow_freewheeling
       ? [
           { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
@@ -192,14 +228,12 @@ export const conversationalAgentFlow = ai.defineFlow(
         ]
       : [];
       
-    const modelToUse = input.photoDataUri ? imageModel : textModelCascade[0];
-
-    for (const model of (input.photoDataUri ? [imageModel] : textModelCascade)) {
+    // 3. Loop through the text models to generate the final response.
+    for (const model of textModelCascade) {
       try {
         console.log(`[Agent Response] Trying model ${model}...`);
-        const { output } = await responseGenerationPrompt(input, { model, config: { safetySettings } });
+        const { output } = await responseGenerationPrompt(finalPromptInput, { model, config: { safetySettings } });
         console.log(`[Agent Response] Model ${model} succeeded.`);
-
         return output!;
 
       } catch (error: any) {
@@ -218,3 +252,5 @@ export const conversationalAgentFlow = ai.defineFlow(
     throw lastError;
   }
 );
+
+    
