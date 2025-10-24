@@ -60,7 +60,8 @@ export type Module =
     | 'embed-builder'
     | 'gif-filter'
     | 'faq-navigation'
-    | 'anti-afk';
+    | 'anti-afk'
+    | 'integrations';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale

@@ -641,6 +641,10 @@ const defaultConfigs: DefaultConfigs = {
         enabled: false,
         timeout_minutes: 15,
         afk_channel_id: null,
+    },
+    'integrations': {
+        enabled: false,
+        rss_feeds: [],
     }
 };
 
