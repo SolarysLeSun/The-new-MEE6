@@ -4,7 +4,6 @@ import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType, DiscordAPIError } from 'discord.js';
 import { updateServerConfig, getServerConfig, getAllBotServers, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem } from '@/lib/db';
-import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { updateGuildCommands } from './handlers/commandHandler';
 import { generateKeywords } from '@/ai/flows/keyword-generation-flow';
@@ -385,97 +384,6 @@ export function startApi(client: Client) {
         }
     });
 
-    // --- AI Personas API ---
-
-    app.get('/api/personas/:guildId', (req, res) => {
-        try {
-            const personas = getPersonasForGuild(guildId);
-            res.json(personas);
-        } catch (error) {
-            res.status(500).json({ error: 'Failed to fetch personas.' });
-        }
-    });
-
-    app.post('/api/personas/generate-prompt', checkGlobalAiStatus, async (req, res) => {
-        const { name, instructions } = req.body;
-        if (!name || !instructions) {
-            return res.status(400).json({ error: 'Name and instructions are required.' });
-        }
-        try {
-            const personaPrompt = await generatePersonaPrompt({ name, instructions });
-            res.json({ personaPrompt });
-        } catch (error) {
-            res.status(500).json({ error: 'Failed to generate persona prompt.' });
-        }
-    });
-
-    app.post('/api/personas/create', checkGlobalAiStatus, async (req, res) => {
-        const { guild_id, name, persona_prompt, creator_id } = req.body;
-         if (!guild_id || !name || !persona_prompt || !creator_id) {
-            return res.status(400).json({ error: 'Missing required fields for persona creation.' });
-        }
-        try {
-            const guild = await client.guilds.fetch(guild_id);
-            if (!guild) {
-                return res.status(404).json({ error: 'Guild not found.' });
-            }
-
-            // Create Role
-            const newRole = await guild.roles.create({
-                name: name,
-                mentionable: true,
-                reason: `Role for AI Persona: ${name}`
-            });
-
-            let avatarDataUri = null;
-            try {
-                const avatarResult = await generatePersonaAvatar({ name, persona_prompt });
-                avatarDataUri = avatarResult.avatarDataUri;
-            } catch (avatarError) {
-                console.error(`[API] Failed to generate avatar for ${name}, using default.`, avatarError);
-            }
-            
-            const newPersona = {
-                id: uuidv4(),
-                guild_id,
-                name,
-                persona_prompt,
-                creator_id,
-                active_channel_id: null,
-                avatar_url: avatarDataUri, 
-                role_id: newRole.id,
-                bot_token: null
-            };
-
-            createPersona(newPersona);
-            res.status(201).json(newPersona);
-        } catch (error) {
-            console.error("[API] Failed to create persona:", error);
-            res.status(500).json({ error: 'Failed to create persona.' });
-        }
-    });
-
-    app.patch('/api/personas/:personaId', (req, res) => {
-        const { personaId } = req.params;
-        const updates = req.body;
-        try {
-            updatePersona(personaId, updates);
-            res.json({ success: true });
-        } catch (error) {
-            res.status(500).json({ error: 'Failed to update persona.' });
-        }
-    });
-
-    app.delete('/api/personas/:personaId', async (req, res) => {
-        const { personaId } = req.params;
-        try {
-            deletePersona(personaId);
-            res.status(204).send();
-        } catch (error) {
-            res.status(500).json({ error: 'Failed to delete persona.' });
-        }
-    });
-
     // --- Keyword Generation API for Auto-Mod ---
     app.post('/api/generate-keywords', checkGlobalAiStatus, async (req, res) => {
         const { prompt } = req.body;
@@ -786,5 +694,3 @@ export function startApi(client: Client) {
         console.log(`[Bot API] Le serveur API interne écoute sur le port ${API_PORT}`);
     });
 }
-
-    
