@@ -314,7 +314,7 @@ export default function StatusPage() {
                 )}>
                    {overallStatus === 'operational' && <CheckCircle/>}
                    {overallStatus === 'outage' && <ServerCrash/>}
-                   {overallCellaralStatus === 'loading' && <Loader2 className="animate-spin" />}
+                   {overallStatus === 'loading' && <Loader2 className="animate-spin" />}
                    {getStatusText(overallStatus)}
                 </div>
                  {lastChecked && <p className="text-xs text-muted-foreground">Dernière vérification : {lastChecked.toLocaleString('fr-FR')}</p>}
