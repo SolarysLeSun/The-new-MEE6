@@ -13,7 +13,7 @@ import { randomBytes } from 'crypto';
 import { exec } from 'child_process';
 import { fixEmbedJson } from '@/ai/flows/embed-json-fixer';
 
-const API_PORT = process.env.BOT_API_PORT || 3630; // toujour le port 3630 !!
+const API_PORT = process.env.BOT_API_PORT || 3630;
 const OWNER_ID = '556529963877138442';
 const WEBHOOK_NAME = "Marcus";
 const MARCUS_EMOJI_GUILD_ID = '1245654161282826260';
@@ -760,3 +760,5 @@ export function startApi(client: Client) {
         console.log(`[Bot API] Le serveur API interne écoute sur le port ${API_PORT}`);
     });
 }
+
+    
