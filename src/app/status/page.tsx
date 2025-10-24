@@ -246,7 +246,7 @@ export default function StatusPage() {
                  const data = await response.json();
                  if (data.disabled) {
                     aiService.status = 'degraded';
-                    aiService.description = `Désactivé par un admin : ${data.reason}`;
+                    aiService.description = `Désactivé par un admin : ${data.reason || 'Aucune raison spécifiée'}`;
                  } else {
                     aiService.status = 'operational';
                     aiService.description = "Les services d'IA sont opérationnels.";
@@ -369,7 +369,10 @@ export default function StatusPage() {
         {clusterStatus.length > 0 && (
             <Card className="max-w-4xl mx-auto bg-card/60 backdrop-blur-sm border-white/10 mt-8">
                 <CardHeader>
-                    <CardTitle>Statut du Cluster de Bot</CardTitle>
+                    <CardTitle>Statut des Clusters de Bot</CardTitle>
+                    <CardDescription>
+                        Note : Il est normal que l'activité soit souvent concentrée sur un seul cluster (ex: Cluster #0). Cela facilite le suivi et la résolution des bugs.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {clusterStatus.map((cluster) => (
@@ -406,5 +409,3 @@ export default function StatusPage() {
     </PageTransitionWrapper>
   );
 }
-
-    
