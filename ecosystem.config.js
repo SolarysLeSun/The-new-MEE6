@@ -4,9 +4,11 @@ module.exports = {
       name: 'bot',
       script: 'npm',
       args: 'run bot:dev',
-      watch: false, // PM2 ne surveille pas, `tsx` le fait déjà
+      watch: false,
+      exec_mode: 'cluster',
+      instances: 'max', // Utilise tous les cœurs disponibles
       env: {
-        NODE_ENV: 'development', // On utilise le mode dev
+        NODE_ENV: 'development',
       },
     },
     {
