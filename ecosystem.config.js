@@ -1,4 +1,3 @@
-
 module.exports = {
   apps: [
     {
@@ -16,7 +15,10 @@ module.exports = {
     // {
     //   name: 'panel',
     //   script: 'npm',
-    //   args: 'run start'
+    //   args: 'run start',
+    //   env: {
+    //     NODE_ENV: 'production',
+    //   }
     // }
   ],
 };
