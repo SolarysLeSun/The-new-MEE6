@@ -1101,23 +1101,23 @@ export async function applyReferral(referralCode: string, referredGuildId: strin
 
 // --- Delegated Permissions ---
 
-export function grantPermission(userId: string, permissionKey: 'genpremium' | 'system' | 'botrestart', grantedBy: string): void {
+export function grantPermission(userId: string, permissionKey: 'genpremium' | 'system', grantedBy: string): void {
     const stmt = db.prepare('INSERT OR REPLACE INTO delegated_permissions (user_id, permission_key, granted_by) VALUES (?, ?, ?)');
     stmt.run(userId, permissionKey, grantedBy);
 }
 
-export function revokePermission(userId: string, permissionKey: 'genpremium' | 'system' | 'botrestart'): void {
+export function revokePermission(userId: string, permissionKey: 'genpremium' | 'system'): void {
     const stmt = db.prepare('DELETE FROM delegated_permissions WHERE user_id = ? AND permission_key = ?');
     stmt.run(userId, permissionKey);
 }
 
-export function hasPermission(userId: string, permissionKey: 'genpremium' | 'system' | 'botrestart'): boolean {
+export function hasPermission(userId: string, permissionKey: 'genpremium' | 'system'): boolean {
     const stmt = db.prepare('SELECT 1 FROM delegated_permissions WHERE user_id = ? AND permission_key = ?');
     const result = stmt.get(userId, permissionKey);
     return !!result;
 }
 
-export function getDelegatedUsersForPermission(permissionKey: 'genpremium' | 'system' | 'botrestart'): string[] {
+export function getDelegatedUsersForPermission(permissionKey: 'genpremium' | 'system'): string[] {
     const stmt = db.prepare('SELECT user_id FROM delegated_permissions WHERE permission_key = ?');
     const rows = stmt.all(permissionKey) as { user_id: string }[];
     return rows.map(row => row.user_id);
@@ -1465,5 +1465,3 @@ export function getCombinedUserLevel(userId: string): number {
 }
 
   
-
-    

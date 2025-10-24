@@ -1,5 +1,4 @@
 
-
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from 'discord.js';
 import type { Command } from '@/types';
 import { hasPermission } from '@/lib/db';
@@ -92,5 +91,3 @@ const SystemCommand: Command = {
 };
 
 export default SystemCommand;
-
-    

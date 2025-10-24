@@ -1,5 +1,4 @@
 
-
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, User } from 'discord.js';
 import type { Command } from '@/types';
 import { grantPermission, revokePermission, hasPermission, getDelegatedUsersForPermission } from '@/lib/db';
@@ -130,5 +129,3 @@ const DelegateCommand: Command = {
 };
 
 export default DelegateCommand;
-
-    
