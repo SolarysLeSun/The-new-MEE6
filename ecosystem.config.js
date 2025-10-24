@@ -2,23 +2,20 @@ module.exports = {
   apps: [
     {
       name: 'bot',
-      script: 'dist/bot/main.js',
-      instances: 'max', // Lance une instance par cœur de CPU disponible
-      exec_mode: 'cluster', // Active le mode cluster pour la haute disponibilité
-      watch: false, // PM2 ne surveille pas les fichiers, on relance manuellement après une mise à jour
-      max_memory_restart: '1G', // Redémarre si une instance dépasse 1 Go de RAM
+      script: 'npm',
+      args: 'run bot:dev',
+      watch: false, // PM2 ne surveille pas, `tsx` le fait déjà
       env: {
-        NODE_ENV: 'production',
+        NODE_ENV: 'development', // On utilise le mode dev
       },
     },
-    // Vous pouvez ajouter d'autres applications ici si nécessaire, par exemple le panel web.
-    // {
-    //   name: 'panel',
-    //   script: 'npm',
-    //   args: 'run start',
-    //   env: {
-    //     NODE_ENV: 'production',
-    //   }
-    // }
+    {
+      name: 'panel',
+      script: 'npm',
+      args: 'run start', // Lance le serveur Next.js en production
+      env: {
+        NODE_ENV: 'production',
+      }
+    }
   ],
 };
