@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 
 
 const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
+const WATCHDOG_API_URL = 'http://localhost:4400';
 
 type ServiceStatus = 'operational' | 'degraded' | 'outage' | 'loading';
 
@@ -187,6 +188,7 @@ export default function StatusPage() {
         { name: "Votre Connexion > Panel", status: 'loading', description: "Latence entre votre navigateur et le panel web.", latency: null },
         { name: "Panel > API du Bot", status: 'loading', description: "Connectivité entre le panel et le bot Discord.", latency: null },
         { name: "Genkit & Services IA", status: 'loading', description: "État des services d'IA (Google Gemini).", latency: null },
+        { name: "Service de Surveillance (Watchdog)", status: 'loading', description: "Surveille l'état de l'API du bot et la redémarre si nécessaire.", latency: null },
     ]);
     const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
@@ -249,6 +251,20 @@ export default function StatusPage() {
             aiService.status = 'outage';
             aiService.description = "La connexion à l'API du bot a échoué.";
         }
+        
+        // 4. Watchdog Service
+        const watchdogService = newServices.find(s => s.name === "Service de Surveillance (Watchdog)")!;
+        try {
+            const startTime = performance.now();
+            const response = await fetch(`${WATCHDOG_API_URL}/health`);
+            const endTime = performance.now();
+            if (!response.ok) throw new Error();
+            watchdogService.latency = Math.round(endTime - startTime);
+            watchdogService.status = 'operational';
+        } catch (e) {
+            watchdogService.status = 'outage';
+            watchdogService.latency = null;
+        }
 
 
         setServices(newServices);
@@ -298,7 +314,7 @@ export default function StatusPage() {
                 )}>
                    {overallStatus === 'operational' && <CheckCircle/>}
                    {overallStatus === 'outage' && <ServerCrash/>}
-                   {overallStatus === 'loading' && <Loader2 className="animate-spin" />}
+                   {overallCellaralStatus === 'loading' && <Loader2 className="animate-spin" />}
                    {getStatusText(overallStatus)}
                 </div>
                  {lastChecked && <p className="text-xs text-muted-foreground">Dernière vérification : {lastChecked.toLocaleString('fr-FR')}</p>}
