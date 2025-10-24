@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useCallback, useEffect } from "react";
@@ -28,7 +27,6 @@ import { useToast } from "@/hooks/use-toast";
 
 
 const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
-const WATCHDOG_API_URL = 'http://localhost:4400';
 
 type ServiceStatus = 'operational' | 'degraded' | 'outage' | 'loading';
 
@@ -194,6 +192,7 @@ export default function StatusPage() {
 
     const checkStatuses = useCallback(async () => {
         const newServices: StatusItem[] = [...services];
+        const WATCHDOG_API_URL = `${window.location.protocol}//${window.location.hostname}:4400`;
 
         // 1. User -> Web Panel
         const userPanelService = newServices.find(s => s.name === "Votre Connexion > Panel")!;
