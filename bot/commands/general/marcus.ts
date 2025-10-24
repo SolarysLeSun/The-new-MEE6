@@ -16,11 +16,102 @@ const getCommandCategory = (filePath: string, commandsPath: string): string => {
     return category || 'uncategorized';
 };
 
+// Replicating module list to avoid cross-dependency issues
+const navCategories = [
+    {
+        name: 'Général',
+        items: [
+            { label: 'Commandes Générales' },
+            { label: 'Identité du Bot' },
+            { label: 'Annonces' },
+            { label: 'Assistant Communautaire' },
+            { label: 'Suggestions' },
+            { label: 'Traduction Auto' },
+            { label: 'Niveaux & XP' },
+            { label: 'Parrainage' },
+        ]
+    },
+    {
+        name: 'Modération',
+        items: [
+            { label: 'Bans & Kicks' },
+            { label: 'Auto-Modération' },
+            { label: 'Anti-AFK' },
+            { label: 'Lock/Unlock' },
+            { label: 'Logs' },
+        ]
+    },
+    {
+        name: 'Sécurité',
+        items: [
+            { label: 'Anti-Bot' },
+            { label: 'Anti-Raid' },
+            { label: 'Scanner de Liens IA' },
+            { label: "Filtre d'Image IA" },
+            { label: 'Captcha' },
+            { label: 'Backup' },
+            { label: 'Sécurité Avancée' },
+            { label: 'Persistance des Rôles' },
+        ]
+    },
+    {
+        name: 'Automatisation',
+        items: [
+            { label: 'Commandes Personnalisées' },
+            { label: 'Tickets' },
+            { label: 'Événements & Calendrier' },
+            { label: 'Accueil & Intégration' },
+            { label: 'Salons de Statistiques' },
+        ]
+    },
+     {
+        name: 'Divertissement',
+        items: [
+            { label: 'Commandes Fun' },
+            { label: 'Roue de la Fortune' },
+            { label: "Création d'Amitié" },
+        ]
+    },
+    {
+        name: 'Vocaux',
+        items: [
+             { label: 'Contrôle manuel' },
+             { label: 'IA Vocaux' },
+             { label: 'Contrôle Vidéo' },
+        ]
+    },
+     {
+        name: 'Outils IA',
+        items: [
+            { label: 'Assistant Personnel IA' },
+            { label: 'Server Builder IA' },
+            { label: 'Assistant Modération IA' },
+            { label: 'Créateur de Contenu IA' },
+            { label: 'Agent Conversationnel' },
+            { label: 'Commandes Spéciales' },
+        ]
+    },
+    {
+        name: 'Connecteurs',
+        items: [
+            { label: 'Intégrations' },
+        ]
+    },
+    {
+        name: 'Outils',
+        items: [
+            { label: 'Lecteur de Transcriptions' },
+            { label: "Constructeur d'Embeds" },
+            { label: 'Commandes Utilitaires' },
+        ]
+    }
+];
+
 
 const MarcusCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('marcus')
-        .setDescription('Affiche la liste de toutes les commandes disponibles.'),
+        .setDescription('Affiche la liste de toutes les commandes et modules disponibles.'),
     async execute(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply({ ephemeral: true });
 
@@ -71,19 +162,12 @@ const MarcusCommand: Command = {
                 }
             }
 
-            // Find the file path from the client's command collection
-            const commandFileName = interaction.client.commands.find(c => c.data.name === command.data.name);
-            if (!commandFileName) continue;
-            
-            // This is a bit of a hack, but `require.resolve` will find the module if it's in node's cache
-            // A more robust way might be to store file paths on the client.commands collection during load.
-            // For now, let's rebuild the path logic more carefully.
+            // This part is complex and error-prone, let's simplify by manually defining categories if needed
+            // For now, we'll keep the dynamic approach but it could be a source of issues.
             let commandFilePath = '';
             try {
-                // This is a bit of a hack, but `require.resolve` will find the module if it's in node's cache
-                commandFilePath = require.resolve(`../${command.data.name.split(' ')[0]}`);
+                commandFilePath = require.resolve(path.join(commandsPath, command.data.name.split(' ')[0]));
             } catch (e) {
-                 // Fallback for nested commands or different folder structures
                  const commandFiles = fs.readdirSync(commandsPath, { withFileTypes: true, recursive: true });
                  const foundFile = commandFiles.find(file => file.isFile() && file.name.startsWith(command.data.name) && (file.name.endsWith('.ts') || file.name.endsWith('.js')));
                  if (foundFile) {
@@ -104,8 +188,8 @@ const MarcusCommand: Command = {
 
         const helpEmbed = new EmbedBuilder()
             .setColor(0x00BFFF)
-            .setTitle('📜 Liste des Commandes de Marcus')
-            .setDescription('Voici les commandes que vous pouvez utiliser.')
+            .setTitle('📜 Liste des Commandes & Modules de Marcus')
+            .setDescription('Voici les commandes et modules que vous pouvez utiliser.')
             .setTimestamp()
             .setFooter({ text: `Demandé par ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() || undefined });
 
@@ -122,6 +206,21 @@ const MarcusCommand: Command = {
                 }
             }
         }
+        
+        // --- Add Modules List ---
+        let moduleText = '';
+        for (const category of navCategories) {
+            moduleText += `\n**${category.name}**\n`;
+            moduleText += category.items.map(item => `• ${item.label}`).join('\n');
+        }
+        
+        if (moduleText.length > 0) {
+            helpEmbed.addFields({
+                name: '🗂️ Modules Disponibles',
+                value: 'Voici la liste de tous les modules configurables depuis le panel web :\n' + moduleText.substring(0, 1000)
+            });
+        }
+
 
         await interaction.editReply({ embeds: [helpEmbed] });
     },
