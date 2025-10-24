@@ -1,11 +1,10 @@
 
-
 'use client';
 
 import React, { useState, useCallback, useEffect } from "react";
 import { AppHeader } from "@/components/app-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Loader2, ServerCrash, XCircle, AlertTriangle, MessageSquareWarning, Cpu, Memory, Power } from "lucide-react";
+import { CheckCircle, Loader2, ServerCrash, XCircle, AlertTriangle, MessageSquareWarning, Cpu, MemoryStick, Power } from "lucide-react";
 import RippleGrid from "@/components/ripple-grid";
 import { PageTransitionWrapper } from "@/components/page-transition-wrapper";
 import { cn } from "@/lib/utils";
@@ -390,7 +389,7 @@ export default function StatusPage() {
                                     <span>{cluster.cpu}%</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Memory className="w-4 h-4 text-muted-foreground" />
+                                    <MemoryStick className="w-4 h-4 text-muted-foreground" />
                                     <span>{cluster.memory} Mo</span>
                                 </div>
                             </CardContent>
