@@ -62,7 +62,8 @@ export type Module =
     | 'faq-navigation'
     | 'anti-afk'
     | 'integrations'
-    | 'stats-channels';
+    | 'stats-channels'
+    | 'partnership';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale

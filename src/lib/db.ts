@@ -668,6 +668,11 @@ const defaultConfigs: DefaultConfigs = {
     'integrations': {
         enabled: false,
         rss_feeds: [],
+    },
+    'stats-channels': {
+        enabled: false,
+        category_id: null,
+        channel_format: '📊 Membres : {membres}',
     }
 };
 
@@ -1065,13 +1070,16 @@ export async function applyReferral(referralCode: string, referredGuildId: strin
 
     const checkReferredStmt = db.prepare("SELECT 1 FROM referrals WHERE referred_guild_id = ?");
     if (checkReferredStmt.get(referredGuildId)) {
-        return { success: false, message: "Ce serveur a déjà été parrainé." };
+        return { success: false, message: "Ce serveur a déjà utilisé un code de parrainage." };
     }
     
     const checkOwnerStmt = db.prepare("SELECT 1 FROM referrals WHERE referring_guild_id = ? AND referred_owner_id = ?");
     if(checkOwnerStmt.get(referringGuildId, referredOwnerId)) {
         return { success: false, message: "Vous ne pouvez pas parrainer un autre de vos serveurs avec ce code." };
     }
+
+    const insertStmt = db.prepare("INSERT INTO referrals (referring_guild_id, referred_guild_id, referred_owner_id) VALUES (?, ?, ?)");
+    insertStmt.run(referringGuildId, referredGuildId, referredOwnerId);
 
     // --- Promotion de Départ Marcus ---
     try {
@@ -1080,7 +1088,7 @@ export async function applyReferral(referralCode: string, referredGuildId: strin
             const countStmt = db.prepare("SELECT COUNT(DISTINCT referred_owner_id) as count FROM referrals WHERE referring_guild_id = ?");
             const { count } = countStmt.get(referringGuildId) as { count: number };
 
-            if (count + 1 >= 2) { // The current referral makes it 2
+            if (count >= 2) { // The current referral makes it 2
                 const owner = await guild.fetchOwner();
                 
                 // Grant 1 month premium to the server
@@ -1107,9 +1115,6 @@ export async function applyReferral(referralCode: string, referredGuildId: strin
     }
     // --- Fin de la promotion ---
 
-
-    const insertStmt = db.prepare("INSERT INTO referrals (referring_guild_id, referred_guild_id, referred_owner_id) VALUES (?, ?, ?)");
-    insertStmt.run(referringGuildId, referredGuildId, referredOwnerId);
 
     // Update count in config
     const countStmt = db.prepare("SELECT COUNT(DISTINCT referred_owner_id) as count FROM referrals WHERE referring_guild_id = ?");
@@ -1528,4 +1533,5 @@ export function listApiBans(): { user_id: string, reason: string | null }[] {
     return db.prepare('SELECT user_id, reason FROM api_bans').all() as any;
 }
   
+
 

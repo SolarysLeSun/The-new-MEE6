@@ -9,10 +9,11 @@ import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Gift, Copy, Check } from 'lucide-react';
+import { Gift, Copy, Check, Handshake, Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { Progress } from '@/components/ui/progress';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -24,18 +25,30 @@ interface ReferralConfig {
 
 function PageSkeleton() {
     return (
-        <Card>
-            <CardHeader>
-                <Skeleton className="h-6 w-48" />
-                <Skeleton className="h-4 w-96 mt-2" />
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-24 w-full" />
-            </CardContent>
-        </Card>
+        <div className="space-y-8">
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-4 w-96 mt-2" />
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-32" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-20 w-full" />
+                </CardContent>
+            </Card>
+        </div>
     );
 }
+
+const REWARD_GOAL = 10;
 
 export default function ReferralPage() {
     const params = useParams();
@@ -77,10 +90,12 @@ export default function ReferralPage() {
         return <PageSkeleton />;
     }
 
+    const progressPercentage = Math.min((config.referral_count / REWARD_GOAL) * 100, 100);
+
     return (
         <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2"><Gift /> Parrainage</h1>
+                <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2"><Handshake /> Partenariats & Récompenses</h1>
                 <p className="text-muted-foreground mt-2">
                     Partagez votre code unique et gagnez des récompenses Premium pour votre serveur !
                 </p>
@@ -88,9 +103,9 @@ export default function ReferralPage() {
             <Separator />
             <Card>
                 <CardHeader>
-                    <CardTitle>Votre Code de Parrainage</CardTitle>
+                    <CardTitle>Votre Code Partenaire</CardTitle>
                     <CardDescription>
-                        Partagez ce code avec d'autres propriétaires de serveurs. Lorsqu'ils l'utilisent avec la commande `/parrainage`, vous progressez vers votre prochaine récompense.
+                        Partagez ce code avec d'autres propriétaires de serveurs. Lorsqu'ils l'utilisent avec la commande <code className="bg-muted px-1.5 py-0.5 rounded-md">/parrainage</code>, vous progressez vers votre prochaine récompense.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -108,17 +123,54 @@ export default function ReferralPage() {
             </Card>
             <Card>
                 <CardHeader>
-                    <CardTitle>Votre Progression</CardTitle>
+                    <CardTitle>Votre Progression vers la Récompense</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                     <p className="text-lg">
                         Vous avez parrainé <span className="font-bold text-primary">{config.referral_count || 0}</span> serveurs uniques.
                     </p>
-                    <p className="text-muted-foreground">
-                        Atteignez 10 parrainages pour recevoir 1 mois de Premium gratuit !
-                    </p>
+                     <div className="space-y-2">
+                        <Progress value={progressPercentage} className="w-full"/>
+                        <p className="text-sm text-muted-foreground text-right">{config.referral_count} / {REWARD_GOAL} parrainages</p>
+                    </div>
+                     <Card className="bg-yellow-500/10 border-yellow-500/30">
+                        <CardContent className="pt-6">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-yellow-500/20 rounded-full">
+                                    <Star className="w-6 h-6 text-yellow-300"/>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-yellow-300">Prochaine récompense : 1 mois de Premium</h3>
+                                    <p className="text-sm text-yellow-300/70">Atteignez {REWARD_GOAL} parrainages pour recevoir un mois de statut Premium gratuit pour ce serveur !</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                     </Card>
                 </CardContent>
             </Card>
+             <Card>
+                <CardHeader>
+                    <CardTitle>Promotion de Lancement</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                    <p className="text-muted-foreground">
+                        Pour célébrer le lancement de ce nouveau système, nous avons une offre spéciale !
+                    </p>
+                    <Card className="bg-primary/10 border-primary/30">
+                         <CardContent className="pt-6">
+                             <div className="flex items-center gap-4">
+                                <div className="p-3 bg-primary/20 rounded-full">
+                                    <Gift className="w-6 h-6 text-primary"/>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-primary">Parrainez 2 serveurs de 30+ membres !</h3>
+                                    <p className="text-sm text-primary/80">Recevez **1 an de statut Testeur** (accès anticipé aux nouveautés) et **1 mois de Premium** pour votre serveur.</p>
+                                </div>
+                            </div>
+                         </CardContent>
+                    </Card>
+                </CardContent>
+             </Card>
         </PageTransitionWrapper>
     );
 }

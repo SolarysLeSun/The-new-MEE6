@@ -1,4 +1,5 @@
 
+
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from 'discord.js';
 import type { Command } from '@/types';
 import { getServerConfig, getReferralCode, applyReferral } from '@/lib/db';
