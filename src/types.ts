@@ -64,7 +64,8 @@ export type Module =
     | 'integrations'
     | 'stats-channels'
     | 'partnership'
-    | 'giveaways';
+    | 'giveaways'
+    | 'challenges';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale
@@ -338,13 +339,32 @@ export interface Partnership {
 export interface Giveaway {
     id: string;
     guild_id: string;
-    channel_id: string | null;
-    message_id: string | null;
+    channel_id: string;
+    message_id: string;
     prize: string;
     winner_count: number;
     reward_type: 'role' | 'xp' | 'custom';
     reward_value: string | null;
     ends_at: string;
-    status: 'draft' | 'scheduled' | 'active' | 'ended';
+    status: 'active' | 'ended';
     created_at: string;
+    created_by: string;
+}
+
+export interface DailyChallenge {
+    challenge_id: number;
+    guild_id: string;
+    type: 'MESSAGES_SENT' | 'VOICE_MINUTES' | 'REACTIONS_ADDED' | 'INVITE_USER';
+    description: string;
+    goal: number;
+    xp_reward: number;
+    date: string;
+}
+
+export interface UserChallengeProgress {
+    user_id: string;
+    guild_id: string;
+    challenge_id: number;
+    progress: number;
+    completed: boolean;
 }

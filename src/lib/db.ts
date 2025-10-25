@@ -4,7 +4,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder, TextChannel } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile, RoadmapItem, Partnership, Giveaway } from '../types';
+import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile, RoadmapItem, Partnership, Giveaway, DailyChallenge, UserChallengeProgress } from '../types';
 import { randomBytes } from 'crypto';
 import ms from 'ms';
 
@@ -241,6 +241,33 @@ const upgradeSchema = () => {
             );
         `);
         console.log('[Database] Table "giveaways" is ready.');
+        
+        db.exec(`
+             CREATE TABLE IF NOT EXISTS daily_challenges (
+                challenge_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id TEXT NOT NULL,
+                type TEXT NOT NULL,
+                description TEXT NOT NULL,
+                goal INTEGER NOT NULL,
+                xp_reward INTEGER NOT NULL,
+                date DATE NOT NULL
+            );
+        `);
+        console.log('[Database] Table "daily_challenges" is ready.');
+        
+        db.exec(`
+             CREATE TABLE IF NOT EXISTS user_challenge_progress (
+                user_id TEXT NOT NULL,
+                guild_id TEXT NOT NULL,
+                challenge_id INTEGER NOT NULL,
+                progress INTEGER NOT NULL DEFAULT 0,
+                completed BOOLEAN NOT NULL DEFAULT 0,
+                PRIMARY KEY (user_id, guild_id, challenge_id),
+                FOREIGN KEY (challenge_id) REFERENCES daily_challenges(challenge_id) ON DELETE CASCADE
+            );
+        `);
+        console.log('[Database] Table "user_challenge_progress" is ready.');
+
 
         // Drop deprecated tables
         db.exec(`DROP TABLE IF EXISTS ai_personas;`);
@@ -270,6 +297,11 @@ const createConfigTable = () => {
 
 // --- Configurations par défaut pour les nouveaux serveurs ---
 const defaultConfigs: DefaultConfigs = {
+    'challenges': {
+        enabled: true,
+        channel_id: null,
+        mention_role_id: null,
+    },
     'moderation': { 
         enabled: true, 
         log_channel_id: null, 
@@ -723,6 +755,87 @@ export function initializeDatabase() {
     upgradeSchema(); // Ensure all tables are created/updated
     console.log('[Database] Initialisation de la base de données terminée.');
 }
+
+// --- Daily Challenges ---
+export function setDailyChallenges(guildId: string, challenges: Omit<DailyChallenge, 'challenge_id' | 'guild_id' | 'date'>[]) {
+    const today = new Date().toISOString().slice(0, 10);
+    const deleteStmt = db.prepare('DELETE FROM daily_challenges WHERE guild_id = ? AND date = ?');
+    const insertStmt = db.prepare('INSERT INTO daily_challenges (guild_id, type, description, goal, xp_reward, date) VALUES (?, ?, ?, ?, ?, ?)');
+
+    db.transaction(() => {
+        deleteStmt.run(guildId, today);
+        for (const challenge of challenges) {
+            insertStmt.run(guildId, challenge.type, challenge.description, challenge.goal, challenge.xp_reward, today);
+        }
+    })();
+}
+
+export function getDailyChallenges(guildId: string): DailyChallenge[] {
+    const today = new Date().toISOString().slice(0, 10);
+    const stmt = db.prepare('SELECT * FROM daily_challenges WHERE guild_id = ? AND date = ?');
+    return stmt.all(guildId, today) as DailyChallenge[];
+}
+
+export function getUserChallengeProgress(guildId: string, userId: string): (UserChallengeProgress & DailyChallenge)[] {
+    const today = new Date().toISOString().slice(0, 10);
+    const stmt = db.prepare(`
+        SELECT p.*, c.type, c.description, c.goal, c.xp_reward, c.date
+        FROM user_challenge_progress p
+        JOIN daily_challenges c ON p.challenge_id = c.challenge_id
+        WHERE p.guild_id = ? AND p.user_id = ? AND c.date = ?
+    `);
+    return stmt.all(guildId, userId, today) as (UserChallengeProgress & DailyChallenge)[];
+}
+
+export function updateUserChallengeProgress(guildId: string, userId: string, challengeType: string, increment: number): DailyChallenge | null {
+    const today = new Date().toISOString().slice(0, 10);
+
+    const getChallengeStmt = db.prepare(`
+        SELECT * FROM daily_challenges 
+        WHERE guild_id = ? AND date = ? AND type = ?
+    `);
+    const challenges = getChallengeStmt.all(guildId, today, challengeType) as DailyChallenge[];
+    
+    let completedChallenge: DailyChallenge | null = null;
+
+    for (const challenge of challenges) {
+        const progressStmt = db.prepare('SELECT * FROM user_challenge_progress WHERE user_id = ? AND guild_id = ? AND challenge_id = ?');
+        const progress = progressStmt.get(userId, guildId, challenge.challenge_id) as UserChallengeProgress | undefined;
+
+        if (progress?.completed) {
+            continue; // Already completed this one
+        }
+
+        const newProgress = (progress?.progress || 0) + increment;
+
+        if (newProgress >= challenge.goal) {
+            // Challenge completed
+            const upsertStmt = db.prepare(`
+                INSERT INTO user_challenge_progress (user_id, guild_id, challenge_id, progress, completed)
+                VALUES (?, ?, ?, ?, 1)
+                ON CONFLICT(user_id, guild_id, challenge_id) DO UPDATE SET progress = ?, completed = 1
+            `);
+            upsertStmt.run(userId, guildId, challenge.challenge_id, newProgress, newProgress);
+            
+            // Give XP
+            updateUserXP(userId, guildId, challenge.xp_reward);
+            completedChallenge = challenge;
+            console.log(`[Challenges] User ${userId} completed challenge "${challenge.description}" in guild ${guildId}.`);
+            
+        } else {
+            // Update progress
+            const upsertStmt = db.prepare(`
+                INSERT INTO user_challenge_progress (user_id, guild_id, challenge_id, progress, completed)
+                VALUES (?, ?, ?, ?, 0)
+                ON CONFLICT(user_id, guild_id, challenge_id) DO UPDATE SET progress = ?
+            `);
+            upsertStmt.run(userId, guildId, challenge.challenge_id, newProgress, newProgress);
+        }
+    }
+    
+    return completedChallenge; // Return the first challenge completed in this update, if any
+}
+
 
 // --- Roadmap Functions ---
 export function getRoadmapItems(): RoadmapItem[] {
@@ -1706,15 +1819,16 @@ export function terminatePartnership(partnershipId: string): { success: boolean;
   
 // --- Giveaway System ---
 export function createGiveaway(giveaway: Omit<Giveaway, 'id' | 'status' | 'created_at'>): Giveaway {
-    const id = uuidv4();
+    const id = "g-" + randomBytes(4).toString('hex');
     const stmt = db.prepare(`
-        INSERT INTO giveaways (id, guild_id, channel_id, prize, winner_count, reward_type, reward_value, ends_at, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO giveaways (id, guild_id, channel_id, message_id, prize, winner_count, reward_type, reward_value, ends_at, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
         id,
         giveaway.guild_id,
         giveaway.channel_id,
+        giveaway.message_id,
         giveaway.prize,
         giveaway.winner_count,
         giveaway.reward_type,
@@ -1727,7 +1841,7 @@ export function createGiveaway(giveaway: Omit<Giveaway, 'id' | 'status' | 'creat
 }
 
 export function getActiveGiveaways(): Giveaway[] {
-    const stmt = db.prepare("SELECT * FROM giveaways WHERE status = 'active'");
+    const stmt = db.prepare("SELECT * FROM giveaways WHERE status = 'active' AND ends_at > CURRENT_TIMESTAMP");
     return stmt.all() as Giveaway[];
 }
 

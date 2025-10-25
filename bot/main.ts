@@ -20,6 +20,7 @@ import ms from 'ms';
 import { startAntiAfkInterval } from './events/moderation/antiAfk';
 import { musicPlayer } from './music/player';
 import { startStatsChannelInterval } from './events/system/statsChannels';
+import { startChallengeScheduler } from './events/system/challengeScheduler';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -137,6 +138,9 @@ client.once(Events.ClientReady, async (readyClient) => {
 
     // Start interval for Stats Channels
     startStatsChannelInterval(client);
+
+    // Start interval for Daily Challenges
+    startChallengeScheduler(client);
 
     // Start the API for the web panel
     startApi(client);
