@@ -107,6 +107,7 @@ export const navCategories = [
             { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, keywords: ['events', 'planning', 'organisation', 'event-create', 'event-list'] },
             { href: 'accueil-integration', label: 'Accueil & Intégration', icon: UserPlus, keywords: ['bienvenue', 'welcome', 'autorole', 'questionnaire'] },
             { href: 'statistiques', label: 'Salons de Statistiques', icon: BarChart, keywords: ['stats', 'compteur', 'membres', 'vocal', 'boosts'] },
+            { href: 'giveaways', label: 'Giveaways (Concours)', icon: Gift, keywords: ['giveaway', 'concours', 'tirage au sort'] },
         ]
     },
      {
@@ -114,7 +115,6 @@ export const navCategories = [
         items: [
             { href: 'commandes-fun', label: 'Commandes Fun', icon: Dice5, keywords: ['renameall', 'mutemass', 'reactbomb', 'react', 'randomnickname'] },
             { href: 'roue-de-la-fortune', label: 'Roue de la Fortune', icon: Dices, keywords: ['tirage', 'giveaway', 'roue', 'fortune', 'aléatoire'] },
-            { href: 'giveaways', label: 'Giveaways (Concours)', icon: Gift, isPremium: true, isDisabled: true, keywords: ['giveaway', 'concours', 'tirage au sort'] },
             { href: 'creation-amitie', label: "Création d'Amitié", icon: Users, isPremium: true, isDisabled: true, keywords: ['amitié', 'relation', 'affinité', 'lien'] },
         ]
     },

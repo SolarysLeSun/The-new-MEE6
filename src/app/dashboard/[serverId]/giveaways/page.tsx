@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { Combobox } from '@/components/ui/combobox';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 
 interface Giveaway {
   id: string;
@@ -119,7 +120,6 @@ export default function GiveawaysPage() {
             <div>
                  <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
                     <Gift /> Giveaways (Concours)
-                    <Badge className="bg-yellow-400 text-yellow-900">Premium</Badge>
                 </h1>
                 <p className="text-muted-foreground mt-2">
                 Créez, gérez et programmez des concours pour votre communauté.

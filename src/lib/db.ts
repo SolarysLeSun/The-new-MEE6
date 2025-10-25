@@ -710,7 +710,7 @@ const defaultConfigs: DefaultConfigs = {
     },
     'giveaways': {
         enabled: true,
-        premium: true,
+        premium: false,
         command_permissions: {
             giveaway: null
         },
