@@ -10,108 +10,127 @@ const OWNER_ID = '556529963877138442';
 // Helper function to capitalize first letter
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-const getCommandCategory = (filePath: string, commandsPath: string): string => {
-    const relativePath = path.relative(commandsPath, filePath);
-    const category = path.dirname(relativePath).split(path.sep)[0];
-    return category || 'uncategorized';
+const getCommandCategory = (commandName: string): string => {
+    // Manually define categories to avoid filesystem access issues
+    const categoryMap: { [key: string]: string } = {
+        adminxp: 'admin',
+        apiban: 'admin',
+        botban: 'admin',
+        delegate: 'admin',
+        devadminannounce: 'admin',
+        devserver: 'admin',
+        listservers: 'admin',
+        normalize: 'admin',
+        ownerboost: 'admin',
+        panelmessage: 'admin',
+        'purge-roles': 'admin',
+        rename: 'admin',
+        restart: 'admin',
+        status: 'admin',
+        system: 'admin',
+        xpadmin: 'admin',
+        iacontent: 'ai',
+        iacreateserv: 'ai',
+        iadeleteserv: 'ai',
+        iaeditserv: 'ai',
+        iaresetserv: 'ai',
+        faq: 'ai',
+        ia: 'ai',
+        addticket: 'automation',
+        'event-create': 'automation',
+        'event-list': 'automation',
+        privateresum: 'automation',
+        set: 'config',
+        'avertir-pour-message': 'context',
+        'bombarder-reactions': 'context',
+        'expulser-vocal': 'context',
+        'surnom-aleatoire': 'context',
+        'traduire-message': 'context',
+        'transformer-en-patchnote': 'context',
+        'action-verite': 'fun',
+        de: 'fun',
+        gaypride: 'fun',
+        mutemass: 'fun',
+        oktban: 'fun',
+        payer: 'fun',
+        pileouface: 'fun',
+        poutine: 'fun',
+        randomnickname: 'fun',
+        react: 'fun',
+        reactbomb: 'fun',
+        renameall: 'fun',
+        roue: 'fun',
+        slots: 'fun',
+        adminannounce: 'general',
+        announce: 'general',
+        help: 'general',
+        invite: 'general',
+        level: 'general',
+        login: 'general',
+        marcus: 'general',
+        marcusfaq: 'general',
+        mystatus: 'general',
+        nextupdate: 'general',
+        ping: 'general',
+        podium: 'general',
+        profil: 'general',
+        say: 'general',
+        setsuggest: 'general',
+        suggest: 'general',
+        toplevel: 'general',
+        topxp: 'general',
+        traduire: 'general',
+        webleaderboard: 'general',
+        ban: 'moderation',
+        clearwarns: 'moderation',
+        kick: 'moderation',
+        kickvoc: 'moderation',
+        lastwarns: 'moderation',
+        listwarns: 'moderation',
+        lock: 'moderation',
+        mute: 'moderation',
+        unban: 'moderation',
+        unlock: 'moderation',
+        warn: 'moderation',
+        decoall: 'premium',
+        disableia: 'premium',
+        enableia: 'premium',
+        freepremium: 'premium',
+        genpremium: 'premium',
+        gift: 'premium',
+        givepremium: 'premium',
+        giverole: 'premium',
+        histoire: 'premium',
+        moveall: 'premium',
+        mp: 'premium',
+        premium: 'premium',
+        tester: 'premium',
+        webhook: 'premium',
+        backup: 'security',
+        apikey: 'utils',
+        parrainage: 'utils',
+        patchnote: 'utils',
+        rappel: 'utils',
+        save: 'utils',
+        setprofil: 'utils',
+        join: 'voice',
+        leave: 'voice',
+        parle: 'voice',
+        play: 'voice',
+        queue: 'voice',
+        skip: 'voice',
+        stop: 'voice',
+        ticket: 'automation'
+    };
+    
+    const cmdName = commandName.split(' ')[0].toLowerCase().replace(/\s/g, '-');
+    return categoryMap[cmdName] || 'uncategorized';
 };
-
-// Replicating module list to avoid cross-dependency issues
-const navCategories = [
-    {
-        name: 'Général',
-        items: [
-            { label: 'Commandes Générales' },
-            { label: 'Identité du Bot' },
-            { label: 'Annonces' },
-            { label: 'Assistant Communautaire' },
-            { label: 'Suggestions' },
-            { label: 'Traduction Auto' },
-            { label: 'Niveaux & XP' },
-            { label: 'Parrainage' },
-        ]
-    },
-    {
-        name: 'Modération',
-        items: [
-            { label: 'Bans & Kicks' },
-            { label: 'Auto-Modération' },
-            { label: 'Anti-AFK' },
-            { label: 'Lock/Unlock' },
-            { label: 'Logs' },
-        ]
-    },
-    {
-        name: 'Sécurité',
-        items: [
-            { label: 'Anti-Bot' },
-            { label: 'Anti-Raid' },
-            { label: 'Scanner de Liens IA' },
-            { label: "Filtre d'Image IA" },
-            { label: 'Captcha' },
-            { label: 'Backup' },
-            { label: 'Sécurité Avancée' },
-            { label: 'Persistance des Rôles' },
-        ]
-    },
-    {
-        name: 'Automatisation',
-        items: [
-            { label: 'Commandes Personnalisées' },
-            { label: 'Tickets' },
-            { label: 'Événements & Calendrier' },
-            { label: 'Accueil & Intégration' },
-            { label: 'Salons de Statistiques' },
-        ]
-    },
-     {
-        name: 'Divertissement',
-        items: [
-            { label: 'Commandes Fun' },
-            { label: 'Roue de la Fortune' },
-            { label: "Création d'Amitié" },
-        ]
-    },
-    {
-        name: 'Vocaux',
-        items: [
-             { label: 'Contrôle manuel' },
-             { label: 'IA Vocaux' },
-             { label: 'Contrôle Vidéo' },
-        ]
-    },
-     {
-        name: 'Outils IA',
-        items: [
-            { label: 'Assistant Personnel IA' },
-            { label: 'Server Builder IA' },
-            { label: 'Assistant Modération IA' },
-            { label: 'Créateur de Contenu IA' },
-            { label: 'Agent Conversationnel' },
-            { label: 'Commandes Spéciales' },
-        ]
-    },
-    {
-        name: 'Connecteurs',
-        items: [
-            { label: 'Intégrations' },
-        ]
-    },
-    {
-        name: 'Outils',
-        items: [
-            { label: 'Lecteur de Transcriptions' },
-            { label: "Constructeur d'Embeds" },
-            { label: 'Commandes Utilitaires' },
-        ]
-    }
-];
-
 
 const MarcusCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('marcus')
-        .setDescription('Affiche la liste de toutes les commandes et modules disponibles.'),
+        .setDescription('Affiche la liste de toutes les commandes disponibles.'),
     async execute(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply({ ephemeral: true });
 
@@ -138,47 +157,25 @@ const MarcusCommand: Command = {
         const ownerCommands = ['genpremium', 'givepremium', 'giverole', 'disableia', 'enableia', 'adminannounce', 'delegate', 'restart', 'panelmessage', 'status', 'devserver', 'devadminannounce'];
         const testerCommands = ['mp', 'webhook', 'tester'];
         
-        const commandsPath = path.join(__dirname, '..');
-        
         for (const command of allCommands.values()) {
             const commandName = command.data.name;
 
-            // Always hide owner commands unless the user is the owner
             if (ownerCommands.includes(commandName) && !isOwner) {
                 continue;
             }
             
-            // Hide tester commands unless the user is a tester or owner
             if (testerCommands.includes(commandName) && !testerStatus.isTester && !isOwner) {
                 continue;
             }
 
-            // For regular users, only show general commands and commands they have explicit permission for.
             if (!isOwner && !isAdmin && !testerStatus.isTester) {
                 const defaultPermissions = command.data.default_member_permissions;
-                // If a command requires any permission by default, hide it from lambda users
                 if (defaultPermissions && BigInt(defaultPermissions) !== BigInt(0)) {
                     continue;
                 }
             }
 
-            // This part is complex and error-prone, let's simplify by manually defining categories if needed
-            // For now, we'll keep the dynamic approach but it could be a source of issues.
-            let commandFilePath = '';
-            try {
-                commandFilePath = require.resolve(path.join(commandsPath, command.data.name.split(' ')[0]));
-            } catch (e) {
-                 const commandFiles = fs.readdirSync(commandsPath, { withFileTypes: true, recursive: true });
-                 const foundFile = commandFiles.find(file => file.isFile() && file.name.startsWith(command.data.name) && (file.name.endsWith('.ts') || file.name.endsWith('.js')));
-                 if (foundFile) {
-                    commandFilePath = path.join(foundFile.path, foundFile.name);
-                 } else {
-                    console.warn(`[MarcusCmd] Could not resolve path for command: ${command.data.name}`);
-                    continue;
-                 }
-            }
-            
-            const category = getCommandCategory(commandFilePath, commandsPath);
+            const category = getCommandCategory(command.data.name);
 
             if (!commandCategories.has(category)) {
                 commandCategories.set(category, []);
@@ -186,14 +183,18 @@ const MarcusCommand: Command = {
             commandCategories.get(category)?.push(command);
         }
 
-        const helpEmbed = new EmbedBuilder()
+        const sortedCategories = new Collection(Array.from(commandCategories.entries()).sort());
+        const embeds: EmbedBuilder[] = [];
+        const MAX_EMBED_SIZE = 5000;
+        
+        let currentEmbed = new EmbedBuilder()
             .setColor(0x00BFFF)
-            .setTitle('📜 Liste des Commandes & Modules de Marcus')
-            .setDescription('Voici les commandes et modules que vous pouvez utiliser.')
+            .setTitle('📜 Liste des Commandes de Marcus')
+            .setDescription('Voici les commandes que vous pouvez utiliser.')
             .setTimestamp()
             .setFooter({ text: `Demandé par ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() || undefined });
-
-        const sortedCategories = new Collection(Array.from(commandCategories.entries()).sort());
+            
+        let currentSize = JSON.stringify(currentEmbed.toJSON()).length;
 
         for (const [category, commandList] of sortedCategories.entries()) {
             if (category !== 'uncategorized' && commandList.length > 0) {
@@ -201,29 +202,38 @@ const MarcusCommand: Command = {
                     .map(cmd => `\`/${cmd.data.name}\`: ${cmd.data.description}`)
                     .join('\n');
                 
-                if (commandText.length > 0) {
-                     helpEmbed.addFields({ name: `**${capitalize(category)}**`, value: commandText.substring(0, 1024) });
+                const fieldName = `**${capitalize(category)}**`;
+                const fieldText = commandText.substring(0, 1024);
+                
+                // Check if adding the new field would exceed the limit
+                if (currentSize + fieldName.length + fieldText.length > MAX_EMBED_SIZE) {
+                    embeds.push(currentEmbed); // Save the current embed
+                    currentEmbed = new EmbedBuilder().setColor(0x00BFFF); // Start a new one
+                    currentSize = JSON.stringify(currentEmbed.toJSON()).length;
                 }
+                
+                currentEmbed.addFields({ name: fieldName, value: fieldText });
+                currentSize += fieldName.length + fieldText.length;
             }
         }
         
-        // --- Add Modules List ---
-        let moduleText = '';
-        for (const category of navCategories) {
-            moduleText += `\n**${category.name}**\n`;
-            moduleText += category.items.map(item => `• ${item.label}`).join('\n');
-        }
-        
-        if (moduleText.length > 0) {
-            helpEmbed.addFields({
-                name: '🗂️ Modules Disponibles',
-                value: 'Voici la liste de tous les modules configurables depuis le panel web :\n' + moduleText.substring(0, 1000)
-            });
-        }
+        embeds.push(currentEmbed); // Add the last embed
 
-
-        await interaction.editReply({ embeds: [helpEmbed] });
+        try {
+            await interaction.editReply({ embeds: [embeds[0]] });
+            if (embeds.length > 1) {
+                for (let i = 1; i < embeds.length; i++) {
+                    // Send subsequent embeds as new messages
+                    await interaction.followUp({ embeds: [embeds[i]], ephemeral: true });
+                }
+            }
+        } catch (error) {
+            console.error('[MarcusCmd] Error sending embeds:', error);
+            await interaction.editReply({ content: "Une erreur est survenue lors de l'affichage des commandes." });
+        }
     },
 };
 
 export default MarcusCommand;
+
+    
