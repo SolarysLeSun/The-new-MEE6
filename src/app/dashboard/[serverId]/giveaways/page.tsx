@@ -1,13 +1,15 @@
 
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Wrench, Gift, Trophy, PlusCircle, Calendar, Clock, Repeat } from 'lucide-react';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -27,10 +29,88 @@ import { Calendar as CalendarIcon } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { Combobox } from '@/components/ui/combobox';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface Giveaway {
+  id: string;
+  prize: string;
+  status: 'active' | 'scheduled' | 'ended';
+  ends_at: string;
+  winner_count: number;
+}
+interface DiscordChannel {
+    id: string;
+    name: string;
+    type: number;
+}
+interface GiveawaysConfig {
+    enabled: boolean;
+    default_channel_id: string | null;
+    command_permissions: { [key: string]: string | null };
+}
+
+const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
 export default function GiveawaysPage() {
-  // Mock data - this will come from DB later
-  const [giveaways, setGiveaways] = useState<any[]>([]); 
+  const params = useParams();
+  const serverId = params.serverId as string;
+  const { toast } = useToast();
+
+  const [config, setConfig] = useState<GiveawaysConfig | null>(null);
+  const [giveaways, setGiveaways] = useState<Giveaway[]>([]); 
+  const [channels, setChannels] = useState<DiscordChannel[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!serverId) return;
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [configRes, serverDetailsRes] = await Promise.all([
+                fetch(`${API_URL}/get-config/${serverId}/giveaways`),
+                fetch(`${API_URL}/get-server-details/${serverId}`)
+            ]);
+            if (!configRes.ok || !serverDetailsRes.ok) throw new Error('Failed to fetch data');
+
+            const configData = await configRes.json();
+            const serverDetailsData = await serverDetailsRes.json();
+            
+            setConfig(configData);
+            setChannels(serverDetailsData.channels.filter((c: DiscordChannel) => c.type === 0));
+        } catch (error) {
+            toast({ title: "Erreur", description: "Impossible de charger la configuration des giveaways.", variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
+    };
+    fetchData();
+  }, [serverId, toast]);
+
+  const saveConfig = async (newConfig: GiveawaysConfig) => {
+    setConfig(newConfig);
+    try {
+        await fetch(`${API_URL}/update-config/${serverId}/giveaways`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newConfig),
+        });
+    } catch (error) {
+        toast({ title: "Erreur de sauvegarde", variant: "destructive" });
+    }
+  };
+
+  const handleValueChange = (key: keyof GiveawaysConfig, value: any) => {
+    if (!config) return;
+    saveConfig({ ...config, [key]: value });
+  };
+  
+  if (loading || !config) {
+      return <Skeleton className="h-96 w-full"/>
+  }
+
+  const channelOptions = channels.map(c => ({ value: c.id, label: `# ${c.name}` }));
 
   return (
     <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
@@ -50,6 +130,30 @@ export default function GiveawaysPage() {
       </div>
       
       <Separator />
+
+      <Card>
+        <CardHeader>
+            <CardTitle>Configuration</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+             <div className="flex items-center justify-between">
+                <Label htmlFor="enable-module" className="font-bold">Activer le module Giveaway</Label>
+                <Switch id="enable-module" checked={config.enabled} onCheckedChange={(val) => handleValueChange('enabled', val)} />
+            </div>
+            <Separator/>
+            <div className="space-y-2">
+                <Label>Salon par défaut des giveaways</Label>
+                <p className="text-sm text-muted-foreground">Les giveaways programmés seront publiés dans ce salon.</p>
+                <Combobox
+                    options={[{ value: 'none', label: 'Aucun' }, ...channelOptions]}
+                    value={config.default_channel_id || 'none'}
+                    onChange={(value) => handleValueChange('default_channel_id', value === 'none' ? null : value)}
+                    placeholder="Sélectionner un salon..."
+                    searchPlaceholder="Rechercher..."
+                />
+            </div>
+        </CardContent>
+      </Card>
 
         {giveaways.length === 0 ? (
             <Card className="text-center py-12 border-2 border-dashed rounded-lg">
@@ -143,7 +247,7 @@ function CreateGiveawayDialog() {
                                 <SelectValue/>
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="now">Lancer maintenant</SelectItem>
+                                <SelectItem value="now">Lancer maintenant (via commande)</SelectItem>
                                 <SelectItem value="once">Programmer une fois</SelectItem>
                                 <SelectItem value="weekly">Hebdomadaire</SelectItem>
                             </SelectContent>

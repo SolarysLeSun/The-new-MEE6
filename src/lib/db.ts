@@ -228,18 +228,16 @@ const upgradeSchema = () => {
             CREATE TABLE IF NOT EXISTS giveaways (
                 id TEXT PRIMARY KEY,
                 guild_id TEXT NOT NULL,
-                channel_id TEXT,
+                channel_id TEXT NOT NULL,
                 message_id TEXT,
                 prize TEXT NOT NULL,
                 winner_count INTEGER NOT NULL DEFAULT 1,
                 reward_type TEXT CHECK(reward_type IN ('role', 'xp', 'custom')),
                 reward_value TEXT,
-                duration_minutes INTEGER,
-                ends_at DATETIME,
-                status TEXT NOT NULL CHECK(status IN ('draft', 'scheduled', 'active', 'ended')) DEFAULT 'draft',
-                schedule_type TEXT CHECK(schedule_type IN ('once', 'daily', 'weekly')),
-                schedule_value TEXT, -- e.g., 'monday@18:00'
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                ends_at DATETIME NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('active', 'ended')) DEFAULT 'active',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                created_by TEXT NOT NULL
             );
         `);
         console.log('[Database] Table "giveaways" is ready.');
@@ -713,7 +711,10 @@ const defaultConfigs: DefaultConfigs = {
     'giveaways': {
         enabled: true,
         premium: true,
-        command_permissions: {},
+        command_permissions: {
+            giveaway: null
+        },
+        default_channel_id: null,
     },
 };
 
@@ -1703,3 +1704,34 @@ export function terminatePartnership(partnershipId: string): { success: boolean;
     return { success: true, message: "Le partenariat a été terminé." };
 }
   
+// --- Giveaway System ---
+export function createGiveaway(giveaway: Omit<Giveaway, 'id' | 'status' | 'created_at'>): Giveaway {
+    const id = uuidv4();
+    const stmt = db.prepare(`
+        INSERT INTO giveaways (id, guild_id, channel_id, prize, winner_count, reward_type, reward_value, ends_at, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+        id,
+        giveaway.guild_id,
+        giveaway.channel_id,
+        giveaway.prize,
+        giveaway.winner_count,
+        giveaway.reward_type,
+        giveaway.reward_value,
+        giveaway.ends_at,
+        giveaway.created_by
+    );
+    const newGiveaway = db.prepare('SELECT * FROM giveaways WHERE id = ?').get(id);
+    return newGiveaway as Giveaway;
+}
+
+export function getActiveGiveaways(): Giveaway[] {
+    const stmt = db.prepare("SELECT * FROM giveaways WHERE status = 'active'");
+    return stmt.all() as Giveaway[];
+}
+
+export function endGiveaway(id: string) {
+    const stmt = db.prepare("UPDATE giveaways SET status = 'ended' WHERE id = ?");
+    stmt.run(id);
+}

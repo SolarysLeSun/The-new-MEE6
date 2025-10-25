@@ -344,10 +344,7 @@ export interface Giveaway {
     winner_count: number;
     reward_type: 'role' | 'xp' | 'custom';
     reward_value: string | null;
-    duration_minutes: number | null;
-    ends_at: string | null; // ISO string
+    ends_at: string;
     status: 'draft' | 'scheduled' | 'active' | 'ended';
-    schedule_type: 'once' | 'daily' | 'weekly' | null;
-    schedule_value: string | null; // e.g., '2024-12-25T18:00:00Z' or 'monday@18:00'
     created_at: string;
 }
