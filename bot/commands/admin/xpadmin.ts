@@ -1,7 +1,9 @@
 
-import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from 'discord.js';
+
+import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, EmbedBuilder, Attachment, AttachmentBuilder } from 'discord.js';
 import type { Command } from '@/types';
-import { updateUserXP, checkTesterStatus, getUserLevel, setUserLevel } from '@/lib/db';
+import { updateUserXP, getUserLevel, setUserLevel } from '@/lib/db';
+import fetch from 'node-fetch';
 
 const OWNER_ID = '556529963877138442';
 
@@ -51,7 +53,16 @@ const XpAdminCommand: Command = {
                 .addIntegerOption(option =>
                     option.setName('xp')
                         .setDescription("Le montant total d'XP à définir pour l'utilisateur.")
-                        .setMinValue(0))),
+                        .setMinValue(0)))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('import_csv')
+                .setDescription("Importe l'XP depuis un fichier CSV (colonnes: userID,xp).")
+                .addAttachmentOption(option =>
+                    option.setName('fichier')
+                        .setDescription('Le fichier CSV à importer.')
+                        .setRequired(true))),
+
 
     async execute(interaction: ChatInputCommandInteraction) {
         if (!interaction.guild || !interaction.member) {
@@ -70,14 +81,66 @@ const XpAdminCommand: Command = {
         await interaction.deferReply({ ephemeral: true });
 
         const subcommand = interaction.options.getSubcommand();
-        const targetUser = interaction.options.getUser('utilisateur', true);
         
-        if (targetUser.bot) {
-            await interaction.editReply({ content: "Vous ne pouvez pas modifier l'XP d'un bot." });
-            return;
-        }
-
         try {
+            if (subcommand === 'import_csv') {
+                const attachment = interaction.options.getAttachment('fichier', true);
+
+                if (!attachment.contentType?.includes('csv')) {
+                    await interaction.editReply({ content: "Le fichier doit être au format CSV." });
+                    return;
+                }
+
+                const response = await fetch(attachment.url);
+                if (!response.ok) {
+                    await interaction.editReply({ content: "Impossible de télécharger le fichier attaché." });
+                    return;
+                }
+
+                const csvText = await response.text();
+                const lines = csvText.split('\n').slice(1); // Ignorer l'en-tête
+
+                let updatedCount = 0;
+                let errorCount = 0;
+
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    const [userId, xpStr] = line.split(',');
+                    const xp = parseInt(xpStr, 10);
+
+                    if (userId && !isNaN(xp)) {
+                        try {
+                            updateUserXP(userId.trim(), interaction.guild.id, xp, 'set');
+                            updatedCount++;
+                        } catch (dbError) {
+                            console.error(`[XP Import] Erreur lors de la mise à jour de l'utilisateur ${userId}:`, dbError);
+                            errorCount++;
+                        }
+                    } else {
+                        errorCount++;
+                    }
+                }
+                
+                const embed = new EmbedBuilder()
+                    .setColor(errorCount > 0 ? 0xFFA500 : 0x00FF00)
+                    .setTitle("Rapport d'Importation d'XP")
+                    .setDescription(`L'opération d'importation depuis le fichier **${attachment.name}** est terminée.`)
+                    .addFields(
+                        { name: 'Utilisateurs mis à jour', value: `${updatedCount}`, inline: true },
+                        { name: 'Lignes en erreur', value: `${errorCount}`, inline: true }
+                    );
+                
+                await interaction.editReply({ embeds: [embed] });
+                return;
+            }
+
+            // --- Logique pour les autres sous-commandes ---
+            const targetUser = interaction.options.getUser('utilisateur', true);
+            if (targetUser.bot) {
+                await interaction.editReply({ content: "Vous ne pouvez pas modifier l'XP d'un bot." });
+                return;
+            }
+
             let embed: EmbedBuilder | null = null;
             
             switch (subcommand) {
@@ -141,3 +204,4 @@ const XpAdminCommand: Command = {
 };
 
 export default XpAdminCommand;
+
