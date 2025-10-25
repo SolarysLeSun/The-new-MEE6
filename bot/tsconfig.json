@@ -8,9 +8,9 @@
     "skipLibCheck": true,
     "outDir": "../dist/bot",
     "rootDir": ".",
-    "baseUrl": ".",
+    "baseUrl": "..",
     "paths": {
-      "@/*": ["../src/*"]
+      "@/*": ["src/*"]
     },
     "resolveJsonModule": true
   },
