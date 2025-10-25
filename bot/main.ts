@@ -22,6 +22,7 @@ import { musicPlayer } from './music/player';
 import { startStatsChannelInterval } from './events/system/statsChannels';
 import { startChallengeScheduler } from './events/system/challengeScheduler';
 import { startActivityTracker } from './events/system/activityTracker';
+import { messageModerator } from './events/automod/messageModerator';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });

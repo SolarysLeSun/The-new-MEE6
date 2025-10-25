@@ -133,6 +133,25 @@ export interface AutoSanction {
     duration?: string;
 }
 
+export interface AutoModRule {
+    id: string;
+    name: string;
+    type: 'keywords' | 'spam' | 'flood' | 'caps' | 'mentions';
+    action: 'delete' | 'warn';
+    // Common
+    exempt_roles: string[];
+    exempt_channels: string[];
+    // Keywords
+    keywords?: string[];
+    // Spam / Flood
+    message_count?: number;
+    timeframe_seconds?: number;
+    // Caps
+    caps_percentage?: number;
+    // Mentions
+    mention_limit?: number;
+}
+
 export interface RoleReward {
     level: number;
     role_id: string;
