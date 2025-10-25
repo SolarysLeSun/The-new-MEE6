@@ -1,8 +1,8 @@
 
 
 import { Events, GuildMember, Message, DMChannel } from 'discord.js';
-import { getServerConfig } from '../../../src/lib/db';
-import { roleAssignmentFlow } from '../../../src/ai/flows/role-assignment-flow';
+import { getServerConfig } from '@/lib/db';
+import { roleAssignmentFlow } from '@/ai/flows/role-assignment-flow';
 import type { AiRoleMapping } from '@/types';
 
 // Collection to track users currently in the onboarding process
