@@ -180,6 +180,15 @@ export interface RoadmapItem {
   sort_order: number;
 }
 
+export interface ShopItem {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    type: 'role' | 'custom';
+    reward_id: string; // Role ID if type is 'role', otherwise a custom identifier for the object
+}
+
 export interface LevelingConfig {
     enabled: boolean;
     difficulty: 'easy' | 'medium' | 'hard' | 'arcade';
@@ -201,6 +210,11 @@ export interface LevelingConfig {
     xp_boost_roles: XPBoost[];
     xp_boost_channels: XPBoost[];
     command_permissions: { [key: string]: string | null };
+    // Shop
+    shop_enabled?: boolean;
+    shop_notification_channel_id?: string | null;
+    shop_notification_role_id?: string | null;
+    shop_items?: ShopItem[];
 }
 
 export interface WelcomeConfig {
