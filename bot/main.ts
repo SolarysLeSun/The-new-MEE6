@@ -21,6 +21,7 @@ import { startAntiAfkInterval } from './events/moderation/antiAfk';
 import { startStatsChannelInterval } from './events/system/statsChannels';
 import { startChallengeScheduler } from './events/system/challengeScheduler';
 import { startActivityTracker } from './events/system/activityTracker';
+import { transcriptSummaryFlow } from '@/ai/flows/transcript-summary-flow';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -345,85 +346,116 @@ async function handlePrivateRoomModal(interaction: ModalSubmitInteraction) {
     if (!interaction.guild || !(interaction.member instanceof GuildMember)) return;
     const config = await getServerConfig(interaction.guild.id, 'private-rooms');
 
-    if (!config || !config.enabled || !config.category_id) {
-        await interaction.reply({ content: "Le système de salons privés n'est pas correctement configuré.", ephemeral: true });
+    if (!config || !config.enabled) {
+        await interaction.reply({ content: "Le système de salons privés n'est pas activé.", ephemeral: true });
         return;
     }
 
-    try {
-        await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ ephemeral: true });
 
-        const sanitizedUsername = interaction.user.username.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20) || 'user';
-        let channelName = config.channel_name_format || 'ticket-{user}';
+    const fields = (config.custom_fields || []).map((field: CustomField) => ({
+        id: field.id,
+        label: field.label,
+        value: interaction.fields.getTextInputValue(field.id),
+    }));
 
-        channelName = channelName
-            .replace('{user}', sanitizedUsername)
-            .replace('{mention}', interaction.user.toString())
-            .replace('{id}', interaction.user.id)
-            .replace('{random}', Math.random().toString(36).substring(2, 8));
-        
-        for (let i = 0; i < (config.custom_fields?.length || 0); i++) {
-            const field = config.custom_fields[i];
-            if (!field.label) continue;
-            const value = interaction.fields.getTextInputValue(field.id);
-            channelName = channelName.replace(`{champ${i + 1}}`, value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
-        }
+    if (config.validation_enabled && config.validation_channel_id) {
+        const validationChannel = await interaction.guild.channels.fetch(config.validation_channel_id).catch(() => null) as TextChannel;
+        if (validationChannel) {
+            const validationEmbed = new EmbedBuilder()
+                .setTitle("Nouvelle demande de ticket")
+                .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
+                .setColor(0x5865F2)
+                .setTimestamp();
+            
+            fields.forEach(field => {
+                validationEmbed.addFields({ name: field.label, value: field.value });
+            });
 
-        const existingChannel = interaction.guild.channels.cache.find(c => c.name === channelName && c.parentId === config.category_id);
-        if(existingChannel) {
-            await interaction.editReply(`Vous avez déjà un salon privé ouvert : ${existingChannel}`);
+            const serializedData = Buffer.from(JSON.stringify({ userId: interaction.user.id, fields })).toString('base64');
+            const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId(`approve_ticket_${serializedData}`).setLabel("Approuver").setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId(`deny_ticket_${interaction.user.id}`).setLabel("Refuser").setStyle(ButtonStyle.Danger)
+            );
+            
+            await validationChannel.send({ embeds: [validationEmbed], components: [row] });
+            await interaction.editReply({ content: config.confirmation_message || "Votre demande a été soumise à validation." });
             return;
         }
+    }
+    
+    // Si la validation est désactivée, créez directement le ticket
+    await createTicketChannel(interaction.guild, interaction.user.id, fields);
+    await interaction.editReply({ content: 'Votre ticket a été créé !' });
+}
 
-        const channel = await interaction.guild.channels.create({
-            name: channelName.slice(0, 100),
-            type: ChannelType.GuildText,
-            parent: config.category_id,
-            permissionOverwrites: [
-                { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
-                { id: client.user!.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels] },
-            ],
+async function createTicketChannel(guild: any, userId: string, fields: { id: string; label: string; value: string }[]) {
+    const config = await getServerConfig(guild.id, 'private-rooms');
+    if (!config || !config.enabled || !config.category_id) return;
+    
+    const user = await client.users.fetch(userId);
+
+    const sanitizedUsername = user.username.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20) || 'user';
+    let channelName = config.channel_name_format || 'ticket-{user}';
+    channelName = channelName.replace('{user}', sanitizedUsername).replace('{id}', user.id).replace('{random}', Math.random().toString(36).substring(2, 8));
+    fields.forEach((field, i) => {
+        channelName = channelName.replace(`{champ${i + 1}}`, field.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
+    });
+
+    const channel = await guild.channels.create({
+        name: channelName.slice(0, 100),
+        type: ChannelType.GuildText,
+        parent: config.category_id,
+        permissionOverwrites: [
+            { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+            { id: user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
+            { id: client.user!.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels] },
+            ...(config.moderator_roles || []).map((roleId: string) => ({
+                id: roleId,
+                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages]
+            }))
+        ],
+    });
+
+    const welcomeEmbed = new EmbedBuilder()
+        .setColor(0x5865F2)
+        .setTitle(`Ticket ouvert par ${user.tag}`)
+        .setDescription(`Bienvenue ${user}, votre ticket a été créé.\n\n🟢 Statut : **Ouvert**`)
+        .setTimestamp();
+    
+    if (fields.length > 0) {
+        welcomeEmbed.addFields({ name: '\u200B', value: '**Détails fournis :**'});
+        fields.forEach(field => {
+            welcomeEmbed.addFields({ name: field.label, value: field.value, inline: false });
         });
-        
-        // Construct initial message embed
-        const welcomeEmbed = new EmbedBuilder()
-            .setColor(0x5865F2)
-            .setTitle(`Ticket ouvert par ${interaction.user.tag}`)
-            .setDescription(`Bienvenue ${interaction.user}, votre ticket a été créé.\n\n🟢 Statut : **Ouvert**`)
-            .setTimestamp();
-        
-        const fields = [];
-        if (config.custom_fields?.length > 0) {
-             welcomeEmbed.addFields({ name: '\u200B', value: '**Détails fournis :**'});
-            for (const field of config.custom_fields) {
-                if (!field.label) continue;
-                const value = interaction.fields.getTextInputValue(field.id);
-                fields.push({ name: field.label, value: value, inline: false });
-            }
-            welcomeEmbed.addFields(fields);
+    }
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId(`close_ticket_${channel.id}`).setLabel('Fermer le Ticket').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId(`add_user_to_ticket_${channel.id}`).setLabel('Ajouter un Membre').setStyle(ButtonStyle.Secondary)
+    );
+
+    let content = `${user}`;
+    if (config.mention_moderators && config.moderator_roles.length > 0) {
+        content += ` ${config.moderator_roles.map((r: string) => `<@&${r}>`).join(' ')}`;
+    }
+    await channel.send({ content, embeds: [welcomeEmbed], components: [row] });
+    
+    if (config.private_thread_enabled) {
+        try {
+            let threadName = (config.private_thread_name_format || 'staff-{user}').replace('{user}', sanitizedUsername);
+            await channel.threads.create({
+                name: threadName,
+                autoArchiveDuration: 1440,
+                type: ChannelType.PrivateThread,
+                reason: 'Fil de discussion pour le staff'
+            });
+        } catch(e) {
+            console.error("Failed to create private thread", e);
         }
-
-        const row = new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`close_ticket_${channel.id}`)
-                    .setLabel('Fermer le Ticket')
-                    .setStyle(ButtonStyle.Danger),
-                new ButtonBuilder()
-                    .setCustomId(`add_user_to_ticket_${channel.id}`)
-                    .setLabel('Ajouter un Membre')
-                    .setStyle(ButtonStyle.Secondary)
-            );
-        
-        await channel.send({ content: `${interaction.user}`, embeds: [welcomeEmbed], components: [row] });
-        await interaction.editReply(`Votre salon privé a été créé : ${channel}`);
-
-    } catch (error) {
-        console.error('[PrivateRoom] Error creating channel:', error);
-        await interaction.editReply({ content: 'Une erreur est survenue lors de la création du salon.' });
     }
 }
+
 
 async function handleReminderButton(interaction: ButtonInteraction) {
     const [ , delayStr, destination, base64Message ] = interaction.customId.split('::');
@@ -525,6 +557,69 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     if (interaction.isButton()) {
         console.log(`[Interaction] Button clicked: ${interaction.customId}`);
         const { customId } = interaction;
+        
+        if (customId.startsWith('approve_ticket_') || customId.startsWith('deny_ticket_')) {
+            if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+                 await interaction.reply({ content: "Vous n'avez pas la permission d'effectuer cette action.", ephemeral: true });
+                 return;
+            }
+            await interaction.deferUpdate();
+            if(customId.startsWith('approve_ticket_')) {
+                const data = JSON.parse(Buffer.from(customId.split('_')[2], 'base64').toString('utf-8'));
+                await createTicketChannel(interaction.guild!, data.userId, data.fields);
+                await interaction.editReply({ content: `Ticket approuvé et créé pour <@${data.userId}>.`, components: []});
+            } else {
+                 const userId = customId.split('_')[2];
+                 const user = await client.users.fetch(userId).catch(() => null);
+                 if(user) {
+                     await user.send(`Votre demande de ticket sur le serveur **${interaction.guild?.name}** a été refusée par un modérateur.`).catch(() => {});
+                 }
+                await interaction.editReply({ content: 'Demande de ticket refusée.', components: []});
+            }
+            return;
+        }
+
+        if (customId.startsWith('close_ticket_') || customId.startsWith('reopen_ticket_') || customId.startsWith('delete_ticket_')) {
+             if (!interaction.guild || !interaction.channel || !(interaction.channel instanceof TextChannel)) return;
+             
+             const config = await getServerConfig(interaction.guild.id, 'private-rooms');
+             if(!config?.moderator_roles.some(roleId => (interaction.member as GuildMember).roles.cache.has(roleId)) && !(interaction.member as GuildMember).permissions.has(PermissionFlagsBits.Administrator)) {
+                 await interaction.reply({ content: "Vous n'avez pas la permission de gérer ce ticket.", ephemeral: true });
+                 return;
+             }
+            
+            await interaction.deferUpdate();
+
+            if(customId.startsWith('close_ticket_')) {
+                if (config.archive_summary) {
+                    await interaction.channel.send({ content: "Génération du résumé et archivage en cours..." });
+                    const messages = await interaction.channel.messages.fetch({ limit: 100 });
+                    const transcript = Array.from(messages.values()).reverse().map(m => `${m.author.tag}: ${m.content}`).join('\n');
+                    const result = await transcriptSummaryFlow({ transcript });
+                    await interaction.channel.send({ embeds: [new EmbedBuilder().setTitle("📝 Résumé du Ticket").setDescription(result.summary).setColor(0x5865F2)] });
+                }
+
+                if (config.auto_delete_on_close) {
+                    await interaction.channel.send("Ce salon sera supprimé dans 5 secondes...");
+                    setTimeout(() => interaction.channel?.delete().catch(console.error), 5000);
+                } else {
+                    await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { ViewChannel: false });
+                    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                        new ButtonBuilder().setCustomId(`reopen_ticket_${interaction.channelId}`).setLabel("Réouvrir").setStyle(ButtonStyle.Success),
+                        new ButtonBuilder().setCustomId(`delete_ticket_${interaction.channelId}`).setLabel("Supprimer définitivement").setStyle(ButtonStyle.Danger)
+                    );
+                    await interaction.channel.send({ content: `Ticket fermé par ${interaction.user}.`, components: [row] });
+                }
+            } else if (customId.startsWith('reopen_ticket_')) {
+                 await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { ViewChannel: null }); // Reset to parent perms
+                 await interaction.message.delete();
+                 await interaction.channel.send({ content: `Ticket ré-ouvert par ${interaction.user}.`});
+            } else if (customId.startsWith('delete_ticket_')) {
+                await interaction.channel.send("Ce salon sera supprimé dans 5 secondes...");
+                setTimeout(() => interaction.channel?.delete().catch(console.error), 5000);
+            }
+             return;
+        }
 
         if (customId.startsWith('airdrop_claim_')) {
             await interaction.deferUpdate();
