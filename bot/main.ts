@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
 import type { Command, CustomField, ProfileLink } from '@/types';
-import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds, getGuildWarnHistory, updateUserProfile } from '@/lib/db';
+import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds, getGuildWarnHistory, updateUserProfile, updateUserXP } from '@/lib/db';
 import { startApi } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
@@ -512,6 +512,36 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     if (interaction.isButton()) {
         console.log(`[Interaction] Button clicked: ${interaction.customId}`);
         const { customId } = interaction;
+
+        if (customId.startsWith('airdrop_claim_')) {
+            await interaction.deferUpdate();
+            const [,,, xpAmountStr] = customId.split('_');
+            const xpAmount = parseInt(xpAmountStr, 10);
+            
+            if (isNaN(xpAmount)) {
+                console.error(`Invalid XP amount in airdrop customId: ${customId}`);
+                return;
+            }
+
+            if (!interaction.guild) return;
+
+            updateUserXP(interaction.user.id, interaction.guild.id, xpAmount);
+            
+            const newEmbed = EmbedBuilder.from(interaction.message.embeds[0])
+                .setDescription(`Récupéré par ${interaction.user.toString()} !`)
+                .setColor(0x57F287);
+                
+            const newButton = ButtonBuilder.from(interaction.component)
+                .setDisabled(true)
+                .setLabel(`Récupéré par ${interaction.user.tag}`)
+                .setStyle(ButtonStyle.Success);
+            
+            await interaction.message.edit({ embeds: [newEmbed], components: [new ActionRowBuilder<ButtonBuilder>().addComponents(newButton)] });
+
+            await interaction.followUp({ content: `Félicitations ! Vous avez récupéré **${xpAmount} XP** !`, ephemeral: true });
+
+            return;
+        }
 
         if (customId === 'confirm_normalize_all' || customId === 'cancel_normalize_all') {
             return;
