@@ -95,6 +95,8 @@ export default function TicketsPage() {
     const [roles, setRoles] = useState<DiscordRole[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [channelNameFormat, setChannelNameFormat] = useState('');
+
     useEffect(() => {
         if (!serverId) return;
         const fetchData = async () => {
@@ -110,6 +112,7 @@ export default function TicketsPage() {
                 const serverDetailsData = await serverDetailsRes.json();
 
                 setConfig(configData);
+                setChannelNameFormat(configData.channel_name_format || 'ticket-{user}');
                 setChannels(serverDetailsData.channels.filter((c: DiscordChannel) => c.type === 0)); // Text channels
                 setCategories(serverDetailsData.channels.filter((c: DiscordChannel) => c.type === 4)); // Category channels
                 setRoles(serverDetailsData.roles);
@@ -255,8 +258,9 @@ export default function TicketsPage() {
             </p>
             <Input
               id="channel-name-format"
-              value={config.channel_name_format || ''}
-              onBlur={(e) => handleValueChange('channel_name_format', e.target.value)}
+              value={channelNameFormat}
+              onChange={(e) => setChannelNameFormat(e.target.value)}
+              onBlur={() => handleValueChange('channel_name_format', channelNameFormat)}
               placeholder="ticket-{user}-{random}"
             />
           </div>
