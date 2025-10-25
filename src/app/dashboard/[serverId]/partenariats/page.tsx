@@ -254,5 +254,3 @@ function PartnershipCard({ partnership, currentGuildId, onAccept, onTerminate }:
         </Card>
     );
 }
-
-```
