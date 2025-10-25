@@ -338,11 +338,16 @@ export interface Partnership {
 export interface Giveaway {
     id: string;
     guild_id: string;
+    channel_id: string | null;
+    message_id: string | null;
     prize: string;
     winner_count: number;
     reward_type: 'role' | 'xp' | 'custom';
     reward_value: string | null;
-    duration: number; // in minutes
-    status: 'scheduled' | 'active' | 'ended';
-    schedule?: string | null; // cron-like string
+    duration_minutes: number | null;
+    ends_at: string | null; // ISO string
+    status: 'draft' | 'scheduled' | 'active' | 'ended';
+    schedule_type: 'once' | 'daily' | 'weekly' | null;
+    schedule_value: string | null; // e.g., '2024-12-25T18:00:00Z' or 'monday@18:00'
+    created_at: string;
 }

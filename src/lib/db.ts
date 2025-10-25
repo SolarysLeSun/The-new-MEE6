@@ -231,13 +231,14 @@ const upgradeSchema = () => {
                 channel_id TEXT,
                 message_id TEXT,
                 prize TEXT NOT NULL,
-                winner_count INTEGER NOT NULL,
+                winner_count INTEGER NOT NULL DEFAULT 1,
                 reward_type TEXT CHECK(reward_type IN ('role', 'xp', 'custom')),
                 reward_value TEXT,
-                duration INTEGER,
+                duration_minutes INTEGER,
                 ends_at DATETIME,
-                status TEXT CHECK(status IN ('scheduled', 'active', 'ended')),
-                schedule TEXT,
+                status TEXT NOT NULL CHECK(status IN ('draft', 'scheduled', 'active', 'ended')) DEFAULT 'draft',
+                schedule_type TEXT CHECK(schedule_type IN ('once', 'daily', 'weekly')),
+                schedule_value TEXT, -- e.g., 'monday@18:00'
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
