@@ -49,6 +49,7 @@ import {
   Handshake,
   Trophy,
   Activity,
+  Store,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -119,6 +120,13 @@ export const navCategories = [
             { href: 'commandes-fun', label: 'Commandes Fun', icon: Dice5, keywords: ['renameall', 'mutemass', 'reactbomb', 'react', 'randomnickname'] },
             { href: 'roue-de-la-fortune', label: 'Roue de la Fortune', icon: Dices, keywords: ['tirage', 'giveaway', 'roue', 'fortune', 'aléatoire'] },
             { href: 'creation-amitie', label: "Création d'Amitié", icon: Users, isPremium: true, isDisabled: true, keywords: ['amitié', 'relation', 'affinité', 'lien'] },
+        ]
+    },
+    {
+        name: 'Niveaux & XP',
+        items: [
+            { href: 'niveaux', label: 'Configuration des Niveaux', icon: Award, keywords: ['levels', 'rank', 'classement', 'exp', 'expérience', 'récompenses', 'topxp', 'podium'] },
+            { href: 'boutique-xp', label: 'Boutique d\'XP', icon: Store, keywords: ['shop', 'magasin', 'acheter', 'récompenses'] },
         ]
     },
     {

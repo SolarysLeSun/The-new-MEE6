@@ -66,7 +66,8 @@ export type Module =
     | 'partnership'
     | 'giveaways'
     | 'challenges'
-    | 'community-analysis';
+    | 'community-analysis'
+    | 'xp-shop';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale
@@ -376,4 +377,20 @@ export interface ActivityStat {
     timestamp: string;
     message_count: number;
     voice_member_count: number;
+}
+
+export interface ShopItem {
+    id: string; // Unique, user-defined ID for the command
+    name: string; // Display name
+    description: string;
+    cost: number;
+    type: 'role' | 'custom';
+    value: string; // Role ID or custom item name
+}
+
+export interface XpShopConfig {
+    enabled: boolean;
+    log_channel_id: string | null;
+    mention_role_id: string | null;
+    items: ShopItem[];
 }
