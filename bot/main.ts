@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
 import type { Command, CustomField, ProfileLink } from '@/types';
-import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds, getGuildWarnHistory, updateUserProfile } from '@/lib/db';
+import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds, getGuildWarnHistory, updateUserProfile, createTicket, getTicketByChannelId } from '@/lib/db';
 import { startApi } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
@@ -354,11 +354,12 @@ async function handlePrivateRoomModal(interaction: ModalSubmitInteraction) {
             .replace('{id}', interaction.user.id)
             .replace('{random}', Math.random().toString(36).substring(2, 8));
         
-        // Replace custom field variables
+        const formData: Record<string, string> = {};
         for (let i = 0; i < (config.custom_fields?.length || 0); i++) {
             const field = config.custom_fields[i];
             if (!field.label) continue;
             const value = interaction.fields.getTextInputValue(field.id);
+            formData[field.label] = value;
             channelName = channelName.replace(`{champ${i + 1}}`, value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
         }
 
@@ -375,22 +376,55 @@ async function handlePrivateRoomModal(interaction: ModalSubmitInteraction) {
             permissionOverwrites: [
                 { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
                 { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
-                { id: client.user!.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels] },
+                { id: client.user!.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.ManageRoles] },
+                ...(config.moderator_roles || []).map((roleId: string) => ({ id: roleId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }))
             ],
         });
+        
+        createTicket({
+            channel_id: channel.id,
+            guild_id: interaction.guild.id,
+            owner_id: interaction.user.id,
+            status: 'open',
+            members: [],
+            form_data: formData
+        });
 
-        // Construct initial message with custom field values
-        let initialMessage = `Bienvenue ${interaction.user}, votre salon privé a été créé.`;
-        if (config.custom_fields?.length > 0) {
-            initialMessage += "\n\n**Détails fournis :**";
-            for (const field of config.custom_fields) {
-                if (!field.label) continue;
-                const value = interaction.fields.getTextInputValue(field.id);
-                initialMessage += `\n**${field.label}:** ${value}`;
-            }
+        const welcomeEmbed = new EmbedBuilder()
+            .setColor(0x57F287) // Green
+            .setTitle(`Ticket ouvert par ${interaction.user.tag}`)
+            .setDescription(`Bienvenue ${interaction.user.toString()}, votre salon privé a été créé. L'équipe vous répondra sous peu.`)
+            .addFields({ name: 'Statut', value: '🟢 Ouvert', inline: true })
+            .setTimestamp();
+        
+        for (const [label, value] of Object.entries(formData)) {
+            welcomeEmbed.addFields({ name: label, value: value || '*Non renseigné*', inline: false });
+        }
+
+        let mentionContent = '';
+        if (config.mention_moderators && config.moderator_roles && config.moderator_roles.length > 0) {
+            mentionContent = config.moderator_roles.map((roleId: string) => `<@&${roleId}>`).join(' ');
         }
         
-        await channel.send(initialMessage);
+        const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+             new ButtonBuilder()
+                .setCustomId(`close_ticket_${channel.id}`)
+                .setLabel('Fermer le Ticket')
+                .setStyle(ButtonStyle.Danger)
+                .setEmoji('🔒'),
+            new ButtonBuilder()
+                .setCustomId(`claim_ticket_${channel.id}`)
+                .setLabel('Réclamer le Ticket')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('🙋'),
+            new ButtonBuilder()
+                .setCustomId(`manage_members_${channel.id}`)
+                .setLabel('Gérer les membres')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('👤')
+        );
+
+        await channel.send({ content: mentionContent, embeds: [welcomeEmbed], components: [actionRow] });
         await interaction.editReply(`Votre salon privé a été créé : ${channel}`);
 
     } catch (error) {
@@ -863,3 +897,4 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
+

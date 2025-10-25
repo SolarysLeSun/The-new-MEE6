@@ -4,7 +4,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile, RoadmapItem } from '../types';
+import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile, RoadmapItem, ShopItem, Ticket } from '../types';
 import { randomBytes } from 'crypto';
 import ms from 'ms';
 
@@ -15,14 +15,39 @@ if (!fs.existsSync(dbDir)) {
 }
 
 const dbPath = path.resolve(dbDir, 'bot.db');
-const db = new Database(dbPath);
-console.log(`[Database] Connecté à la base de données SQLite sur ${dbPath}`);
+let db: Database.Database;
+
+function connectDatabase() {
+    try {
+        db = new Database(dbPath);
+        db.pragma('journal_mode = WAL');
+        console.log(`[Database] Connecté à la base de données SQLite sur ${dbPath}`);
+    } catch (error: any) {
+        if (error.code === 'SQLITE_CORRUPT') {
+            console.error(`[FATAL] La base de données ${dbPath} est corrompue.`);
+            const backupPath = `${dbPath}.corrupted-backup-${Date.now()}`;
+            console.log(`[Database] Tentative de renommage du fichier corrompu en ${backupPath}`);
+            try {
+                fs.renameSync(dbPath, backupPath);
+                console.log(`[Database] Fichier corrompu sauvegardé. Tentative de recréer une nouvelle base de données...`);
+                db = new Database(dbPath);
+                db.pragma('journal_mode = WAL');
+                 console.log('[Database] Nouvelle base de données créée avec succès.');
+            } catch (renameError) {
+                console.error(`[FATAL] Impossible de renommer le fichier de base de données corrompu. Le bot ne peut pas démarrer.`, renameError);
+                process.exit(1);
+            }
+        } else {
+            console.error(`[FATAL] Erreur de base de données inconnue.`, error);
+            process.exit(1);
+        }
+    }
+}
 
 
 // --- Schéma et Migration de la Base de Données ---
 const upgradeSchema = () => {
     try {
-        db.pragma('journal_mode = WAL');
         
         db.exec(`
             CREATE TABLE IF NOT EXISTS global_settings (
@@ -130,19 +155,15 @@ const upgradeSchema = () => {
         `);
         console.log('[Database] La table "delegated_permissions" est prête.');
 
-        // Force recreation of referrals table to fix potential schema inconsistencies
-        db.exec('DROP TABLE IF EXISTS referrals;');
-        db.transaction(() => {
-            db.exec(`
-                CREATE TABLE referrals (
-                    referring_guild_id TEXT NOT NULL,
-                    referred_guild_id TEXT PRIMARY KEY NOT NULL,
-                    referred_owner_id TEXT NOT NULL,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                );
-            `);
-            db.exec('CREATE INDEX idx_referring_guild_id ON referrals (referring_guild_id);');
-        })();
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS referrals (
+                referring_guild_id TEXT NOT NULL,
+                referred_guild_id TEXT PRIMARY KEY NOT NULL,
+                referred_owner_id TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        db.exec('CREATE INDEX IF NOT EXISTS idx_referring_guild_id ON referrals (referring_guild_id);');
         console.log('[Database] La table "referrals" est prête.');
 
         db.exec(`
@@ -213,6 +234,21 @@ const upgradeSchema = () => {
             );
         `);
         console.log('[Database] Table "api_bans" is ready.');
+        
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS tickets (
+                channel_id TEXT PRIMARY KEY,
+                guild_id TEXT NOT NULL,
+                owner_id TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'open',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                closed_at DATETIME,
+                claimed_by TEXT,
+                members TEXT,
+                form_data TEXT
+            );
+        `);
+        console.log('[Database] Table "tickets" is ready.');
 
 
         // Drop deprecated tables
@@ -228,17 +264,21 @@ const upgradeSchema = () => {
 
 
 const createConfigTable = () => {
-    db.exec(`
-        CREATE TABLE IF NOT EXISTS server_configs (
-            guild_id TEXT NOT NULL,
-            module TEXT NOT NULL,
-            config TEXT NOT NULL,
-            premium BOOLEAN DEFAULT FALSE,
-            premium_expires_at DATETIME,
-            PRIMARY KEY (guild_id, module)
-        );
-    `);
-    console.log('[Database] La table "server_configs" est prête.');
+    try {
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS server_configs (
+                guild_id TEXT NOT NULL,
+                module TEXT NOT NULL,
+                config TEXT NOT NULL,
+                premium BOOLEAN DEFAULT FALSE,
+                premium_expires_at DATETIME,
+                PRIMARY KEY (guild_id, module)
+            );
+        `);
+        console.log('[Database] La table "server_configs" est prête.');
+    } catch(e) {
+         console.error('[Database] Erreur lors de la création de la table de configuration :', e);
+    }
 };
 
 // --- Configurations par défaut pour les nouveaux serveurs ---
@@ -300,6 +340,14 @@ const defaultConfigs: DefaultConfigs = {
         enabled: false,
         rules: [],
         log_channel_id: null,
+        anti_spam_enabled: false,
+        anti_spam_settings: {
+            message_limit: 5,
+            time_window_seconds: 5,
+            action: 'warn',
+        },
+        exempt_roles: [],
+        exempt_channels: [],
     },
     'gif-filter': {
         enabled: false,
@@ -402,11 +450,12 @@ const defaultConfigs: DefaultConfigs = {
         enabled: true, 
         creation_channel: null, 
         category_id: null, 
-        embed_message: 'Cliquez sur le bouton pour créer un salon privé.',
+        embed_message: 'Cliquez sur le bouton pour créer un nouveau ticket.',
         channel_name_format: 'ticket-{user}',
         archive_summary: true,
-        modal_title: 'Créer un salon privé',
+        modal_title: 'Créer un ticket',
         custom_fields: [],
+        moderator_roles: [],
         command_permissions: {
             addprivate: null,
             privateresum: null,
@@ -553,8 +602,6 @@ const defaultConfigs: DefaultConfigs = {
             join: null,
             leave: null,
             parle: null,
-            play: null,
-            stop: null,
         }
     },
     'announcements': {
@@ -591,6 +638,10 @@ const defaultConfigs: DefaultConfigs = {
             topxp: null,
             webleaderboard: null,
         },
+        shop_enabled: false,
+        shop_notification_channel_id: null,
+        shop_notification_role_id: null,
+        shop_items: [],
     },
     'fun-commands': {
         enabled: true,
@@ -608,6 +659,8 @@ const defaultConfigs: DefaultConfigs = {
             pileouface: null,
             slots: null,
             payer: null,
+            giveaway: null,
+            airdrop: null,
         }
     },
     'admin': {
@@ -655,11 +708,6 @@ const defaultConfigs: DefaultConfigs = {
     'embed-builder': {
         enabled: true,
     },
-    'gif-filter': {
-        enabled: false,
-        exempt_roles: [],
-        exempt_channels: [],
-    },
     'anti-afk': {
         enabled: false,
         timeout_minutes: 15,
@@ -668,13 +716,65 @@ const defaultConfigs: DefaultConfigs = {
     'integrations': {
         enabled: false,
         rss_feeds: [],
+    },
+    'stats-channels': {
+        enabled: false,
+        category_id: null,
+        channel_format: '📊 Membres : {membres}'
     }
 };
 
 export function initializeDatabase() {
+    connectDatabase();
     createConfigTable();
     upgradeSchema(); // Ensure all tables are created/updated
     console.log('[Database] Initialisation de la base de données terminée.');
+}
+
+// --- Ticket System Functions ---
+
+export function createTicket(ticketData: Omit<Ticket, 'created_at' | 'closed_at' | 'claimed_by'>) {
+    const stmt = db.prepare(`
+        INSERT INTO tickets (channel_id, guild_id, owner_id, status, members, form_data)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+        ticketData.channel_id,
+        ticketData.guild_id,
+        ticketData.owner_id,
+        'open',
+        JSON.stringify(ticketData.members || []),
+        JSON.stringify(ticketData.form_data || {})
+    );
+}
+
+export function getTicketByChannelId(channelId: string): Ticket | null {
+    const stmt = db.prepare('SELECT * FROM tickets WHERE channel_id = ?');
+    const row = stmt.get(channelId) as any;
+    if (row) {
+        row.members = JSON.parse(row.members);
+        row.form_data = JSON.parse(row.form_data);
+    }
+    return row || null;
+}
+
+export function updateTicket(channelId: string, updates: Partial<Ticket>) {
+    const fields = Object.keys(updates).filter(key => key !== 'channel_id');
+    if (fields.length === 0) return;
+
+    const setClauses = fields.map(field => `${field} = ?`).join(', ');
+    const values = fields.map(field => {
+        const value = (updates as any)[field];
+        return typeof value === 'object' ? JSON.stringify(value) : value;
+    });
+
+    const stmt = db.prepare(`UPDATE tickets SET ${setClauses} WHERE channel_id = ?`);
+    stmt.run(...values, channelId);
+}
+
+export function deleteTicket(channelId: string) {
+    const stmt = db.prepare('DELETE FROM tickets WHERE channel_id = ?');
+    stmt.run(channelId);
 }
 
 // --- Roadmap Functions ---

@@ -325,6 +325,18 @@ export interface UserProfile {
     links: ProfileLink[];
 }
 
+export interface Ticket {
+  channel_id: string;
+  guild_id: string;
+  owner_id: string;
+  status: 'open' | 'claimed' | 'closed';
+  created_at: string;
+  closed_at?: string | null;
+  claimed_by?: string | null;
+  members: string[];
+  form_data: Record<string, string>;
+}
+
 export interface TicketsConfig {
     enabled: boolean;
     creation_channel: string | null;
@@ -346,3 +358,4 @@ export interface TicketsConfig {
     command_permissions: { [key: string]: string | null };
 }
   
+
