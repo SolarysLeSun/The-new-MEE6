@@ -1451,30 +1451,35 @@ export function updateUserXP(userId: string, guildId: string, amount: number, mo
     transaction();
 }
 
-
-export const setUserLevel = db.transaction((userId: string, guildId: string, targetLevel: number) => {
-    const levelingConfig = getServerConfig(guildId, 'leveling') as LevelingConfig | null;
-    const difficulty = levelingConfig?.difficulty || 'medium';
-
-    let totalXpForTargetLevel = 0;
-    if (difficulty === 'arcade') {
-        totalXpForTargetLevel = targetLevel * ARCADE_XP_PER_LEVEL;
-    } else {
-        for (let i = 0; i < targetLevel; i++) {
-            totalXpForTargetLevel += calculateRequiredXp(i, difficulty);
-        }
+export function setUserLevel(userId: string, guildId: string, targetLevel: number) {
+    if (!db) {
+        console.error("[Database] Tentative d'accès à la base de données avant initialisation (setUserLevel).");
+        return;
     }
+    const transaction = db.transaction((uid: string, gid: string, tLevel: number) => {
+        const levelingConfig = getServerConfig(gid, 'leveling') as LevelingConfig | null;
+        const difficulty = levelingConfig?.difficulty || 'medium';
 
+        let totalXpForTargetLevel = 0;
+        if (difficulty === 'arcade') {
+            totalXpForTargetLevel = tLevel * ARCADE_XP_PER_LEVEL;
+        } else {
+            for (let i = 0; i < tLevel; i++) {
+                totalXpForTargetLevel += calculateRequiredXp(i, difficulty);
+            }
+        }
 
-    const upsertStmt = db.prepare(`
-        INSERT INTO user_levels (user_id, guild_id, xp, level)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(user_id, guild_id) DO UPDATE SET xp = ?, level = ?;
-    `);
-    upsertStmt.run(userId, guildId, totalXpForTargetLevel, targetLevel, totalXpForTargetLevel, targetLevel);
+        const upsertStmt = db.prepare(`
+            INSERT INTO user_levels (user_id, guild_id, xp, level)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(user_id, guild_id) DO UPDATE SET xp = ?, level = ?;
+        `);
+        upsertStmt.run(uid, gid, totalXpForTargetLevel, tLevel, totalXpForTargetLevel, tLevel);
 
-    console.log(`[Leveling] User ${userId} in guild ${guildId} has been set to level ${targetLevel} with ${totalXpForTargetLevel} XP.`);
-});
+        console.log(`[Leveling] User ${uid} in guild ${gid} has been set to level ${tLevel} with ${totalXpForTargetLevel} XP.`);
+    });
+    transaction(userId, guildId, targetLevel);
+}
 
 function checkLevel(userId: string, guildId: string) {
     const levelingConfig = getServerConfig(guildId, 'leveling') as LevelingConfig | null;
