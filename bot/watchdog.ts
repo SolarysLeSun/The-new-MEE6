@@ -86,7 +86,7 @@ async function restartBot(reason: string) {
     let logs = 'Impossible de récupérer les logs.';
     try {
         logs = await new Promise((resolve, reject) => {
-            exec('pm2 logs bot --lines 50 --nostream', (error, stdout, stderr) => {
+            exec('pm2 logs bot --lines 140 --nostream', (error, stdout, stderr) => {
                 if (error) {
                     reject(`Erreur d'exécution: ${error.message}\n${stderr}`);
                     return;
