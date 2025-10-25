@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { AreaChart, Loader2, ServerCrash } from 'lucide-react';
+import { AreaChart, Loader2, ServerCrash, Users, MessagesSquare, Ratio, Activity, UserMinus, UserPlus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
@@ -16,8 +15,7 @@ import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
 import { useServerInfo } from '@/hooks/use-server-info';
 import { Badge } from '@/components/ui/badge';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { subHours, format, startOfHour } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { format } from 'date-fns';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -50,7 +48,22 @@ function PageSkeleton() {
     );
 }
 
-function CommunityAnalysisContent({ isPremium, serverId }: { isPremium: boolean, serverId: string }) {
+function RatioCard({ title, value, description, icon: Icon }: { title: string, value: string, description: string, icon: React.ElementType }) {
+    return (
+        <Card className="bg-card/50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{title}</CardTitle>
+                <Icon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{value}</div>
+                <p className="text-xs text-muted-foreground">{description}</p>
+            </CardContent>
+        </Card>
+    );
+}
+
+function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverInfo: any, isPremium: boolean, serverId: string }) {
     const { toast } = useToast();
     const [config, setConfig] = useState<AnalysisConfig | null>(null);
     const [activityData, setActivityData] = useState<ActivityStat[]>([]);
@@ -108,10 +121,31 @@ function CommunityAnalysisContent({ isPremium, serverId }: { isPremium: boolean,
             time: format(new Date(stat.timestamp_bucket), 'HH:mm'),
             Messages: stat.message_count,
             'Utilisateurs en vocal': stat.active_voice_members_count,
-            'Minutes en vocal': stat.cumulative_voice_minutes,
+            'Minutes en vocal': Math.round(stat.cumulative_voice_minutes),
         })).reverse();
     }, [activityData]);
     
+    const engagementRatios = useMemo(() => {
+        if (!activityData || activityData.length === 0 || !serverInfo) {
+            return { engagement: 0, textVsVoice: 0, msgPerUser: 0 };
+        }
+        
+        const totalMessages = activityData.reduce((sum, stat) => sum + stat.message_count, 0);
+        const totalVoiceMinutes = activityData.reduce((sum, stat) => sum + stat.cumulative_voice_minutes, 0);
+        const uniqueTextUsers = new Set(activityData.flatMap(stat => Array(stat.active_text_members_count).keys())); // Simplified representation
+        const uniqueVoiceUsers = new Set(activityData.flatMap(stat => Array(stat.active_voice_members_count).keys()));
+        const totalActiveUsers = new Set([...uniqueTextUsers, ...uniqueVoiceUsers]).size;
+
+        const engagement = serverInfo.memberCount > 0 ? (totalActiveUsers / serverInfo.memberCount) * 100 : 0;
+        const textVsVoice = totalVoiceMinutes > 0 ? totalMessages / totalVoiceMinutes : totalMessages;
+        const msgPerUser = uniqueTextUsers.size > 0 ? totalMessages / uniqueTextUsers.size : 0;
+
+        return {
+            engagement: engagement.toFixed(1),
+            textVsVoice: textVsVoice.toFixed(2),
+            msgPerUser: msgPerUser.toFixed(1)
+        }
+    }, [activityData, serverInfo]);
 
     if (!config) {
         return <PageSkeleton />;
@@ -131,6 +165,33 @@ function CommunityAnalysisContent({ isPremium, serverId }: { isPremium: boolean,
                         </CardDescription>
                     </CardHeader>
                 </Card>
+                
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <RatioCard 
+                        title="Taux d'Engagement"
+                        value={`${engagementRatios.engagement}%`}
+                        description="Membres actifs / Membres totaux sur 24h"
+                        icon={Users}
+                    />
+                     <RatioCard 
+                        title="Messages par minute vocale"
+                        value={engagementRatios.textVsVoice}
+                        description="Ratio messages / minutes en vocal"
+                        icon={Ratio}
+                    />
+                     <RatioCard 
+                        title="Activité par membre"
+                        value={`${engagementRatios.msgPerUser} msg`}
+                        description="Moyenne de messages par membre actif à l'écrit"
+                        icon={Activity}
+                    />
+                    <RatioCard 
+                        title="Rétention (Join/Leave)"
+                        value="N/A"
+                        description="Fonctionnalité en développement"
+                        icon={UserPlus}
+                    />
+                </div>
                 
                 <Card>
                     <CardHeader>
@@ -196,7 +257,7 @@ export default function CommunityAnalysisPage() {
       {loading ? (
         <PageSkeleton />
       ) : (
-        <CommunityAnalysisContent isPremium={serverInfo?.isPremium || false} serverId={serverId} />
+        <CommunityAnalysisContent serverInfo={serverInfo} isPremium={serverInfo?.isPremium || false} serverId={serverId} />
       )}
     </PageTransitionWrapper>
   );

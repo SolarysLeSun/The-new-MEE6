@@ -147,6 +147,7 @@ export const voiceStateUpdateHandler = async (oldState: VoiceState, newState: Vo
     }
 };
 
-// We attach these handlers to the main bot events
-client.on(Events.MessageCreate, messageCreateHandler);
-client.on(Events.VoiceStateUpdate, voiceStateUpdateHandler);
+// We attach these handlers to the main bot events in main.ts if they are not already there.
+// e.g. client.on(Events.MessageCreate, messageCreateHandler);
+// e.g. client.on(Events.VoiceStateUpdate, voiceStateUpdateHandler);
+

@@ -20,7 +20,7 @@ import ms from 'ms';
 import { startAntiAfkInterval } from './events/moderation/antiAfk';
 import { startStatsChannelInterval } from './events/system/statsChannels';
 import { transcriptSummaryFlow } from '@/ai/flows/transcript-summary-flow';
-import { startCommunityAnalysisInterval } from './events/activity/communityAnalysis';
+import { startCommunityAnalysisInterval, messageCreateHandler as communityAnalysisMessageCreateHandler, voiceStateUpdateHandler as communityAnalysisVoiceStateUpdateHandler } from './events/activity/communityAnalysis';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -83,6 +83,10 @@ const loadEvents = (client: Client) => {
                  try {
                     const event = require(fullPath);
                      if (event.name && event.execute) {
+                        if (event.name === Events.MessageCreate || event.name === Events.VoiceStateUpdate) {
+                            // These are handled specially below
+                            return;
+                        }
                         if (event.once) {
                             client.once(event.name, (...args) => event.execute(...args, client));
                         } else {
@@ -619,10 +623,40 @@ async function handleDeleteTicket(interaction: ButtonInteraction, channelId: str
 
 client.on(Events.MessageCreate, async (message) => {
     if (message.author.bot) return;
+    
+    // Import event handlers
+    const { execute: messageXPHandler } = await import('./events/leveling/messageXP');
+    const { execute: reactionXPHandler } = await import('./events/leveling/reactionXP'); // This should not be here, it is for MessageReactionAdd
+    const { execute: reactionModesHandler } = await import('./events/fun/reactionModes');
+    const { execute: linkScannerHandler } = await import('./events/security/linkScanner');
+    const { execute: conversationalAgentHandler } = await import('./events/agent/conversation');
+    const { execute: gifFilterHandler } = await import('./events/automod/gifFilter');
+    const { execute: messageCreateHandler } = await import('./events/messageCreate');
 
-    if (message.channel.type === ChannelType.DM) {
-        await handleOnboardingResponse(message);
-    }
+    // Run all handlers
+    await Promise.all([
+        messageXPHandler(message),
+        reactionModesHandler(message),
+        linkScannerHandler(message),
+        conversationalAgentHandler(message),
+        gifFilterHandler(message),
+        messageCreateHandler(message),
+        communityAnalysisMessageCreateHandler(message),
+    ]);
+});
+
+client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
+    // Dynamically import and execute handlers
+    const { execute: smartVoiceHandler } = await import('./events/voice/smartVoice');
+    const { execute: voiceStateUpdateAutoroleHandler } = await import('./events/voice/voiceStateUpdateAutorole');
+    const { execute: voiceWebcamControlHandler } = await import('./events/security/voiceStateUpdate');
+
+    await Promise.all([
+        smartVoiceHandler(oldState, newState),
+        voiceStateUpdateAutoroleHandler(oldState, newState),
+        voiceWebcamControlHandler(oldState, newState),
+        communityAnalysisVoiceStateUpdateHandler(oldState, newState)
+    ]);
 });
 
 
@@ -1043,5 +1077,6 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
+
 
 
