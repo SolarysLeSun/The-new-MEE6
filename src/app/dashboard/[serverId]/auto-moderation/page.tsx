@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -10,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Trash2, PlusCircle, Sparkles, Loader2, BotMessageSquare, FileVideo } from 'lucide-react';
+import { Trash2, PlusCircle, Sparkles, Loader2, BotMessageSquare, FileVideo, ShieldAlert } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ import { Switch } from '@/components/ui/switch';
 import { v4 as uuidv4 } from 'uuid';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -41,6 +43,14 @@ interface AutoModConfig {
     enabled: boolean;
     rules: AutoModRule[];
     log_channel_id: string | null;
+    anti_spam_enabled?: boolean;
+    anti_spam_settings?: {
+        message_limit: number;
+        time_window_seconds: number;
+        action: 'delete' | 'warn';
+    };
+    exempt_roles?: string[];
+    exempt_channels?: string[];
 }
 interface GifFilterConfig {
     enabled: boolean;
@@ -143,10 +153,19 @@ export default function AutoModerationPage() {
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Auto-Modération</h1>
                 <p className="text-muted-foreground mt-2">
-                    Créez des filtres de mots-clés ou bloquez les GIFs pour garder le contrôle de votre communauté.
+                    Créez des filtres de mots-clés, bloquez les GIFs ou limitez le spam pour garder le contrôle de votre communauté.
                 </p>
             </div>
             
+            <Separator />
+            
+            <AntiSpamCard 
+                config={autoModConfig} 
+                roles={roles}
+                channels={channels}
+                onUpdate={(newConfig) => saveConfig('auto-moderation', newConfig)}
+            />
+
             <Separator />
             
             <GifFilterCard 
@@ -162,7 +181,7 @@ export default function AutoModerationPage() {
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight">Filtres de Mots-Clés</h2>
                      <p className="text-muted-foreground mt-1">
-                        Les messages contenant ces mots seront supprimés et un avertissement sera enregistré pour l'utilisateur.
+                        Les messages contenant ces mots seront supprimés et une sanction sera appliquée.
                     </p>
                 </div>
                 <div className="flex items-center space-x-4">
@@ -207,6 +226,84 @@ export default function AutoModerationPage() {
                 </div>
             )}
         </PageTransitionWrapper>
+    );
+}
+
+// --- AntiSpamCard ---
+function AntiSpamCard({ config, roles, channels, onUpdate }: { config: AutoModConfig, roles: DiscordRole[], channels: DiscordChannel[], onUpdate: (config: AutoModConfig) => void }) {
+    const roleOptions = roles.map(r => ({ value: r.id, label: r.name }));
+    const channelOptions = channels.map(c => ({ value: c.id, label: `# ${c.name}` }));
+
+    const antiSpamSettings = config.anti_spam_settings || { message_limit: 5, time_window_seconds: 5, action: 'warn' };
+
+    const handleSettingChange = (key: keyof typeof antiSpamSettings, value: any) => {
+        onUpdate({ ...config, anti_spam_settings: { ...antiSpamSettings, [key]: value } });
+    };
+
+    return (
+         <Card>
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2"><ShieldAlert /> Anti-Spam & Anti-Flood</CardTitle>
+                    <Switch
+                        checked={config.anti_spam_enabled ?? false}
+                        onCheckedChange={(val) => onUpdate({ ...config, anti_spam_enabled: val })}
+                    />
+                </div>
+                <CardDescription>Détectez et sanctionnez les membres qui envoient des messages trop rapidement ou de manière répétitive.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="grid md:grid-cols-3 gap-4 items-end">
+                    <div className="space-y-2">
+                        <Label>Seuil de messages</Label>
+                        <Input 
+                            type="number" 
+                            value={antiSpamSettings.message_limit}
+                            onChange={e => handleSettingChange('message_limit', parseInt(e.target.value) || 5)}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Fenêtre de temps (secondes)</Label>
+                         <Input 
+                            type="number" 
+                            value={antiSpamSettings.time_window_seconds}
+                            onChange={e => handleSettingChange('time_window_seconds', parseInt(e.target.value) || 5)}
+                        />
+                    </div>
+                     <div className="space-y-2">
+                        <Label>Action</Label>
+                        <Select value={antiSpamSettings.action} onValueChange={(val: 'delete' | 'warn') => handleSettingChange('action', val)}>
+                            <SelectTrigger><SelectValue/></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="delete">Supprimer les messages</SelectItem>
+                                <SelectItem value="warn">Avertir & Supprimer 1 message</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <Separator/>
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label>Rôles exemptés</Label>
+                        <MultiSelectCombobox
+                            options={roleOptions}
+                            selected={config.exempt_roles || []}
+                            onSelectedChange={(selected) => onUpdate({ ...config, exempt_roles: selected })}
+                            placeholder="Sélectionner des rôles..."
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Salons exemptés</Label>
+                        <MultiSelectCombobox
+                            options={channelOptions}
+                            selected={config.exempt_channels || []}
+                            onSelectedChange={(selected) => onUpdate({ ...config, exempt_channels: selected })}
+                            placeholder="Sélectionner des salons..."
+                        />
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
     );
 }
 

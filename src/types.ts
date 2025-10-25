@@ -75,6 +75,20 @@ export type DefaultConfigs = {
 
 // --- Types pour les modules spécifiques ---
 
+export interface AutoModConfig {
+    enabled: boolean;
+    rules: any[]; // Remplacez `any` par un type plus spécifique si vous le souhaitez
+    log_channel_id: string | null;
+    anti_spam_enabled?: boolean;
+    anti_spam_settings?: {
+        message_limit: number;
+        time_window_seconds: number;
+        action: 'delete' | 'warn';
+    };
+    exempt_roles?: string[];
+    exempt_channels?: string[];
+}
+
 export interface Persona {
     id: string;
     guild_id: string;

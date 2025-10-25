@@ -34,7 +34,7 @@ async function sendWebhookNotification(reason: string, logs?: string) {
     
     if (logs) {
         embed.fields.push({
-            name: 'Derniers Logs du Bot (pm2 logs bot --lines 50)',
+            name: 'Derniers Logs du Bot (pm2 logs bot --lines 140)',
             value: `\`\`\`\n${logs.substring(0, 1000)}\n\`\`\``,
         });
     }
