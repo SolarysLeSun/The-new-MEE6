@@ -12,8 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Trash2, Settings, MessageSquare, Mic, MousePointerClick, Video, Award, Gem, Shield, Handshake, AlertTriangle } from 'lucide-react';
-import type { RoleReward, XPBoost, LevelingConfig, AntiAfkConfig } from '@/types';
+import { PlusCircle, Trash2, Settings, MessageSquare, Mic, MousePointerClick, Video, Award, Gem, Shield, Handshake, AlertTriangle, ShoppingCart } from 'lucide-react';
+import type { RoleReward, XPBoost, LevelingConfig, AntiAfkConfig, ShopItem } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,6 +22,8 @@ import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
+import { v4 as uuidv4 } from 'uuid';
+
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -104,31 +106,32 @@ export default function LevelingPage() {
         saveConfig({ ...config, [key]: value });
     };
 
-    const handleListChange = useCallback(<T extends RoleReward | XPBoost>(
-        key: 'role_rewards' | 'xp_boost_roles' | 'xp_boost_channels',
+    const handleListChange = useCallback(<T extends RoleReward | XPBoost | ShopItem>(
+        key: 'role_rewards' | 'xp_boost_roles' | 'xp_boost_channels' | 'shop_items',
         index: number,
         field: keyof T,
         value: string | number
     ) => {
         if (!config) return;
-        const list = [...(config[key] as T[])];
+        const list = [...(config[key] as T[] || [])];
         (list[index] as any)[field] = value;
         handleValueChange(key, list);
     }, [config]);
     
-    const addListItem = useCallback((key: 'role_rewards' | 'xp_boost_roles' | 'xp_boost_channels') => {
+    const addListItem = useCallback((key: 'role_rewards' | 'xp_boost_roles' | 'xp_boost_channels' | 'shop_items') => {
         if (!config) return;
-        const list = [...(config[key] as any[])];
+        const list = [...(config[key] as any[] || [])];
         let newItem: any = {};
         if (key === 'role_rewards') newItem = { level: 1, role_id: '' };
         if (key === 'xp_boost_roles') newItem = { role_id: '', multiplier: 1.5 };
         if (key === 'xp_boost_channels') newItem = { channel_id: '', multiplier: 1.5 };
+        if (key === 'shop_items') newItem = { id: uuidv4(), name: 'Nouvel Article', description: '', price: 100, type: 'custom', reward_id: '' };
         handleValueChange(key, [...list, newItem]);
     }, [config]);
     
-    const removeListItem = useCallback((key: 'role_rewards' | 'xp_boost_roles' | 'xp_boost_channels', index: number) => {
+    const removeListItem = useCallback((key: 'role_rewards' | 'xp_boost_roles' | 'xp_boost_channels' | 'shop_items', index: number) => {
         if (!config) return;
-        const list = [...(config[key] as any[])];
+        const list = [...(config[key] as any[] || [])];
         list.splice(index, 1);
         handleValueChange(key, list);
     }, [config]);
@@ -209,9 +212,10 @@ export default function LevelingPage() {
         </Card>
 
         <Tabs defaultValue="gains">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
                 <TabsTrigger value="gains">Gains d'XP</TabsTrigger>
                 <TabsTrigger value="recompenses">Récompenses & Boosts</TabsTrigger>
+                <TabsTrigger value="boutique">Boutique</TabsTrigger>
                 <TabsTrigger value="personnalisation">Personnalisation</TabsTrigger>
                 <TabsTrigger value="commandes">Commandes</TabsTrigger>
             </TabsList>
@@ -264,7 +268,7 @@ export default function LevelingPage() {
                             <CardDescription>Attribuez des rôles automatiquement lorsque les membres atteignent un certain niveau.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4 flex-grow">
-                            {config.role_rewards.map((reward, index) => (
+                            {(config.role_rewards || []).map((reward, index) => (
                                 <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
                                     <div className="w-full sm:w-24">
                                         <Label className="text-xs">Niveau</Label>
@@ -288,11 +292,11 @@ export default function LevelingPage() {
                              <CardDescription>Donnez plus d'XP aux membres ayant certains rôles ou parlant dans certains salons.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4 flex-grow">
-                             {config.xp_boost_roles.map((boost, index) => (
+                             {(config.xp_boost_roles || []).map((boost, index) => (
                                 <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
                                     <div className="flex-1">
                                          <Label className="text-xs">Rôle</Label>
-                                         <Combobox options={roleOptions} value={boost.role_id} onChange={val => handleListChange('xp_boost_roles', index, 'role_id', val)} placeholder="Sélectionner un rôle..." />
+                                         <Combobox options={roleOptions} value={boost.role_id || ''} onChange={val => handleListChange('xp_boost_roles', index, 'role_id', val)} placeholder="Sélectionner un rôle..." />
                                     </div>
                                     <div className="w-full sm:w-28">
                                         <Label className="text-xs">Multiplicateur</Label>
@@ -301,11 +305,11 @@ export default function LevelingPage() {
                                     <Button variant="ghost" size="icon" className="shrink-0" onClick={() => removeListItem('xp_boost_roles', index)}><Trash2 className="text-destructive"/></Button>
                                 </div>
                             ))}
-                             {config.xp_boost_channels.map((boost, index) => (
+                             {(config.xp_boost_channels || []).map((boost, index) => (
                                 <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
                                      <div className="flex-1">
                                          <Label className="text-xs">Salon</Label>
-                                        <Combobox options={allChannelOptions} value={boost.channel_id} onChange={val => handleListChange('xp_boost_channels', index, 'channel_id', val)} placeholder="Sélectionner un salon..." />
+                                        <Combobox options={allChannelOptions} value={boost.channel_id || ''} onChange={val => handleListChange('xp_boost_channels', index, 'channel_id', val)} placeholder="Sélectionner un salon..." />
                                     </div>
                                      <div className="w-full sm:w-28">
                                         <Label className="text-xs">Multiplicateur</Label>
@@ -328,6 +332,80 @@ export default function LevelingPage() {
                         </CardContent>
                     </Card>
                 </div>
+            </TabsContent>
+            
+            <TabsContent value="boutique">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><ShoppingCart /> Boutique d'XP</CardTitle>
+                        <CardDescription>Permettez à vos membres d'échanger leur XP contre des récompenses.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="shop-enabled" className="font-semibold">Activer la boutique</Label>
+                            <Switch id="shop-enabled" checked={config.shop_enabled ?? false} onCheckedChange={(val) => handleValueChange('shop_enabled', val)} />
+                        </div>
+                        <Separator />
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Salon de notification des achats</Label>
+                                <Combobox options={textChannelOptions} value={config.shop_notification_channel_id || ''} onChange={(val) => handleValueChange('shop_notification_channel_id', val)} placeholder="Aucun" />
+                            </div>
+                             <div className="space-y-2">
+                                <Label>Rôle à mentionner</Label>
+                                <Combobox options={roleOptions} value={config.shop_notification_role_id || ''} onChange={(val) => handleValueChange('shop_notification_role_id', val)} placeholder="Aucun" />
+                            </div>
+                        </div>
+                         <Separator />
+                         <div>
+                            <h3 className="text-lg font-semibold mb-2">Articles de la Boutique</h3>
+                            <div className="space-y-4">
+                                {(config.shop_items || []).map((item, index) => (
+                                    <div key={item.id} className="p-4 border rounded-lg bg-card-foreground/5 space-y-3">
+                                        <div className="flex justify-between items-start">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-grow">
+                                                <div className="space-y-1">
+                                                    <Label>Nom d'affichage</Label>
+                                                    <Input value={item.name} placeholder="Ex: Rôle VIP" onChange={e => handleListChange('shop_items', index, 'name', e.target.value)} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label>ID unique (pour /acheter)</Label>
+                                                    <Input value={item.id} placeholder="Ex: vip-role" onChange={e => handleListChange('shop_items', index, 'id', e.target.value)} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label>Prix (XP)</Label>
+                                                    <Input type="number" value={item.price} placeholder="Ex: 10000" onChange={e => handleListChange('shop_items', index, 'price', parseInt(e.target.value))} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label>Description</Label>
+                                                    <Input value={item.description} placeholder="Ex: Donne accès aux salons VIP" onChange={e => handleListChange('shop_items', index, 'description', e.target.value)} />
+                                                </div>
+                                                 <div className="space-y-1">
+                                                    <Label>Type de récompense</Label>
+                                                    <Select value={item.type} onValueChange={(val: 'role'|'custom') => handleListChange('shop_items', index, 'type', val)}>
+                                                        <SelectTrigger><SelectValue/></SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="custom">Personnalisé (notification)</SelectItem>
+                                                            <SelectItem value="role">Rôle Automatique</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                 <div className="space-y-1">
+                                                    <Label>Récompense (ID de rôle)</Label>
+                                                    <Combobox options={roleOptions} value={item.reward_id} onChange={(val) => handleListChange('shop_items', index, 'reward_id', val)} placeholder="Choisir un rôle..." disabled={item.type !== 'role'} />
+                                                </div>
+                                            </div>
+                                             <Button variant="ghost" size="icon" onClick={() => removeListItem('shop_items', index)}><Trash2 className="text-destructive"/></Button>
+                                        </div>
+                                    </div>
+                                ))}
+                                <Button variant="outline" className="w-full" onClick={() => addListItem('shop_items')}>
+                                    <PlusCircle className="mr-2"/> Ajouter un article
+                                </Button>
+                            </div>
+                         </div>
+                    </CardContent>
+                </Card>
             </TabsContent>
 
             <TabsContent value="personnalisation">
