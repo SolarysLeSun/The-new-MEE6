@@ -42,7 +42,7 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
         },
     ].filter(u => u.displayName !== 'N/A');
 
-    const backgroundUrl = searchParams.get('backgroundUrl');
+    const backgroundUrl = searchParams.get('backgroundUrl') || 'https://nightproject.nationquest.fr/levelbw.jpg';
     const serverName = searchParams.get('serverName') || 'Serveur';
 
     const width = 1000;
