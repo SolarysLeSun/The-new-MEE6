@@ -369,3 +369,11 @@ export interface UserChallengeProgress {
     progress: number;
     completed: boolean;
 }
+
+export interface ActivityStat {
+    id: number;
+    guild_id: string;
+    timestamp: string;
+    message_count: number;
+    voice_member_count: number;
+}
