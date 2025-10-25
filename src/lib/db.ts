@@ -689,7 +689,12 @@ const defaultConfigs: DefaultConfigs = {
         command_permissions: {},
         partner_role: null,
         partner_rewards: [],
-    }
+    },
+    'giveaways': {
+        enabled: false,
+        premium: true,
+        command_permissions: {},
+    },
 };
 
 export function initializeDatabase() {
@@ -1678,4 +1683,3 @@ export function terminatePartnership(partnershipId: string): { success: boolean;
     return { success: true, message: "Le partenariat a été terminé." };
 }
   
-```

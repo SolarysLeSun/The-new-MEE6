@@ -53,7 +53,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useEffect, useState } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from './ui/skeleton';
 import { useServerInfo } from '@/hooks/use-server-info';
 import GradientText from './ui/gradient-text';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -73,7 +73,7 @@ export const navCategories = [
             { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages, isPremium: true, keywords: ['translate', 'multilingue', 'langue'] },
             { href: 'niveaux', label: 'Niveaux & XP', icon: Award, keywords: ['levels', 'rank', 'classement', 'exp', 'expérience', 'récompenses', 'topxp', 'podium'] },
             { href: 'parrainage', label: 'Parrainage', icon: Gift, keywords: ['récompense', 'premium', 'inviter', 'code'] },
-            { href: 'partenariats', label: 'Partenariats', icon: Handshake, isDisabled: true, keywords: ['partenaires', 'collaboration', 'pub'] },
+            { href: 'partenariats', label: 'Partenariats', icon: Handshake, keywords: ['partenaires', 'collaboration', 'pub'] },
         ]
     },
     {
@@ -114,6 +114,7 @@ export const navCategories = [
         items: [
             { href: 'commandes-fun', label: 'Commandes Fun', icon: Dice5, keywords: ['renameall', 'mutemass', 'reactbomb', 'react', 'randomnickname'] },
             { href: 'roue-de-la-fortune', label: 'Roue de la Fortune', icon: Dices, keywords: ['tirage', 'giveaway', 'roue', 'fortune', 'aléatoire'] },
+            { href: 'giveaways', label: 'Giveaways (Concours)', icon: Gift, isPremium: true, isDisabled: true, keywords: ['giveaway', 'concours', 'tirage au sort'] },
             { href: 'creation-amitie', label: "Création d'Amitié", icon: Users, isPremium: true, isDisabled: true, keywords: ['amitié', 'relation', 'affinité', 'lien'] },
         ]
     },
