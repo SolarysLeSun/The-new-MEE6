@@ -3,7 +3,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType, DiscordAPIError } from 'discord.js';
-import { updateServerConfig, getServerConfig, getAllBotServers, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem, getApiKeyInfo } from '@/lib/db';
+import { updateServerConfig, getServerConfig, getAllBotServers, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem, getApiKeyInfo, getPartnerships, requestPartnership, acceptPartnership, terminatePartnership } from '@/lib/db';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { updateGuildCommands } from './handlers/commandHandler';
@@ -721,6 +721,58 @@ export function startApi(client: Client) {
         } catch (error) {
             console.error('[API] Erreur lors de l\'envoi du rapport de problème :', error);
             res.status(500).json({ error: 'Impossible d\'envoyer le rapport au propriétaire du bot.' });
+        }
+    });
+
+    // --- Partnership API ---
+    app.get('/api/partnerships/:guildId', async (req, res) => {
+        const { guildId } = req.params;
+        try {
+            const partnerships = await getPartnerships(guildId, client);
+            res.status(200).json(partnerships);
+        } catch (error) {
+            res.status(500).json({ error: "Failed to fetch partnerships." });
+        }
+    });
+
+    app.post('/api/partnerships/request', async (req, res) => {
+        const { guild1_id, guild2_id, duration_months } = req.body;
+        if (!guild1_id || !guild2_id) {
+            return res.status(400).json({ error: "Both guild IDs are required."});
+        }
+        try {
+            const result = await requestPartnership({ guild1_id, guild2_id, duration_months }, client);
+            if (result.success) {
+                res.status(201).json(result);
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error) {
+            res.status(500).json({ success: false, message: "Internal server error."});
+        }
+    });
+
+    app.post('/api/partnerships/accept/:partnershipId', async (req, res) => {
+        const { partnershipId } = req.params;
+        try {
+            const result = await acceptPartnership(partnershipId, client);
+             if (result.success) {
+                res.status(200).json(result);
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error) {
+             res.status(500).json({ success: false, message: "Internal server error."});
+        }
+    });
+    
+    app.post('/api/partnerships/terminate/:partnershipId', async (req, res) => {
+        const { partnershipId } = req.params;
+        try {
+            const result = terminatePartnership(partnershipId);
+            res.status(200).json(result);
+        } catch (error) {
+            res.status(500).json({ success: false, message: "Internal server error."});
         }
     });
 

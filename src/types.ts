@@ -319,3 +319,17 @@ export interface TicketsConfig {
     command_permissions: { [key: string]: string | null };
 }
   
+export interface Partnership {
+    id: string;
+    guild1_id: string;
+    guild2_id: string;
+    status: 'pending' | 'accepted' | 'denied' | 'terminated';
+    requested_at: string;
+    accepted_at: string | null;
+    expires_at: string | null;
+    // For UI display
+    guild1_name?: string;
+    guild1_icon?: string | null;
+    guild2_name?: string;
+    guild2_icon?: string | null;
+}
