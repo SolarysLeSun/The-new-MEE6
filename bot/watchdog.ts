@@ -4,6 +4,7 @@ import fetch from 'node-fetch';
 import { exec } from 'child_process';
 import dotenv from 'dotenv';
 import path from 'path';
+import FormData from 'form-data';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
@@ -31,26 +32,28 @@ async function sendWebhookNotification(reason: string, logs?: string) {
         ],
         timestamp: new Date().toISOString(),
     };
-    
+
+    const formData = new FormData();
+    formData.append('payload_json', JSON.stringify({
+        content: `<@${OWNER_ID_TO_PING}>, le bot a redémarré.`,
+        embeds: [embed],
+    }));
+
     if (logs) {
-        embed.fields.push({
-            name: 'Derniers Logs du Bot (pm2 logs bot --lines 140)',
-            value: `\`\`\`\n${logs.substring(0, 1000)}\n\`\`\``,
+        formData.append('file1', Buffer.from(logs), {
+            contentType: 'text/plain',
+            filename: 'logs.txt',
         });
     }
 
     try {
         await fetch(WEBHOOK_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                content: `<@${OWNER_ID_TO_PING}>`,
-                embeds: [embed],
-            }),
+            body: formData,
         });
          console.log(`[${new Date().toISOString()}] [Watchdog] Notification de redémarrage envoyée sur Discord.`);
     } catch (error) {
-        console.error(`[${new Date().toISOString()}] [Watchdog] Impossible d\'envoyer la notification webhook:`, error);
+        console.error(`[${new Date().toISOString()}] [Watchdog] Impossible d'envoyer la notification webhook:`, error);
     }
 }
 
