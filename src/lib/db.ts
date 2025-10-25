@@ -3,8 +3,8 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile, RoadmapItem } from '../types';
+import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder, TextChannel } from 'discord.js';
+import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile, RoadmapItem, Partnership } from '../types';
 import { randomBytes } from 'crypto';
 import ms from 'ms';
 
@@ -211,6 +211,18 @@ const upgradeSchema = () => {
         `);
         console.log('[Database] Table "api_bans" is ready.');
 
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS partnerships (
+                id TEXT PRIMARY KEY,
+                guild1_id TEXT NOT NULL,
+                guild2_id TEXT NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('pending', 'accepted', 'denied', 'terminated')),
+                requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                accepted_at DATETIME,
+                expires_at DATETIME
+            );
+        `);
+        console.log('[Database] Table "partnerships" is ready.');
 
         // Drop deprecated tables
         db.exec(`DROP TABLE IF EXISTS ai_personas;`);
@@ -672,8 +684,11 @@ const defaultConfigs: DefaultConfigs = {
         channel_format: '📊 Membres : {membres}',
     },
     'partnership': {
-        enabled: false,
+        enabled: true,
         premium: true,
+        command_permissions: {},
+        partner_role: null,
+        partner_rewards: [],
     }
 };
 
@@ -1130,23 +1145,23 @@ export async function applyReferral(referralCode: string, referredGuildId: strin
 
 // --- Delegated Permissions ---
 
-export function grantPermission(userId: string, permissionKey: 'genpremium' | 'botrestart', grantedBy: string): void {
+export function grantPermission(userId: string, permissionKey: 'genpremium' | 'botrestart' | 'system', grantedBy: string): void {
     const stmt = db.prepare('INSERT OR REPLACE INTO delegated_permissions (user_id, permission_key, granted_by) VALUES (?, ?, ?)');
     stmt.run(userId, permissionKey, grantedBy);
 }
 
-export function revokePermission(userId: string, permissionKey: 'genpremium' | 'botrestart'): void {
+export function revokePermission(userId: string, permissionKey: 'genpremium' | 'botrestart' | 'system'): void {
     const stmt = db.prepare('DELETE FROM delegated_permissions WHERE user_id = ? AND permission_key = ?');
     stmt.run(userId, permissionKey);
 }
 
-export function hasPermission(userId: string, permissionKey: 'genpremium' | 'botrestart'): boolean {
+export function hasPermission(userId: string, permissionKey: 'genpremium' | 'botrestart' | 'system'): boolean {
     const stmt = db.prepare('SELECT 1 FROM delegated_permissions WHERE user_id = ? AND permission_key = ?');
     const result = stmt.get(userId, permissionKey);
     return !!result;
 }
 
-export function getDelegatedUsersForPermission(permissionKey: 'genpremium' | 'botrestart'): string[] {
+export function getDelegatedUsersForPermission(permissionKey: 'genpremium' | 'botrestart' | 'system'): string[] {
     const stmt = db.prepare('SELECT user_id FROM delegated_permissions WHERE permission_key = ?');
     const rows = stmt.all(permissionKey) as { user_id: string }[];
     return rows.map(row => row.user_id);
@@ -1533,8 +1548,134 @@ export function removeApiBan(userId: string) {
 export function listApiBans(): { user_id: string, reason: string | null }[] {
     return db.prepare('SELECT user_id, reason FROM api_bans').all() as any;
 }
+
+// --- Partnership System ---
+
+export function getPartnerships(guildId: string, client: Client): Promise<Partnership[]> {
+    const stmt = db.prepare('SELECT * FROM partnerships WHERE guild1_id = ? OR guild2_id = ?');
+    const partnerships = stmt.all(guildId, guildId) as Partnership[];
+    
+    return Promise.all(partnerships.map(async (p) => {
+        try {
+            const g1 = await client.guilds.fetch(p.guild1_id);
+            const g2 = await client.guilds.fetch(p.guild2_id);
+            return {
+                ...p,
+                guild1_name: g1.name,
+                guild1_icon: g1.iconURL(),
+                guild2_name: g2.name,
+                guild2_icon: g2.iconURL(),
+            };
+        } catch(e) {
+            console.error(`Could not fetch guild details for partnership ${p.id}`, e);
+            // Return with at least the names we have, to avoid crashing the UI
+            return {
+                ...p,
+                guild1_name: "Serveur Inconnu",
+                guild1_icon: null,
+                guild2_name: "Serveur Inconnu",
+                guild2_icon: null
+            };
+        }
+    }));
+}
+
+export async function requestPartnership(
+    { guild1_id, guild2_id, duration_months }: { guild1_id: string; guild2_id: string; duration_months?: number },
+    client: Client
+): Promise<{ success: boolean; message: string }> {
+
+    if (guild1_id === guild2_id) {
+        return { success: false, message: 'Un serveur ne peut pas être partenaire avec lui-même.' };
+    }
+
+    const existingStmt = db.prepare(`
+        SELECT 1 FROM partnerships 
+        WHERE (guild1_id = ? AND guild2_id = ?) OR (guild1_id = ? AND guild2_id = ?)
+    `);
+    if (existingStmt.get(guild1_id, guild2_id, guild2_id, guild1_id)) {
+        return { success: false, message: 'Une demande de partenariat existe déjà avec ce serveur.' };
+    }
+
+    try {
+        const guild2 = await client.guilds.fetch(guild2_id);
+        const owner2 = await guild2.fetchOwner();
+        
+        const guild1 = await client.guilds.fetch(guild1_id);
+
+        const id = randomBytes(8).toString('hex');
+        const expires_at = duration_months ? new Date(Date.now() + ms(`${duration_months}mo`)) : null;
+
+        const stmt = db.prepare(`
+            INSERT INTO partnerships (id, guild1_id, guild2_id, status, expires_at)
+            VALUES (?, ?, ?, 'pending', ?)
+        `);
+        stmt.run(id, guild1_id, guild2_id, expires_at?.toISOString());
+        
+        const embed = new EmbedBuilder()
+            .setTitle('🤝 Nouvelle Demande de Partenariat')
+            .setDescription(`Le serveur **${guild1.name}** souhaite établir un partenariat avec votre serveur **${guild2.name}**.\n\nPour accepter, veuillez vous rendre sur le panel de votre serveur dans la section "Partenariats".`)
+            .setColor(0x5865F2)
+            .setTimestamp();
+        
+        await owner2.send({ embeds: [embed] });
+
+        return { success: true, message: 'Demande de partenariat envoyée avec succès.' };
+    } catch (error) {
+        console.error("Error requesting partnership:", error);
+        return { success: false, message: "Impossible de trouver le serveur ou son propriétaire. Vérifiez l'ID." };
+    }
+}
+
+export async function acceptPartnership(partnershipId: string, client: Client): Promise<{ success: boolean; message: string }> {
+    const stmt = db.prepare('UPDATE partnerships SET status = ?, accepted_at = CURRENT_TIMESTAMP WHERE id = ? AND status = ?');
+    const result = stmt.run('accepted', partnershipId, 'pending');
+
+    if (result.changes === 0) {
+        return { success: false, message: "Aucune demande en attente trouvée pour cet ID." };
+    }
+    
+    // --- Announce on both servers ---
+    const partnership = db.prepare('SELECT * FROM partnerships WHERE id = ?').get(partnershipId) as Partnership;
+    if (partnership) {
+        try {
+            const guild1 = await client.guilds.fetch(partnership.guild1_id);
+            const guild2 = await client.guilds.fetch(partnership.guild2_id);
+
+            const announcementConfig1 = getServerConfig(guild1.id, 'announcements');
+            const announcementConfig2 = getServerConfig(guild2.id, 'announcements');
+            
+            const makeAnnouncement = async (guild: Guild, partnerGuild: Guild, config: any) => {
+                const channelId = config?.announcement_channel_id;
+                if (!channelId) return;
+                const channel = await guild.channels.fetch(channelId).catch(() => null) as TextChannel;
+                if (channel) {
+                     const embed = new EmbedBuilder()
+                        .setTitle(`🎉 Nouveau Partenariat ! 🎉`)
+                        .setDescription(`Nous sommes ravis d'annoncer notre nouveau partenariat avec le serveur **${partnerGuild.name}** !\n\n*${partnerGuild.description || 'Allez découvrir leur communauté !'}*`)
+                        .setThumbnail(partnerGuild.iconURL())
+                        .setColor(0xFFD700)
+                        .setTimestamp();
+                    await channel.send({ embeds: [embed] });
+                }
+            };
+            
+            await makeAnnouncement(guild1, guild2, announcementConfig1);
+            await makeAnnouncement(guild2, guild1, announcementConfig2);
+
+        } catch (e) {
+            console.error("Failed to send partnership announcement:", e);
+        }
+    }
+
+
+    return { success: true, message: "Partenariat accepté et annoncé !" };
+}
+
+export function terminatePartnership(partnershipId: string): { success: boolean; message: string } {
+    const stmt = db.prepare('UPDATE partnerships SET status = ? WHERE id = ?');
+    stmt.run('terminated', partnershipId);
+    return { success: true, message: "Le partenariat a été terminé." };
+}
   
-
-
-
-
+```

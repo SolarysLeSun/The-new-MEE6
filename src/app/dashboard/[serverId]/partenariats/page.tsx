@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Handshake, Loader2, PlusCircle, Check, X, Send } from 'lucide-react';
+import { Handshake, Loader2, PlusCircle, Check, X, Send, Crown, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { Partnership } from '@/types';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -104,7 +105,10 @@ export default function PartnershipsPage() {
     const handleAccept = async (partnershipId: string) => {
         try {
             const res = await fetch(`${API_URL}/partnerships/accept/${partnershipId}`, { method: 'POST' });
-            if (!res.ok) throw new Error("Impossible d'accepter le partenariat.");
+             if (!res.ok) {
+                 const errorData = await res.json();
+                 throw new Error(errorData.message || "Impossible d'accepter le partenariat.");
+             }
             toast({ title: "Succès", description: "Partenariat accepté !" });
             fetchPartnerships();
         } catch (error: any) {
@@ -182,6 +186,14 @@ export default function PartnershipsPage() {
                     </Card>
                 </div>
             )}
+
+            <Alert>
+                <Handshake className="h-4 w-4" />
+                <AlertTitle>Prochainement...</AlertTitle>
+                <AlertDescription>
+                    La configuration des rôles à donner aux partenaires et aux membres des serveurs partenaires sera bientôt disponible ici.
+                </AlertDescription>
+            </Alert>
         </PageTransitionWrapper>
     );
 }
@@ -226,7 +238,21 @@ function PartnershipCard({ partnership, currentGuildId, onAccept, onTerminate }:
                     )}
                 </div>
             </CardContent>
+             {partnership.status === 'accepted' && (
+                <CardContent className="border-t border-border/50 pt-4 space-y-4">
+                    <h4 className="font-semibold">Options du Partenariat</h4>
+                    <div className="space-y-2 opacity-50">
+                         <Label>Rôle à donner aux membres du serveur partenaire</Label>
+                         <p className="text-xs text-muted-foreground">Bientôt disponible.</p>
+                    </div>
+                    <div className="space-y-2 opacity-50">
+                         <Label>Rôle à donner au staff du serveur partenaire</Label>
+                          <p className="text-xs text-muted-foreground">Bientôt disponible.</p>
+                    </div>
+                </CardContent>
+            )}
         </Card>
     );
 }
 
+```
