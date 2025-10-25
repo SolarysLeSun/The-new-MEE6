@@ -1,11 +1,13 @@
 
 
 import { Events, GuildMember, EmbedBuilder, TextChannel } from 'discord.js';
-import { getServerConfig } from '../../../src/lib/db';
+import { getServerConfig, recordMemberMovement } from '../../../src/lib/db';
 
 export const name = Events.GuildMemberAdd;
 
 export async function execute(member: GuildMember) {
+    recordMemberMovement(member.guild.id, member.id, 'join');
+    
     const config = await getServerConfig(member.guild.id, 'logs');
     if (!config?.enabled || !config.log_settings?.members?.enabled) return;
     

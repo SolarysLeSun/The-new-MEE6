@@ -69,5 +69,5 @@ export async function execute(message: Message) {
     }
     xpToGive *= highestRoleMultiplier;
 
-    updateUserXP(message.author.id, message.guild.id, Math.round(xpToGive));
+    updateUserXP(message.author.id, message.guild.id, Math.round(xpToGive), 'add');
 }

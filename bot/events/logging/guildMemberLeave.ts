@@ -7,7 +7,7 @@ export const name = Events.GuildMemberRemove;
 
 export async function execute(member: GuildMember) {
     recordMemberMovement(member.guild.id, member.id, 'leave');
-
+    
     const config = await getServerConfig(member.guild.id, 'logs');
     if (!config?.enabled || !config.log_settings?.members?.enabled) return;
 

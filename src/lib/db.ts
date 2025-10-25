@@ -3,7 +3,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder, TextChannel } from 'discord.js';
+import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder, TextChannel, AuditLogEvent } from 'discord.js';
 import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile, RoadmapItem, Partnership, Giveaway, DailyChallenge, UserChallengeProgress, ActivityStat } from '../types';
 import { randomBytes } from 'crypto';
 import ms from 'ms';
@@ -56,6 +56,7 @@ const upgradeSchema = () => {
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
+        db.exec('CREATE INDEX IF NOT EXISTS idx_sanction_history_guild_time ON sanction_history (guild_id, timestamp);');
         console.log('[Database] La table "sanction_history" est prête.');
         
         const configColumns = db.pragma('table_info(server_configs)') as any[];
@@ -279,6 +280,18 @@ const upgradeSchema = () => {
         `);
         db.exec('CREATE INDEX IF NOT EXISTS idx_activity_stats_guild_time ON activity_stats (guild_id, timestamp);');
         console.log('[Database] Table "activity_stats" is ready.');
+        
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS member_movements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                type TEXT NOT NULL CHECK(type IN ('join', 'leave')),
+                timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        db.exec('CREATE INDEX IF NOT EXISTS idx_member_movements_guild_time ON member_movements (guild_id, timestamp);');
+        console.log('[Database] Table "member_movements" is ready.');
 
 
         // Drop deprecated tables
@@ -773,6 +786,40 @@ export function initializeDatabase() {
     upgradeSchema(); // Ensure all tables are created/updated
     console.log('[Database] Initialisation de la base de données terminée.');
 }
+
+// --- Community Analysis ---
+export function getCommunityRatios(guildId: string, client: Client): { activeMemberPercentage: number, joinLeaveRatio: { joins: number, leaves: number } } {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    // 1. Active members
+    const activeUsersStmt = db.prepare(`
+        SELECT COUNT(DISTINCT user_id) as count
+        FROM user_levels
+        WHERE guild_id = ? AND last_message_timestamp >= ?
+    `);
+    const activeResult = activeUsersStmt.get(guildId, since) as { count: number };
+    const activeCount = activeResult?.count || 0;
+
+    const guild = client.guilds.cache.get(guildId);
+    const totalMembers = guild?.memberCount || 1;
+    const activeMemberPercentage = totalMembers > 0 ? (activeCount / totalMembers) * 100 : 0;
+
+    // 2. Joins and Leaves
+    const joinStmt = db.prepare(`SELECT COUNT(*) as count FROM member_movements WHERE guild_id = ? AND type = 'join' AND timestamp >= ?`);
+    const joinsResult = joinStmt.get(guildId, since) as { count: number };
+
+    const leaveStmt = db.prepare(`SELECT COUNT(*) as count FROM member_movements WHERE guild_id = ? AND type = 'leave' AND timestamp >= ?`);
+    const leavesResult = leaveStmt.get(guildId, since) as { count: number };
+
+    return {
+        activeMemberPercentage,
+        joinLeaveRatio: {
+            joins: joinsResult?.count || 0,
+            leaves: leavesResult?.count || 0
+        }
+    };
+}
+
 
 // --- Activity Stats ---
 export function recordActivityStat(guildId: string, messageCount: number, voiceMemberCount: number) {
@@ -1497,9 +1544,9 @@ export const updateUserXP = db.transaction((userId: string, guildId: string, amo
     }
 
     const upsertStmt = db.prepare(`
-        INSERT INTO user_levels (user_id, guild_id, xp, level)
-        VALUES (?, ?, ?, 0)
-        ON CONFLICT(user_id, guild_id) DO UPDATE SET xp = ?;
+        INSERT INTO user_levels (user_id, guild_id, xp, level, last_message_timestamp)
+        VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id, guild_id) DO UPDATE SET xp = ?, last_message_timestamp = CURRENT_TIMESTAMP;
     `);
     upsertStmt.run(userId, guildId, newXp, newXp);
 
@@ -1878,4 +1925,10 @@ export function getActiveGiveaways(): Giveaway[] {
 export function endGiveaway(id: string) {
     const stmt = db.prepare("UPDATE giveaways SET status = 'ended' WHERE id = ?");
     stmt.run(id);
+}
+
+// --- Member Movements ---
+export function recordMemberMovement(guildId: string, userId: string, type: 'join' | 'leave'): void {
+    const stmt = db.prepare(`INSERT INTO member_movements (guild_id, user_id, type) VALUES (?, ?, ?)`);
+    stmt.run(guildId, userId, type);
 }

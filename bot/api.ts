@@ -2,8 +2,8 @@
 
 import express from 'express';
 import cors from 'cors';
-import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType, DiscordAPIError } from 'discord.js';
-import { updateServerConfig, getServerConfig, getAllBotServers, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem, getApiKeyInfo, getPartnerships, requestPartnership, acceptPartnership, terminatePartnership } from '@/lib/db';
+import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType, DiscordAPIError, AuditLogEvent } from 'discord.js';
+import { updateServerConfig, getServerConfig, getAllBotServers, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem, getApiKeyInfo, getPartnerships, requestPartnership, acceptPartnership, terminatePartnership, getActivityStats, getCommunityRatios } from '@/lib/db';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { updateGuildCommands } from './handlers/commandHandler';
@@ -775,6 +775,30 @@ export function startApi(client: Client) {
             res.status(500).json({ success: false, message: "Internal server error."});
         }
     });
+    
+    // --- Community Analysis API ---
+    app.get('/api/activity-stats/:guildId', async (req, res) => {
+        const { guildId } = req.params;
+        const { hours = '24' } = req.query;
+        try {
+            const data = getActivityStats(guildId, parseInt(hours as string, 10));
+            res.status(200).json(data);
+        } catch (error) {
+            res.status(500).json({ error: "Failed to fetch activity stats." });
+        }
+    });
+    
+    app.get('/api/community-ratios/:guildId', async (req, res) => {
+        const { guildId } = req.params;
+        try {
+            const data = getCommunityRatios(guildId, client);
+            res.status(200).json(data);
+        } catch (error) {
+            console.error('[API] Error fetching community ratios:', error);
+            res.status(500).json({ error: "Failed to fetch community ratios." });
+        }
+    });
+
 
     // --- Public API Endpoints ---
 

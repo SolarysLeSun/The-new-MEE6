@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -7,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Wrench, BarChart2, Users, MessageSquare, Loader2 } from 'lucide-react';
+import { Wrench, BarChart2, Users, MessageSquare, Loader2, ArrowUp, ArrowDown } from 'lucide-react';
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { useServerInfo } from '@/hooks/use-server-info';
@@ -24,6 +25,14 @@ interface ActivityStat {
     message_count: number;
     voice_member_count: number;
 }
+interface RatiosData {
+    activeMemberPercentage: number;
+    joinLeaveRatio: {
+        joins: number;
+        leaves: number;
+    };
+}
+
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -71,19 +80,25 @@ function CommunityAnalysisContent({ isPremium }: { isPremium: boolean }) {
     const serverId = params.serverId as string;
     const { toast } = useToast();
     const [activityData, setActivityData] = useState<ActivityStat[]>([]);
+    const [ratiosData, setRatiosData] = useState<RatiosData | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!serverId || !isPremium) return;
         const fetchData = async () => {
-            setLoading(true);
             try {
-                const response = await fetch(`${API_URL}/activity-stats/${serverId}`);
-                if (!response.ok) {
-                    throw new Error("Impossible de récupérer les statistiques d'activité.");
-                }
-                const data = await response.json();
-                setActivityData(data);
+                const [activityRes, ratiosRes] = await Promise.all([
+                    fetch(`${API_URL}/activity-stats/${serverId}`),
+                    fetch(`${API_URL}/community-ratios/${serverId}`)
+                ]);
+                if (!activityRes.ok) throw new Error("Impossible de récupérer les statistiques d'activité.");
+                if (!ratiosRes.ok) throw new Error("Impossible de récupérer les ratios communautaires.");
+
+                const activityData = await activityRes.json();
+                const ratiosData = await ratiosRes.json();
+                setActivityData(activityData);
+                setRatiosData(ratiosData);
+
             } catch (error: any) {
                 toast({ title: "Erreur", description: error.message, variant: "destructive" });
             } finally {
@@ -104,89 +119,99 @@ function CommunityAnalysisContent({ isPremium }: { isPremium: boolean }) {
 
     return (
         <PremiumFeatureWrapper isPremium={isPremium}>
-            <Alert>
-                <Wrench className="h-4 w-4" />
-                <AlertTitle>Données en cours de collecte</AlertTitle>
-                <AlertDescription>
-                Ce module vient d'être activé. Les données d'activité de votre serveur sont en cours de collecte et apparaîtront progressivement sur les graphiques ci-dessous. Le graphique sera complet après 24h.
-                </AlertDescription>
-            </Alert>
+            <PageTransitionWrapper className="space-y-8">
+                <Alert>
+                    <Wrench className="h-4 w-4" />
+                    <AlertTitle>Données en cours de collecte</AlertTitle>
+                    <AlertDescription>
+                    Ce module vient d'être activé. Les données d'activité de votre serveur sont en cours de collecte et apparaîtront progressivement. Les graphiques et ratios seront complets après 24h.
+                    </AlertDescription>
+                </Alert>
+                
+                <div className="grid md:grid-cols-2 gap-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><Users /> Ratios Clés (24h)</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {loading ? <Skeleton className="h-16 w-full"/> : (
+                                <>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-muted-foreground">Taux de membres actifs</span>
+                                        <span className="font-bold text-2xl text-primary">{ratiosData?.activeMemberPercentage.toFixed(1) ?? '--'}%</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-muted-foreground">Ratio arrivées / départs</span>
+                                        <div className="flex items-center gap-4">
+                                            <span className="font-bold text-lg text-green-400 flex items-center gap-1"><ArrowUp/>{ratiosData?.joinLeaveRatio.joins ?? '--'}</span>
+                                            <span className="font-bold text-lg text-red-400 flex items-center gap-1"><ArrowDown/>{ratiosData?.joinLeaveRatio.leaves ?? '--'}</span>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
+                    <Card className="opacity-50">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><MessageSquare /> Top Salons (24h)</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-muted-foreground">
+                             <p># ...</p>
+                        </CardContent>
+                    </Card>
+                </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Activité sur les dernières 24 heures</CardTitle>
-                    <CardDescription>Aperçu du volume de messages et de l'activité vocale.</CardDescription>
-                </CardHeader>
-                <CardContent className="h-[350px] w-full">
-                    {loading ? (
-                        <div className="w-full h-full flex items-center justify-center">
-                            <Loader2 className="animate-spin text-primary w-8 h-8"/>
-                        </div>
-                    ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={formattedData}>
-                                <defs>
-                                    <linearGradient id="colorMessages" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                                    </linearGradient>
-                                    <linearGradient id="colorVocal" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#3498db" stopOpacity={0.8}/>
-                                        <stop offset="95%" stopColor="#3498db" stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                                <XAxis 
-                                    dataKey="time"
-                                    stroke="hsl(var(--muted-foreground))"
-                                    fontSize={12} 
-                                    tickLine={false} 
-                                    axisLine={false}
-                                    tickFormatter={(time) => format(new Date(time), 'HH:mm')}
-                                    type="number"
-                                    domain={['dataMin', 'dataMax']}
-                                />
-                                <YAxis 
-                                    stroke="hsl(var(--muted-foreground))"
-                                    fontSize={12} 
-                                    tickLine={false} 
-                                    axisLine={false}
-                                />
-                                <Tooltip content={<CustomTooltip />} />
-                                <Area type="monotone" dataKey="message_count" name="Messages" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorMessages)" />
-                                <Area type="monotone" dataKey="voice_member_count" name="Membres en vocal" stroke="#3498db" fillOpacity={1} fill="url(#colorVocal)" />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    )}
-                </CardContent>
-            </Card>
-            
-            <div className="grid md:grid-cols-2 gap-6">
-                <Card className="opacity-50">
+
+                <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Users /> Ratios Clés</CardTitle>
+                        <CardTitle>Activité sur les dernières 24 heures</CardTitle>
+                        <CardDescription>Aperçu du volume de messages et de l'activité vocale.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Ratio membres / activité</span>
-                            <span className="font-bold">-- %</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Ratio arrivées / départs (7j)</span>
-                            <span className="font-bold text-green-400">--</span>
-                        </div>
+                    <CardContent className="h-[350px] w-full">
+                        {loading ? (
+                            <div className="w-full h-full flex items-center justify-center">
+                                <Loader2 className="animate-spin text-primary w-8 h-8"/>
+                            </div>
+                        ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={formattedData}>
+                                    <defs>
+                                        <linearGradient id="colorMessages" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                                        </linearGradient>
+                                        <linearGradient id="colorVocal" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#3498db" stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor="#3498db" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                                    <XAxis 
+                                        dataKey="time"
+                                        stroke="hsl(var(--muted-foreground))"
+                                        fontSize={12} 
+                                        tickLine={false} 
+                                        axisLine={false}
+                                        tickFormatter={(time) => format(new Date(time), 'HH:mm')}
+                                        type="number"
+                                        domain={['dataMin', 'dataMax']}
+                                    />
+                                    <YAxis 
+                                        stroke="hsl(var(--muted-foreground))"
+                                        fontSize={12} 
+                                        tickLine={false} 
+                                        axisLine={false}
+                                    />
+                                    <Tooltip content={<CustomTooltip />} />
+                                    <Area type="monotone" dataKey="message_count" name="Messages" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorMessages)" />
+                                    <Area type="monotone" dataKey="voice_member_count" name="Membres en vocal" stroke="#3498db" fillOpacity={1} fill="url(#colorVocal)" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        )}
                     </CardContent>
                 </Card>
-                <Card className="opacity-50">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><MessageSquare /> Top Salons (24h)</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-muted-foreground">
-                        <p># ...</p>
-                    </CardContent>
-                </Card>
-            </div>
-        </PageTransitionWrapper>
+            </PageTransitionWrapper>
+        </PremiumFeatureWrapper>
     );
 }
 
@@ -217,4 +242,3 @@ export default function CommunityAnalysisPage() {
     </PageTransitionWrapper>
   );
 }
-
