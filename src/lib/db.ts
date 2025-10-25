@@ -4,7 +4,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder, TextChannel } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile, RoadmapItem, Partnership, Giveaway, DailyChallenge, UserChallengeProgress } from '../types';
+import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile, RoadmapItem, Partnership, Giveaway, DailyChallenge, UserChallengeProgress, ActivityStat } from '../types';
 import { randomBytes } from 'crypto';
 import ms from 'ms';
 
@@ -235,7 +235,7 @@ const upgradeSchema = () => {
                 reward_type TEXT CHECK(reward_type IN ('role', 'xp', 'custom')),
                 reward_value TEXT,
                 ends_at DATETIME NOT NULL,
-                status TEXT NOT NULL CHECK(status IN ('active', 'ended')) DEFAULT 'active',
+                status TEXT NOT NULL CHECK(status IN ('active', 'ended', 'scheduled')) DEFAULT 'active',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 created_by TEXT NOT NULL
             );
@@ -267,6 +267,18 @@ const upgradeSchema = () => {
             );
         `);
         console.log('[Database] Table "user_challenge_progress" is ready.');
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS activity_stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id TEXT NOT NULL,
+                timestamp DATETIME NOT NULL,
+                message_count INTEGER NOT NULL,
+                voice_member_count INTEGER NOT NULL
+            );
+        `);
+        db.exec('CREATE INDEX IF NOT EXISTS idx_activity_stats_guild_time ON activity_stats (guild_id, timestamp);');
+        console.log('[Database] Table "activity_stats" is ready.');
 
 
         // Drop deprecated tables
@@ -745,7 +757,6 @@ const defaultConfigs: DefaultConfigs = {
     },
     'giveaways': {
         enabled: true,
-        premium: false,
         command_permissions: {
             giveaway: null
         },
@@ -761,6 +772,18 @@ export function initializeDatabase() {
     createConfigTable();
     upgradeSchema(); // Ensure all tables are created/updated
     console.log('[Database] Initialisation de la base de données terminée.');
+}
+
+// --- Activity Stats ---
+export function recordActivityStat(guildId: string, messageCount: number, voiceMemberCount: number) {
+    const stmt = db.prepare('INSERT INTO activity_stats (guild_id, timestamp, message_count, voice_member_count) VALUES (?, datetime("now"), ?, ?)');
+    stmt.run(guildId, messageCount, voiceMemberCount);
+}
+
+export function getActivityStats(guildId: string, hours: number = 24): ActivityStat[] {
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+    const stmt = db.prepare('SELECT * FROM activity_stats WHERE guild_id = ? AND timestamp >= ? ORDER BY timestamp ASC');
+    return stmt.all(guildId, since) as ActivityStat[];
 }
 
 // --- Daily Challenges ---
