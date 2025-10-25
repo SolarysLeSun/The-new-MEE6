@@ -8,10 +8,6 @@
     "skipLibCheck": true,
     "outDir": "../dist/bot",
     "rootDir": ".",
-    "baseUrl": "..",
-    "paths": {
-      "@/*": ["src/*"]
-    },
     "resolveJsonModule": true
   },
   "include": ["**/*.ts"],
