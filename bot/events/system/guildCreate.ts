@@ -59,6 +59,7 @@ export async function execute(guild: Guild, client: Client) {
         ) as TextChannel;
 
         let welcomeEmbed: EmbedBuilder;
+        const panelUrl = process.env.PANEL_BASE_URL || 'http://localhost:9002';
 
         // Check for trial
         if (!hasClaimedTrial(ownerId)) {
@@ -69,15 +70,19 @@ export async function execute(guild: Guild, client: Client) {
             welcomeEmbed = new EmbedBuilder()
                 .setColor(0xFFD700)
                 .setTitle(`🎉 Merci d'avoir choisi Marcus pour ${guild.name} !`)
-                .setDescription(`Bonjour ${owner.user.toString()} ! Pour vous souhaiter la bienvenue, j'ai activé un **essai Premium de 3 heures** pour ce serveur.`)
+                .setDescription(`Bonjour ${owner.user.toString()} ! Pour vous souhaiter la bienvenue, j'ai activé un **essai Premium de 3 heures** pour ce serveur afin que vous puissiez découvrir tout mon potentiel.`)
                 .addFields(
                     {
-                        name: '🚀 Pour commencer',
-                        value: 'Utilisez `/login` pour accéder au panel de configuration. Je vous recommande de tester en priorité l\'**Agent Conversationnel IA** !',
+                        name: '🚀 Pour commencer (la seule commande à retenir)',
+                        value: `La configuration se passe sur notre panel web. Pour y accéder, utilisez la commande \`/login\`.\n> Je vous enverrai un lien de connexion unique et sécurisé en message privé.`,
+                    },
+                    {
+                        name: '🗺️ Explorer les fonctionnalités',
+                        value: `Une fois sur le panel, explorez les modules via le menu de gauche. Je vous recommande de tester en priorité l'**Agent Conversationnel IA** !\n\nUtilisez \`/marcus\` pour voir la liste des commandes et modules, ou \`/marcusfaq\` pour poser une question à l'IA sur une fonctionnalité.`,
                     },
                      {
-                        name: '✨ Expire dans 3 heures',
-                        value: `Votre essai se terminera <t:${Math.floor(trialExpiry.getTime() / 1000)}:R>.`
+                        name: '✨ L\'essai Premium expire dans 3 heures',
+                        value: `Votre essai se terminera <t:${Math.floor(trialExpiry.getTime() / 1000)}:R>. Visitez notre [site](${panelUrl}/premium) pour en savoir plus sur nos offres.`
                     }
                 )
                 .setFooter({ text: "Profitez bien de toutes les fonctionnalités !" });
@@ -91,8 +96,16 @@ export async function execute(guild: Guild, client: Client) {
                 .setDescription(`Bonjour ! Je suis **Marcus**, votre nouvel assistant pour gérer et animer votre serveur.`)
                 .addFields(
                     { 
-                        name: '🚀 Pour commencer', 
-                        value: 'Pour accéder au panel de configuration web, un administrateur doit simplement taper la commande suivante dans n\'importe quel salon :\n\n`/login`\n\nCela générera un lien de connexion unique et sécurisé pour configurer tous mes modules.',
+                        name: '🚀 Pour commencer (la seule commande à retenir)', 
+                        value: `La configuration se passe sur notre panel web. Pour y accéder, utilisez la commande \`/login\`.\n> Je vous enverrai un lien de connexion unique et sécurisé en message privé.`,
+                    },
+                    {
+                        name: '🗺️ Explorer les fonctionnalités',
+                        value: `Une fois sur le panel, explorez les modules via le menu de gauche.\n\nUtilisez \`/marcus\` pour voir la liste des commandes et modules, ou \`/marcusfaq\` pour poser une question à l'IA sur une fonctionnalité.`
+                    },
+                     {
+                        name: '❓ Besoin d\'aide ?',
+                        value: `Rejoignez notre [serveur de support](${process.env.SUPPORT_SERVER_URL || 'https://discord.gg/WSpz7FqFsC'}) pour toute question.`
                     }
                 )
                 .setFooter({ text: 'J\'ai hâte de vous aider !' });
