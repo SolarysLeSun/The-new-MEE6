@@ -86,6 +86,7 @@ export default function MentionsLegalesPage() {
                                     <li><strong>Discord :</strong> Notre service est un bot Discord, il est donc intrinsèquement lié à l'API de Discord et à ses conditions d'utilisation.</li>
                                     <li><strong>Google Cloud :</strong> L'ensemble de notre infrastructure (hébergement du bot, panel web) et nos fonctionnalités IA (Genkit) sont propulsés par les services de Google Cloud Platform.</li>
                                     <li><strong>PayPal / Stripe :</strong> Pour la vente de nos offres Premium, nous utilisons des services de paiement sécurisés. Nous ne stockons aucune information de paiement.</li>
+                                    <li><strong>API Publique :</strong> Si un administrateur génère une clé d'API, certaines données non-sensibles du serveur (ex: classement des niveaux) deviennent accessibles à des services externes. La gestion et la sécurité de cette clé relèvent de la responsabilité de l'utilisateur.</li>
                                 </ul>
                             </p>
                         </AccordionContent>
