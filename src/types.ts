@@ -165,6 +165,7 @@ export interface CustomField {
     id: string;
     label: string;
     placeholder: string;
+    required: boolean;
 }
 
 export interface AiRoleMapping {
@@ -358,4 +359,3 @@ export interface TicketsConfig {
     command_permissions: { [key: string]: string | null };
 }
   
-

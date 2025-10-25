@@ -1,6 +1,6 @@
 
 
-import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction, ButtonStyle, DiscordAPIError, ButtonBuilder } from 'discord.js';
+import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction, ButtonStyle, DiscordAPIError, ButtonBuilder, AnyThreadChannel } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -424,7 +424,22 @@ async function handlePrivateRoomModal(interaction: ModalSubmitInteraction) {
                 .setEmoji('👤')
         );
 
-        await channel.send({ content: mentionContent, embeds: [welcomeEmbed], components: [actionRow] });
+        const mainMessage = await channel.send({ content: mentionContent, embeds: [welcomeEmbed], components: [actionRow] });
+
+        // --- Fil Privé ---
+        if (config.private_thread_enabled) {
+            let threadName = (config.private_thread_name_format || 'staff-{user}')
+                .replace('{user}', sanitizedUsername)
+                .replace('{id}', interaction.user.id);
+            
+            const staffThread = await mainMessage.startThread({
+                name: threadName,
+                autoArchiveDuration: 1440, // 24 hours
+                reason: `Fil de discussion interne pour le ticket de ${interaction.user.tag}`
+            });
+            await staffThread.send(`Fil privé pour les modérateurs concernant le ticket de ${interaction.user.toString()}.`);
+        }
+
         await interaction.editReply(`Votre salon privé a été créé : ${channel}`);
 
     } catch (error) {
@@ -827,7 +842,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                     .setLabel(field.label)
                     .setPlaceholder(field.placeholder || '')
                     .setStyle(TextInputStyle.Short)
-                    .setRequired(true);
+                    .setRequired(field.required ?? true);
                 modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(textInput));
             }
 

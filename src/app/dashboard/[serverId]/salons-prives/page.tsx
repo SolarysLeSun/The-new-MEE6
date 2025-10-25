@@ -141,10 +141,10 @@ export default function TicketsPage() {
         saveConfig({ ...config, [key]: value });
     };
     
-    const handleCustomFieldChange = (index: number, field: 'label' | 'placeholder', value: string) => {
+    const handleCustomFieldChange = (index: number, field: keyof CustomField, value: string | boolean) => {
         if (!config || !config.custom_fields) return;
         const newFields = [...config.custom_fields];
-        newFields[index] = { ...newFields[index], [field]: value };
+        (newFields[index] as any)[field] = value;
         handleValueChange('custom_fields', newFields);
     };
 
@@ -153,7 +153,7 @@ export default function TicketsPage() {
             toast({ title: "Limite atteinte", description: "Vous ne pouvez pas ajouter plus de 3 champs personnalisés.", variant: "destructive"});
             return;
         };
-        const newField: CustomField = { id: `custom_field_${Date.now()}`, label: '', placeholder: '' };
+        const newField: CustomField = { id: `custom_field_${Date.now()}`, label: '', placeholder: '', required: true };
         handleValueChange('custom_fields', [...(config.custom_fields || []), newField]);
     };
 
@@ -293,6 +293,10 @@ export default function TicketsPage() {
                             defaultValue={field.placeholder}
                             onBlur={(e) => handleCustomFieldChange(index, 'placeholder', e.target.value)}
                         />
+                        <div className="flex items-center gap-2 pt-2">
+                           <Switch id={`required-${field.id}`} checked={field.required} onCheckedChange={(val) => handleCustomFieldChange(index, 'required', val)} />
+                           <Label htmlFor={`required-${field.id}`}>Requis</Label>
+                        </div>
                     </div>
                 ))}
                 <Button variant="outline" className="w-full" onClick={addCustomField} disabled={(config.custom_fields?.length || 0) >= 3}>
@@ -316,7 +320,7 @@ export default function TicketsPage() {
             {config.validation_enabled && (
                  <div className="space-y-2 pl-4 border-l-2">
                     <Label>Salon de validation</Label>
-                    <Combobox options={channelOptions} value={config.validation_channel_id || 'none'} onChange={(v) => handleValueChange('validation_channel_id', v)} placeholder="Sélectionner un salon..."/>
+                    <Combobox options={channelOptions} value={config.validation_channel_id || 'none'} onChange={(v) => handleValueChange('validation_channel_id', v === 'none' ? null : v)} placeholder="Sélectionner un salon..."/>
                     <Label>Message de confirmation</Label>
                     <Input defaultValue={config.confirmation_message} onBlur={(e) => handleValueChange('confirmation_message', e.target.value)} placeholder="Votre demande a été envoyée pour validation."/>
                 </div>
@@ -338,7 +342,7 @@ export default function TicketsPage() {
                 <Switch id="auto-delete" checked={config.auto_delete_on_close} onCheckedChange={(val) => handleValueChange('auto_delete_on_close', val)} />
             </div>
              <div className="flex items-center justify-between">
-                <Label htmlFor="archive-summary" className="font-bold">Sauvegarder la conversation à la fermeture</Label>
+                <Label htmlFor="archive-summary" className="font-bold">Sauvegarder la conversation à la fermeture (IA)</Label>
                 <Switch id="archive-summary" checked={config.archive_summary} onCheckedChange={(val) => handleValueChange('archive_summary', val)} />
             </div>
              {config.archive_summary && (
@@ -370,7 +374,7 @@ export default function TicketsPage() {
                     <Combobox
                         options={modRoleOptions}
                         value={config.command_permissions?.[command.key] || 'none'}
-                        onChange={(value) => handlePermissionChange(command.key, value)}
+                        onChange={(value) => handlePermissionChange(command.key, value === 'none' ? null : value)}
                         placeholder="Sélectionner un rôle"
                     />
                 </div>
