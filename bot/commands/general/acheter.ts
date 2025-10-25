@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, TextChannel, User, GuildMember } from 'discord.js';
 import type { Command, ShopItem } from '@/types';
 import { getServerConfig, getUserLevel, updateUserXP } from '@/lib/db';
+import ms from 'ms';
 
 const AcheterCommand: Command = {
     data: new SlashCommandBuilder()
@@ -59,7 +60,27 @@ const AcheterCommand: Command = {
                 const role = await interaction.guild.roles.fetch(itemToBuy.reward_id).catch(() => null);
                 if (role) {
                     await member.roles.add(role);
-                    rewardMessage += `\nLe rôle **${role.name}** vous a été attribué.`;
+                    
+                    if (itemToBuy.duration) {
+                        const durationMs = ms(itemToBuy.duration);
+                        if (durationMs) {
+                            rewardMessage += `\nLe rôle **${role.name}** vous a été attribué pour une durée de **${itemToBuy.duration}**.`;
+                            setTimeout(async () => {
+                                try {
+                                    const freshMember = await interaction.guild!.members.fetch(interaction.user.id).catch(() => null);
+                                    if (freshMember && freshMember.roles.cache.has(role.id)) {
+                                        await freshMember.roles.remove(role, 'Rôle temporaire de la boutique expiré.');
+                                    }
+                                } catch (error) {
+                                    console.error(`[Acheter] Erreur lors du retrait du rôle temporaire pour ${interaction.user.tag}:`, error);
+                                }
+                            }, durationMs);
+                        } else {
+                             rewardMessage += `\nLe rôle **${role.name}** vous a été attribué. (Durée invalide configurée)`;
+                        }
+                    } else {
+                        rewardMessage += `\nLe rôle **${role.name}** vous a été attribué.`;
+                    }
                 } else {
                     rewardMessage += `\n⚠️ Le rôle récompense est introuvable. Veuillez contacter un administrateur.`;
                 }
@@ -82,6 +103,9 @@ const AcheterCommand: Command = {
                             { name: 'Type de Récompense', value: itemToBuy.type === 'role' ? 'Rôle Automatique' : 'Objet Personnalisé', inline: true }
                         )
                         .setTimestamp();
+                    if(itemToBuy.type === 'role' && itemToBuy.duration) {
+                        notifEmbed.addFields({ name: 'Durée', value: itemToBuy.duration, inline: true });
+                    }
                     await notifChannel.send({ content: pingMessage, embeds: [notifEmbed] });
                 }
             }

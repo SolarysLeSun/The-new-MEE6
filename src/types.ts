@@ -203,6 +203,7 @@ export interface ShopItem {
     price: number;
     type: 'role' | 'custom';
     reward_id: string; // Role ID if type is 'role', otherwise a custom identifier for the object
+    duration?: string; // Optional duration for temporary roles (e.g., '7d', '24h')
 }
 
 export interface LevelingConfig {

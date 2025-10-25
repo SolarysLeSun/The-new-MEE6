@@ -370,7 +370,7 @@ export default function LevelingPage() {
                                                 </div>
                                                 <div className="space-y-1">
                                                     <Label>ID unique (pour /acheter)</Label>
-                                                    <Input defaultValue={item.id} placeholder="Ex: vip-role" onBlur={e => handleListChange('shop_items', index, 'id', e.target.value)} />
+                                                    <Input defaultValue={item.id} placeholder="Ex: vip-role" onBlur={(e) => handleListChange('shop_items', index, 'id', e.target.value)} />
                                                 </div>
                                                 <div className="space-y-1">
                                                     <Label>Prix (XP)</Label>
@@ -390,9 +390,15 @@ export default function LevelingPage() {
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
-                                                 <div className="space-y-1">
-                                                    <Label>Récompense (ID de rôle)</Label>
-                                                    <Combobox options={roleOptions} value={item.reward_id} onChange={(val) => handleListChange('shop_items', index, 'reward_id', val)} placeholder="Choisir un rôle..." disabled={item.type !== 'role'} />
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                    <div className="space-y-1">
+                                                        <Label>Récompense (ID de rôle)</Label>
+                                                        <Combobox options={roleOptions} value={item.reward_id} onChange={(val) => handleListChange('shop_items', index, 'reward_id', val)} placeholder="Choisir un rôle..." disabled={item.type !== 'role'} />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <Label>Durée</Label>
+                                                        <Input placeholder="Ex: 7j, 24h (vide = permanent)" defaultValue={item.duration || ''} onBlur={e => handleListChange('shop_items', index, 'duration', e.target.value)} disabled={item.type !== 'role'} />
+                                                    </div>
                                                 </div>
                                             </div>
                                              <Button variant="ghost" size="icon" onClick={() => removeListItem('shop_items', index)}><Trash2 className="text-destructive"/></Button>
