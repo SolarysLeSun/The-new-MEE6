@@ -48,6 +48,7 @@ import {
   BarChart,
   Handshake,
   Trophy,
+  Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -137,6 +138,12 @@ export const navCategories = [
             { href: 'createur-contenu-ia', label: 'Créateur de Contenu IA', icon: Palette, isPremium: true, keywords: ['générer annonce', 'générer règle', 'générer image', 'iacontent'] },
             { href: 'agent-conversationnel', label: 'Agent Conversationnel', icon: MessageCircleQuestion, isPremium: true, keywords: ['chatbot', 'personnalité', 'base de connaissances'] },
             { href: 'commandes-testeurs', label: 'Commandes Spéciales', icon: TestTubeDiagonal, isPremium: true, keywords: ['mp', 'webhook', 'givepremium', 'genpremium', 'tester', 'owner'] },
+        ]
+    },
+    {
+        name: 'Statistiques & Analyse',
+        items: [
+            { href: 'analyse-communaute', label: 'Analyse de Communauté', icon: Activity, isPremium: true, keywords: ['stats', 'activité', 'graphiques', 'analyse'] },
         ]
     },
     {

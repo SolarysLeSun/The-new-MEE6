@@ -719,6 +719,9 @@ const defaultConfigs: DefaultConfigs = {
         exempt_roles: [],
         exempt_channels: [],
     },
+    'faq-navigation': {
+        enabled: true,
+    },
     'anti-afk': {
         enabled: false,
         timeout_minutes: 15,
@@ -748,6 +751,10 @@ const defaultConfigs: DefaultConfigs = {
         },
         default_channel_id: null,
     },
+    'community-analysis': {
+        enabled: false,
+        premium: true,
+    }
 };
 
 export function initializeDatabase() {

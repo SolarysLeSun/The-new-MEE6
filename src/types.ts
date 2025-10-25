@@ -65,7 +65,8 @@ export type Module =
     | 'stats-channels'
     | 'partnership'
     | 'giveaways'
-    | 'challenges';
+    | 'challenges'
+    | 'community-analysis';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale
