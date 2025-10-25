@@ -342,7 +342,7 @@ async function handleTranslationSelect(interaction: StringSelectMenuInteraction)
 }
 
 async function handlePrivateRoomModal(interaction: ModalSubmitInteraction) {
-    if (!interaction.guild || !interaction.member) return;
+    if (!interaction.guild || !(interaction.member instanceof GuildMember)) return;
     const config = await getServerConfig(interaction.guild.id, 'private-rooms');
 
     if (!config || !config.enabled || !config.category_id) {
@@ -362,7 +362,6 @@ async function handlePrivateRoomModal(interaction: ModalSubmitInteraction) {
             .replace('{id}', interaction.user.id)
             .replace('{random}', Math.random().toString(36).substring(2, 8));
         
-        // Replace custom field variables
         for (let i = 0; i < (config.custom_fields?.length || 0); i++) {
             const field = config.custom_fields[i];
             if (!field.label) continue;
@@ -386,19 +385,38 @@ async function handlePrivateRoomModal(interaction: ModalSubmitInteraction) {
                 { id: client.user!.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels] },
             ],
         });
-
-        // Construct initial message with custom field values
-        let initialMessage = `Bienvenue ${interaction.user}, votre salon privé a été créé.`;
+        
+        // Construct initial message embed
+        const welcomeEmbed = new EmbedBuilder()
+            .setColor(0x5865F2)
+            .setTitle(`Ticket ouvert par ${interaction.user.tag}`)
+            .setDescription(`Bienvenue ${interaction.user}, votre ticket a été créé.\n\n🟢 Statut : **Ouvert**`)
+            .setTimestamp();
+        
+        const fields = [];
         if (config.custom_fields?.length > 0) {
-            initialMessage += "\n\n**Détails fournis :**";
+             welcomeEmbed.addFields({ name: '\u200B', value: '**Détails fournis :**'});
             for (const field of config.custom_fields) {
                 if (!field.label) continue;
                 const value = interaction.fields.getTextInputValue(field.id);
-                initialMessage += `\n**${field.label}:** ${value}`;
+                fields.push({ name: field.label, value: value, inline: false });
             }
+            welcomeEmbed.addFields(fields);
         }
+
+        const row = new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`close_ticket_${channel.id}`)
+                    .setLabel('Fermer le Ticket')
+                    .setStyle(ButtonStyle.Danger),
+                new ButtonBuilder()
+                    .setCustomId(`add_user_to_ticket_${channel.id}`)
+                    .setLabel('Ajouter un Membre')
+                    .setStyle(ButtonStyle.Secondary)
+            );
         
-        await channel.send(initialMessage);
+        await channel.send({ content: `${interaction.user}`, embeds: [welcomeEmbed], components: [row] });
         await interaction.editReply(`Votre salon privé a été créé : ${channel}`);
 
     } catch (error) {
@@ -901,3 +919,5 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
+
+    
