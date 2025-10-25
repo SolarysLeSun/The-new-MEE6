@@ -37,7 +37,7 @@ export default function ConditionsUtilisationPage() {
                 1. Acceptation des Conditions
               </h2>
               <p>
-                En ajoutant le bot Marcus à votre serveur Discord ou en utilisant son panel de gestion, vous acceptez sans réserve les présentes Conditions Générales d'Utilisation (CGU). Si vous n'êtes pas d'accord avec ces termes, vous ne devez pas utiliser le bot ou ses services associés.
+                En ajoutant le bot Marcus à votre serveur Discord ou en utilisant son panel de gestion, vous acceptez sans réserve les présentes Conditions Générales d'Utilisation (CGU). Si vous n'êtes pas d'accord avec ces termes, vous ne devez pas utiliser le bot ou ses services associés. Vous vous engagez également à respecter les <a href="https://discord.com/terms" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Conditions d'Utilisation de Discord</a>.
               </p>
             </div>
             <div className="space-y-2">
@@ -59,7 +59,7 @@ export default function ConditionsUtilisationPage() {
                 3. Abus et Utilisation Interdite
               </h2>
               <p>
-                Il est formellement interdit d'abuser des fonctionnalités du bot, notamment de ses capacités d'Intelligence Artificielle. Cela inclut, sans s'y limiter, le spam de commandes, les tentatives de contournement des limitations, la génération de contenu illégal ou inapproprié, ou toute utilisation visant à nuire au bon fonctionnement du bot ou à d'autres utilisateurs.
+                Il est formellement interdit d'abuser des fonctionnalités du bot, notamment de ses capacités d'Intelligence Artificielle (via Genkit). Cela inclut, sans s'y limiter, le spam de commandes, les tentatives de contournement des limitations ou des filtres de sécurité, la génération de contenu illégal, haineux, ou inapproprié, ou toute utilisation visant à nuire au bon fonctionnement du bot ou à d'autres utilisateurs.
               </p>
                <p>
                 Toute violation constatée pourra entraîner une interdiction d'utilisation du bot pour le serveur concerné, sans préavis.

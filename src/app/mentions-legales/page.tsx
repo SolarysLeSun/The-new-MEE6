@@ -39,31 +39,15 @@ export default function MentionsLegalesPage() {
                 1. Propriété Intellectuelle
               </h2>
               <p>
-                Le bot Discord "Marcus", son code source, son panel de gestion web, ainsi que tous les éléments graphiques et textuels associés sont la propriété intellectuelle exclusive de son créateur, associé à Forgenet.fr.
+                Le bot Discord "Marcus", son code source, son panel de gestion web, ainsi que tous les éléments graphiques et textuels associés sont la propriété intellectuelle de <strong>ForgeNet Collective</strong>. Copyright © 2025.
               </p>
-              <p>
-                Ce projet, bien qu'étant une œuvre originale, n'est pas formellement enregistré auprès d'une organisation de protection des droits d'auteur. Néanmoins, il est protégé par le droit d'auteur inhérent à toute création de l'esprit, conformément à la législation en vigueur.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-semibold text-white">
-                2. Interdiction d'Utilisation Commerciale
-              </h2>
-              <p>
-                Toute revente, appropriation, distribution à but lucratif, ou toute autre forme d'utilisation commerciale du code source du bot Marcus ou de son panel est strictement interdite sans une autorisation écrite et explicite du créateur. L'utilisation du bot est réservée à la gestion de serveurs Discord et ne doit en aucun cas générer de bénéfice direct ou indirect pour des tiers non autorisés.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-semibold text-white">
-                3. Responsabilité
-              </h2>
-              <p>
-                Le créateur de Marcus et Forgenet ne sauraient être tenus responsables des éventuels dommages, pertes de données, ou conflits survenant sur les serveurs Discord qui utilisent le bot. L'administration et la modération du serveur restent sous l'entière responsabilité de ses propriétaires et de leur équipe de modération.
+               <p>
+                Ce logiciel et sa documentation sont fournis à des fins éducatives et de contribution communautaire uniquement. Vous pouvez consulter le code et suggérer des améliorations via les canaux appropriés, mais il est strictement interdit de copier, modifier, distribuer, héberger ou utiliser ce logiciel ou ses composants dans tout projet public ou privé sans une autorisation écrite explicite de ForgeNet.
               </p>
             </div>
             <div className="space-y-2" id="contact">
               <h2 className="text-2xl font-semibold text-white">
-                4. Contact
+                2. Contact
               </h2>
               <p>Pour toute demande, veuillez utiliser l'adresse e-mail appropriée :</p>
               <ul className="list-disc list-inside space-y-2 pl-4">
@@ -72,27 +56,23 @@ export default function MentionsLegalesPage() {
                       <a href="mailto:contact@marcusbot.fr" className="text-primary hover:underline">contact@marcusbot.fr</a>
                   </li>
                   <li>
-                      <strong>Support Technique & Infrastructure (Forge Network) :</strong>{" "}
+                      <strong>Support Technique & Infrastructure (ForgeNet) :</strong>{" "}
                       <a href="mailto:contact@forgenet.fr" className="text-primary hover:underline">contact@forgenet.fr</a>
                   </li>
                    <li>
                       <strong>Développement & Questions Techniques (NightFury) :</strong>{" "}
                       <a href="mailto:nightfury@nationquest.fr" className="text-primary hover:underline">nightfury@nationquest.fr</a>
                   </li>
-                  <li>
-                      <strong>Projet "Marcus Extend" (NationQuest) :</strong>{" "}
-                      <a href="mailto:marcus@nationquest.fr" className="text-primary hover:underline">marcus@nationquest.fr</a>
-                  </li>
               </ul>
             </div>
              <div className="space-y-4">
-                <h2 className="text-2xl font-semibold text-white">5. Gestion des Données et Services Tiers</h2>
+                <h2 className="text-2xl font-semibold text-white">3. Gestion des Données et Services Tiers</h2>
                  <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="item-1">
                         <AccordionTrigger>Cliquez ici pour voir notre politique de données</AccordionTrigger>
                         <AccordionContent className="space-y-3">
                            <p>
-                                <strong>Traitement des données :</strong> Pour fonctionner, Marcus doit analyser le contenu de certains messages (par exemple, pour l'auto-modération ou les commandes). Ce traitement est effectué en temps réel et **aucune de ces données de conversation n'est stockée** dans notre base de données.
+                                <strong>Traitement des données :</strong> Pour fonctionner, Marcus doit analyser le contenu de certains messages (par exemple, pour l'auto-modération ou les commandes IA). Ce traitement est effectué en temps réel et **aucune de ces données de conversation n'est stockée** dans notre base de données.
                             </p>
                             <p>
                                 <strong>Données stockées :</strong> Les seules informations que nous conservons sont celles que vous configurez explicitement via le panel de gestion. Il s'agit principalement d'identifiants (IDs de salons, de rôles, de membres) fournis par l'API Discord, qui sont essentiels pour le fonctionnement des modules que vous activez. Aucune donnée personnelle en dehors de ces identifiants fonctionnels n'est stockée.
@@ -103,9 +83,9 @@ export default function MentionsLegalesPage() {
                             <p>
                                 <strong>Services tiers :</strong> Marcus repose sur des services externes pour fonctionner.
                                 <ul className="list-disc list-inside pl-4 mt-2 space-y-1">
-                                    <li><strong>Discord :</strong> Notre service est un bot Discord, il est donc intrinsèquement lié à l'API de Discord.</li>
-                                    <li><strong>Google Cloud :</strong> L'ensemble de notre infrastructure (hébergement du bot, panel web) et nos fonctionnalités IA sont propulsés par les services de Google.</li>
-                                    <li><strong>PayPal :</strong> Pour la vente de nos offres Premium, nous utilisons des services de paiement comme PayPal. Nous ne sommes pas responsables de la gestion des données de ces plateformes. Pour plus d'informations, veuillez consulter leurs propres conditions d'utilisation et politiques de confidentialité.</li>
+                                    <li><strong>Discord :</strong> Notre service est un bot Discord, il est donc intrinsèquement lié à l'API de Discord et à ses conditions d'utilisation.</li>
+                                    <li><strong>Google Cloud :</strong> L'ensemble de notre infrastructure (hébergement du bot, panel web) et nos fonctionnalités IA (Genkit) sont propulsés par les services de Google Cloud Platform.</li>
+                                    <li><strong>PayPal / Stripe :</strong> Pour la vente de nos offres Premium, nous utilisons des services de paiement sécurisés. Nous ne stockons aucune information de paiement.</li>
                                 </ul>
                             </p>
                         </AccordionContent>
