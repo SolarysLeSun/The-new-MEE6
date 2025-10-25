@@ -72,7 +72,8 @@ export const navCategories = [
             { href: 'suggestions', label: 'Suggestions', icon: Lightbulb, keywords: ['idées', 'boîte à idées', 'feedback', 'setsuggest'] },
             { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages, isPremium: true, keywords: ['translate', 'multilingue', 'langue'] },
             { href: 'niveaux', label: 'Niveaux & XP', icon: Award, keywords: ['levels', 'rank', 'classement', 'exp', 'expérience', 'récompenses', 'topxp', 'podium'] },
-            { href: 'parrainage', label: 'Partenariats & Récompenses', icon: Handshake, keywords: ['parrainage', 'récompense', 'premium', 'inviter', 'code', 'partenaire'] },
+            { href: 'parrainage', label: 'Parrainage', icon: Gift, keywords: ['récompense', 'premium', 'inviter', 'code'] },
+            { href: 'partenariats', label: 'Partenariats', icon: Handshake, isDisabled: true, keywords: ['partenaires', 'collaboration', 'pub'] },
         ]
     },
     {

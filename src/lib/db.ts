@@ -130,20 +130,17 @@ const upgradeSchema = () => {
         `);
         console.log('[Database] La table "delegated_permissions" est prête.');
 
-        // Force recreation of referrals table to fix potential schema inconsistencies
-        db.exec('DROP TABLE IF EXISTS referrals;');
-        db.transaction(() => {
-            db.exec(`
-                CREATE TABLE referrals (
-                    referring_guild_id TEXT NOT NULL,
-                    referred_guild_id TEXT PRIMARY KEY NOT NULL,
-                    referred_owner_id TEXT NOT NULL,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                );
-            `);
-            db.exec('CREATE INDEX idx_referring_guild_id ON referrals (referring_guild_id);');
-        })();
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS referrals (
+                referring_guild_id TEXT NOT NULL,
+                referred_guild_id TEXT PRIMARY KEY NOT NULL,
+                referred_owner_id TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        db.exec('CREATE INDEX IF NOT EXISTS idx_referring_guild_id ON referrals (referring_guild_id);');
         console.log('[Database] La table "referrals" est prête.');
+
 
         db.exec(`
             CREATE TABLE IF NOT EXISTS dev_guilds (
@@ -673,6 +670,10 @@ const defaultConfigs: DefaultConfigs = {
         enabled: false,
         category_id: null,
         channel_format: '📊 Membres : {membres}',
+    },
+    'partnership': {
+        enabled: false,
+        premium: true,
     }
 };
 
@@ -1533,5 +1534,6 @@ export function listApiBans(): { user_id: string, reason: string | null }[] {
     return db.prepare('SELECT user_id, reason FROM api_bans').all() as any;
 }
   
+
 
 

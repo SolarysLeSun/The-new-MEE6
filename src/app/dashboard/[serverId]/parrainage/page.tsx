@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Gift, Copy, Check, Handshake, Star } from 'lucide-react';
+import { Gift, Copy, Check, Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
@@ -95,15 +95,15 @@ export default function ReferralPage() {
     return (
         <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2"><Handshake /> Partenariats & Récompenses</h1>
+                <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2"><Gift /> Parrainage</h1>
                 <p className="text-muted-foreground mt-2">
-                    Partagez votre code unique et gagnez des récompenses Premium pour votre serveur !
+                    Invitez d'autres serveurs à utiliser Marcus et gagnez des récompenses Premium !
                 </p>
             </div>
             <Separator />
             <Card>
                 <CardHeader>
-                    <CardTitle>Votre Code Partenaire</CardTitle>
+                    <CardTitle>Votre Code de Parrainage</CardTitle>
                     <CardDescription>
                         Partagez ce code avec d'autres propriétaires de serveurs. Lorsqu'ils l'utilisent avec la commande <code className="bg-muted px-1.5 py-0.5 rounded-md">/parrainage</code>, vous progressez vers votre prochaine récompense.
                     </CardDescription>
