@@ -19,7 +19,7 @@ import { patchNoteFlow } from '@/ai/flows/patchnote-flow';
 import ms from 'ms';
 import { startAntiAfkInterval } from './events/moderation/antiAfk';
 import { startStatsChannelInterval } from './events/system/statsChannels';
-import { startChallengeScheduler } from './events/system/challengeScheduler';
+// import { startChallengeScheduler } from './events/system/challengeScheduler';
 import { startActivityTracker } from './events/system/activityTracker';
 import { transcriptSummaryFlow } from '@/ai/flows/transcript-summary-flow';
 
@@ -137,7 +137,7 @@ client.once(Events.ClientReady, async (readyClient) => {
     startStatsChannelInterval(client);
 
     // Start interval for Daily Challenges
-    startChallengeScheduler(client);
+    // startChallengeScheduler(client);
 
     // Start activity tracker
     startActivityTracker(client);
@@ -1014,5 +1014,7 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
+
+    
 
     
