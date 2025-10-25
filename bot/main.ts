@@ -5,8 +5,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
-import type { Command, CustomField, ProfileLink } from '@/types';
-import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds, getGuildWarnHistory, updateUserProfile, createTicket, getTicketByChannelId } from '@/lib/db';
+import type { Command, CustomField, ProfileLink, Ticket } from '@/types';
+import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds, getGuildWarnHistory, updateUserProfile, createTicket, getTicketByChannelId, updateTicket, deleteTicket } from '@/lib/db';
 import { startApi } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
@@ -19,6 +19,7 @@ import { patchNoteFlow } from '@/ai/flows/patchnote-flow';
 import ms from 'ms';
 import { startAntiAfkInterval } from './events/moderation/antiAfk';
 import { startStatsChannelInterval } from './events/system/statsChannels';
+import { transcriptSummaryFlow } from '@/ai/flows/transcript-summary-flow';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -348,21 +349,27 @@ async function handlePrivateRoomModal(interaction: ModalSubmitInteraction) {
         const sanitizedUsername = interaction.user.username.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20) || 'user';
         let channelName = config.channel_name_format || 'ticket-{user}';
 
+        const formData: Record<string, string> = {};
+        if (config.custom_fields && config.custom_fields.length > 0) {
+            for (let i = 0; i < config.custom_fields.length; i++) {
+                const field = config.custom_fields[i];
+                if (!field.label) continue;
+                const value = interaction.fields.getTextInputValue(field.id);
+                if (field.required && !value.trim()) {
+                    await interaction.editReply({ content: `Le champ "${field.label}" est obligatoire.` });
+                    return;
+                }
+                formData[field.label] = value;
+                channelName = channelName.replace(`{champ${i + 1}}`, value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
+            }
+        }
+        
         channelName = channelName
             .replace('{user}', sanitizedUsername)
             .replace('{mention}', interaction.user.toString())
             .replace('{id}', interaction.user.id)
             .replace('{random}', Math.random().toString(36).substring(2, 8));
         
-        const formData: Record<string, string> = {};
-        for (let i = 0; i < (config.custom_fields?.length || 0); i++) {
-            const field = config.custom_fields[i];
-            if (!field.label) continue;
-            const value = interaction.fields.getTextInputValue(field.id);
-            formData[field.label] = value;
-            channelName = channelName.replace(`{champ${i + 1}}`, value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
-        }
-
         const existingChannel = interaction.guild.channels.cache.find(c => c.name === channelName && c.parentId === config.category_id);
         if(existingChannel) {
             await interaction.editReply(`Vous avez déjà un salon privé ouvert : ${existingChannel}`);
@@ -502,6 +509,109 @@ async function handleReminderButton(interaction: ButtonInteraction) {
 
 const WEBHOOK_NAME = "Marcus";
 
+async function handleCloseTicket(interaction: ButtonInteraction) {
+    if (!interaction.guild || !interaction.member) return;
+    const channelId = interaction.customId.split('_')[2];
+    const ticket = getTicketByChannelId(channelId);
+    if (!ticket) {
+        await interaction.reply({ content: "Ce ticket est introuvable dans la base de données.", ephemeral: true });
+        return;
+    }
+
+    const config = await getServerConfig(interaction.guild.id, 'private-rooms');
+    const member = interaction.member as GuildMember;
+    const isModerator = member.roles.cache.some(r => config.moderator_roles.includes(r.id));
+    const isOwner = ticket.owner_id === member.id;
+
+    if (!isModerator && !isOwner) {
+        await interaction.reply({ content: "Vous n'avez pas la permission de fermer ce ticket.", ephemeral: true });
+        return;
+    }
+
+    await interaction.deferUpdate();
+
+    // Update the embed
+    const originalEmbed = interaction.message.embeds[0];
+    const newEmbed = EmbedBuilder.from(originalEmbed)
+        .setColor(0xED4245) // Red
+        .spliceFields(0, 1, { name: 'Statut', value: '🔴 Fermé', inline: true })
+        .setFooter({ text: `Ticket fermé par ${interaction.user.tag}` });
+
+    const newRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId(`reopen_ticket_${channelId}`).setLabel('Rouvrir').setStyle(ButtonStyle.Success).setEmoji('🔓'),
+        new ButtonBuilder().setCustomId(`delete_ticket_${channelId}`).setLabel('Supprimer').setStyle(ButtonStyle.Danger).setEmoji('🗑️')
+    );
+
+    await interaction.message.edit({ embeds: [newEmbed], components: [newRow] });
+    updateTicket(channelId, { status: 'closed', closed_at: new Date().toISOString() });
+
+    if (config.auto_delete_on_close) {
+        await interaction.followUp({ content: `Ce salon sera automatiquement supprimé dans 10 secondes...`, ephemeral: true });
+        setTimeout(() => handleDeleteTicket(interaction, channelId, true), 10000);
+    }
+}
+
+async function handleDeleteTicket(interaction: ButtonInteraction, channelId: string, isAutoDelete = false) {
+    if (!interaction.guild) return;
+    const ticket = getTicketByChannelId(channelId);
+    if (!ticket) return;
+
+    const config = await getServerConfig(interaction.guild.id, 'private-rooms');
+    const member = interaction.member as GuildMember;
+    const isModerator = member.roles.cache.some(r => config.moderator_roles.includes(r.id));
+
+    if (!isModerator && !isAutoDelete) {
+        await interaction.reply({ content: "Vous n'avez pas la permission de supprimer ce ticket.", ephemeral: true });
+        return;
+    }
+    
+    const channel = await interaction.guild.channels.fetch(channelId).catch(() => null) as TextChannel;
+    if (!channel) return;
+
+    if (!isAutoDelete) {
+        await interaction.deferReply({ ephemeral: true });
+    }
+
+    try {
+        // --- Archive Summary ---
+        if (config.archive_summary) {
+            const modConfig = await getServerConfig(interaction.guild.id, 'moderation');
+            const logChannelId = modConfig?.log_channel_id || config.log_channel_id;
+
+            if (logChannelId) {
+                const logChannel = await interaction.guild.channels.fetch(logChannelId).catch(() => null) as TextChannel;
+                if (logChannel) {
+                    const messages = await channel.messages.fetch({ limit: 100 });
+                    const transcript = Array.from(messages.values()).reverse().map(msg => `${msg.author.tag}: ${msg.content}`).join('\n');
+                    if (transcript) {
+                        const { summary } = await transcriptSummaryFlow({ transcript });
+                        const summaryEmbed = new EmbedBuilder()
+                            .setColor(0x95a5a6)
+                            .setTitle(`📝 Transcription du Ticket #${channel.name}`)
+                            .setDescription(summary || "Impossible de générer un résumé.")
+                            .setFooter({ text: `Ticket fermé par ${interaction.user.tag}` })
+                            .setTimestamp();
+                        await logChannel.send({ embeds: [summaryEmbed] });
+                    }
+                }
+            }
+        }
+
+        await channel.delete('Ticket fermé et supprimé.');
+        deleteTicket(channelId);
+
+        if (!isAutoDelete) {
+            await interaction.editReply({ content: "Ticket supprimé avec succès." });
+        }
+    } catch (error) {
+        console.error("Failed to delete ticket:", error);
+        if (!isAutoDelete) {
+             await interaction.editReply({ content: "Une erreur est survenue lors de la suppression du ticket." });
+        }
+    }
+}
+
+
 client.on(Events.MessageCreate, async (message) => {
     if (message.author.bot) return;
 
@@ -555,6 +665,17 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
         if (customId.startsWith('reschedule_reminder::')) {
             await handleReminderButton(interaction);
+            return;
+        }
+
+        if (customId.startsWith('close_ticket_')) {
+            await handleCloseTicket(interaction);
+            return;
+        }
+        
+        if (customId.startsWith('delete_ticket_')) {
+            const channelId = customId.split('_')[2];
+            await handleDeleteTicket(interaction, channelId);
             return;
         }
         
@@ -635,7 +756,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
             if (!interaction.guild || !interaction.member) return;
             
             if (!(interaction.member.permissions as any).has(PermissionFlagsBits.Administrator)) {
-                 await interaction.followUp({ content: 'Vous n\'avez pas la permission d\'effectuer cette action.', flags: MessageFlags.Ephemeral });
+                 await interaction.followUp({ content: 'Vous n\'avez pas la permission d\'effectuer cette action.', ephemeral: true });
                  return;
             }
             
@@ -837,6 +958,11 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                     console.warn(`[PrivateRoom] Skipping custom field with empty label for guild ${interaction.guild.id}`);
                     continue;
                 }
+                 if (field.required && !field.label) {
+                    await interaction.reply({ content: "Un champ personnalisé obligatoire n'a pas de titre. Veuillez contacter un administrateur.", ephemeral: true });
+                    return;
+                }
+
                 const textInput = new TextInputBuilder()
                     .setCustomId(field.id)
                     .setLabel(field.label)

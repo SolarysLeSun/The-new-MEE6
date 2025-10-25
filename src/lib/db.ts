@@ -450,15 +450,24 @@ const defaultConfigs: DefaultConfigs = {
         enabled: true, 
         creation_channel: null, 
         category_id: null, 
+        log_channel_id: null,
+        moderator_roles: [],
+        mention_moderators: true,
         embed_message: 'Cliquez sur le bouton pour créer un nouveau ticket.',
         channel_name_format: 'ticket-{user}',
         archive_summary: true,
+        auto_delete_on_close: false,
         modal_title: 'Créer un ticket',
         custom_fields: [],
-        moderator_roles: [],
+        validation_enabled: false,
+        validation_channel_id: null,
+        confirmation_message: "Votre demande a été envoyée pour validation. Vous recevrez une notification si elle est acceptée.",
+        private_thread_enabled: true,
+        private_thread_name_format: 'staff-{user}',
         command_permissions: {
-            addprivate: null,
+            addticket: null,
             privateresum: null,
+            ticket: null,
         }
     },
     'smart-events': { 
@@ -1628,4 +1637,3 @@ export function listApiBans(): { user_id: string, reason: string | null }[] {
     return db.prepare('SELECT user_id, reason FROM api_bans').all() as any;
 }
   
-
