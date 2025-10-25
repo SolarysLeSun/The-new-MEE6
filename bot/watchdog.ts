@@ -48,37 +48,39 @@ async function sendWebhookNotification(reason: string, logs?: string) {
                 embeds: [embed],
             }),
         });
-         console.log('[Watchdog] Notification de redémarrage envoyée sur Discord.');
+         console.log(`[${new Date().toISOString()}] [Watchdog] Notification de redémarrage envoyée sur Discord.`);
     } catch (error) {
-        console.error('[Watchdog] Impossible d\'envoyer la notification webhook:', error);
+        console.error(`[${new Date().toISOString()}] [Watchdog] Impossible d\'envoyer la notification webhook:`, error);
     }
 }
 
 
 async function checkApiHealth() {
+    const timestamp = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
     if (isRestarting) {
-        console.log('[Watchdog] Restart in progress, skipping health check.');
+        console.log(`[${timestamp}] [Watchdog] Restart in progress, skipping health check.`);
         return;
     }
 
-    console.log(`[Watchdog] Checking health of ${TARGET_API_URL}...`);
+    console.log(`[${timestamp}] [Watchdog] Checking health of ${TARGET_API_URL}...`);
 
     try {
         const response = await fetch(TARGET_API_URL, { timeout: 10000 }); // 10 second timeout
         if (response.ok) {
-            console.log('[Watchdog] API is healthy. Status:', response.status);
+            console.log(`[${timestamp}] [Watchdog] API is healthy. Status:`, response.status);
         } else {
             throw new Error(`API returned a non-ok status: ${response.status}`);
         }
     } catch (error: any) {
-        console.error('[Watchdog] Health check failed:', error.message);
-        console.log('[Watchdog] API is down. Triggering restart...');
+        console.error(`[${timestamp}] [Watchdog] Health check failed:`, error.message);
+        console.log(`[${timestamp}] [Watchdog] API is down. Triggering restart...`);
         await restartBot(error.message);
     }
 }
 
 async function restartBot(reason: string) {
     isRestarting = true;
+    const timestamp = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
     
     // 1. Get logs first
     let logs = 'Impossible de récupérer les logs.';
@@ -93,7 +95,7 @@ async function restartBot(reason: string) {
             });
         });
     } catch (logError) {
-        console.error('[Watchdog] Erreur lors de la récupération des logs PM2 :', logError);
+        console.error(`[${timestamp}] [Watchdog] Erreur lors de la récupération des logs PM2 :`, logError);
     }
 
     // 2. Send notification
@@ -101,24 +103,24 @@ async function restartBot(reason: string) {
 
 
     // 3. Execute restart
-    console.log('[Watchdog] Executing "pm2 restart bot"...');
+    console.log(`[${timestamp}] [Watchdog] Executing "pm2 restart bot"...`);
     exec('pm2 restart bot', (error, stdout, stderr) => {
         if (error) {
-            console.error(`[Watchdog] PM2 restart command failed: ${error.message}`);
+            console.error(`[${timestamp}] [Watchdog] PM2 restart command failed: ${error.message}`);
             // Reset flag even if restart fails, to allow for another attempt
             setTimeout(() => { isRestarting = false; }, 30000); // Wait 30s before allowing another restart
             return;
         }
         
-        console.log(`[Watchdog] PM2 stdout: ${stdout}`);
+        console.log(`[${timestamp}] [Watchdog] PM2 stdout: ${stdout}`);
         if (stderr) {
-            console.error(`[Watchdog] PM2 stderr: ${stderr}`);
+            console.error(`[${timestamp}] [Watchdog] PM2 stderr: ${stderr}`);
         }
 
-        console.log('[Watchdog] Restart command sent. Waiting 1 minute before resuming health checks.');
+        console.log(`[${timestamp}] [Watchdog] Restart command sent. Waiting 1 minute before resuming health checks.`);
         setTimeout(() => {
             isRestarting = false;
-            console.log('[Watchdog] Resuming health checks.');
+            console.log(`[${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}] [Watchdog] Resuming health checks.`);
         }, 60000); // Cooldown period after restart
     });
 }
@@ -130,8 +132,9 @@ app.get('/health', (req, res) => {
 });
 
 app.listen(WATCHDOG_PORT, () => {
-    console.log(`[Watchdog] Health check server listening on port ${WATCHDOG_PORT}`);
-    console.log(`[Watchdog] Starting regular checks on ${TARGET_API_URL}`);
+    const timestamp = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
+    console.log(`[${timestamp}] [Watchdog] Health check server listening on port ${WATCHDOG_PORT}`);
+    console.log(`[${timestamp}] [Watchdog] Starting regular checks on ${TARGET_API_URL}`);
     
     // Initial check on startup after a small delay
     setTimeout(checkApiHealth, 5000);
