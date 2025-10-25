@@ -106,15 +106,15 @@ export default function LevelingPage() {
         saveConfig({ ...config, [key]: value });
     };
 
-    const handleListChange = useCallback(<T extends RoleReward | XPBoost | ShopItem>(
+    const handleListChange = useCallback((
         key: 'role_rewards' | 'xp_boost_roles' | 'xp_boost_channels' | 'shop_items',
         index: number,
-        field: keyof T,
+        field: keyof (RoleReward | XPBoost | ShopItem),
         value: string | number
     ) => {
         if (!config) return;
-        const list = [...(config[key] as T[] || [])];
-        (list[index] as any)[field] = value;
+        const list = [...(config[key] as any[] || [])];
+        list[index] = { ...list[index], [field]: value };
         handleValueChange(key, list);
     }, [config]);
     
@@ -272,7 +272,7 @@ export default function LevelingPage() {
                                 <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
                                     <div className="w-full sm:w-24">
                                         <Label className="text-xs">Niveau</Label>
-                                        <Input type="number" placeholder="Niv." defaultValue={reward.level} onChange={e => handleListChange('role_rewards', index, 'level', parseInt(e.target.value))} />
+                                        <Input type="number" placeholder="Niv." defaultValue={reward.level} onBlur={e => handleListChange('role_rewards', index, 'level', parseInt(e.target.value))} />
                                     </div>
                                     <div className="flex-1">
                                         <Label className="text-xs">Rôle</Label>
@@ -300,7 +300,7 @@ export default function LevelingPage() {
                                     </div>
                                     <div className="w-full sm:w-28">
                                         <Label className="text-xs">Multiplicateur</Label>
-                                        <Input type="number" step="0.1" placeholder="Ex: 1.5" defaultValue={boost.multiplier} onChange={e => handleListChange('xp_boost_roles', index, 'multiplier', parseFloat(e.target.value))} />
+                                        <Input type="number" step="0.1" placeholder="Ex: 1.5" defaultValue={boost.multiplier} onBlur={e => handleListChange('xp_boost_roles', index, 'multiplier', parseFloat(e.target.value))} />
                                     </div>
                                     <Button variant="ghost" size="icon" className="shrink-0" onClick={() => removeListItem('xp_boost_roles', index)}><Trash2 className="text-destructive"/></Button>
                                 </div>
@@ -313,7 +313,7 @@ export default function LevelingPage() {
                                     </div>
                                      <div className="w-full sm:w-28">
                                         <Label className="text-xs">Multiplicateur</Label>
-                                        <Input type="number" step="0.1" placeholder="Ex: 1.5" defaultValue={boost.multiplier} onChange={e => handleListChange('xp_boost_channels', index, 'multiplier', parseFloat(e.target.value))} />
+                                        <Input type="number" step="0.1" placeholder="Ex: 1.5" defaultValue={boost.multiplier} onBlur={e => handleListChange('xp_boost_channels', index, 'multiplier', parseFloat(e.target.value))} />
                                     </div>
                                     <Button variant="ghost" size="icon" className="shrink-0" onClick={() => removeListItem('xp_boost_channels', index)}><Trash2 className="text-destructive"/></Button>
                                 </div>
@@ -366,19 +366,19 @@ export default function LevelingPage() {
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-grow">
                                                 <div className="space-y-1">
                                                     <Label>Nom d'affichage</Label>
-                                                    <Input value={item.name} placeholder="Ex: Rôle VIP" onChange={e => handleListChange('shop_items', index, 'name', e.target.value)} />
+                                                    <Input defaultValue={item.name} placeholder="Ex: Rôle VIP" onBlur={e => handleListChange('shop_items', index, 'name', e.target.value)} />
                                                 </div>
                                                 <div className="space-y-1">
                                                     <Label>ID unique (pour /acheter)</Label>
-                                                    <Input value={item.id} placeholder="Ex: vip-role" onChange={e => handleListChange('shop_items', index, 'id', e.target.value)} />
+                                                    <Input defaultValue={item.id} placeholder="Ex: vip-role" onBlur={e => handleListChange('shop_items', index, 'id', e.target.value)} />
                                                 </div>
                                                 <div className="space-y-1">
                                                     <Label>Prix (XP)</Label>
-                                                    <Input type="number" value={item.price} placeholder="Ex: 10000" onChange={e => handleListChange('shop_items', index, 'price', parseInt(e.target.value))} />
+                                                    <Input type="number" defaultValue={item.price} placeholder="Ex: 10000" onBlur={e => handleListChange('shop_items', index, 'price', parseInt(e.target.value))} />
                                                 </div>
                                                 <div className="space-y-1">
                                                     <Label>Description</Label>
-                                                    <Input value={item.description} placeholder="Ex: Donne accès aux salons VIP" onChange={e => handleListChange('shop_items', index, 'description', e.target.value)} />
+                                                    <Input defaultValue={item.description} placeholder="Ex: Donne accès aux salons VIP" onBlur={e => handleListChange('shop_items', index, 'description', e.target.value)} />
                                                 </div>
                                                  <div className="space-y-1">
                                                     <Label>Type de récompense</Label>
