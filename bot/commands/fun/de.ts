@@ -41,7 +41,7 @@ const DiceCommand: Command = {
         const sum = rolls.reduce((a, b) => a + b, 0);
 
         const embed = new EmbedBuilder()
-            .setColor(0x3498DB)
+            .setColor(0xf37349)
             .setTitle(`🎲 Lancer de ${numberOfDice}d${numberOfFaces}`)
             .setDescription(`**Résultats :** ${rolls.join(', ')}`)
             .addFields({ name: 'Total', value: `**${sum}**`, inline: true });

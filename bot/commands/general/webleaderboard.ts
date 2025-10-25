@@ -24,7 +24,7 @@ const WebLeaderboardCommand: Command = {
         const leaderboardUrl = `${panelUrl}/scoreboard/level/${interaction.guild.id}`;
 
         const embed = new EmbedBuilder()
-            .setColor(0x3498DB)
+            .setColor(0xf37349)
             .setTitle(`🏆 Classement de ${interaction.guild.name}`)
             .setDescription("Consultez le classement complet en temps réel sur notre panel web !");
             

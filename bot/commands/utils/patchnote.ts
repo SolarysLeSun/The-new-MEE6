@@ -65,7 +65,7 @@ const PatchNoteCommand: Command = {
                 .setTitle(`📝 ${result.title}`)
                 .setAuthor({ name: result.author })
                 .setDescription(result.content)
-                .setColor(isOfficial ? 0xFFD700 : 0x3498DB)
+                .setColor(isOfficial ? 0xFFD700 : 0xf37349)
                 .setTimestamp();
             
             // --- Webhook Logic ---

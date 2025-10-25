@@ -320,7 +320,7 @@ async function handleTranslationSelect(interaction: StringSelectMenuInteraction)
         
         if (result.translatedText) {
             const embed = new EmbedBuilder()
-                .setColor(0x3498DB)
+                .setColor(0xf37349)
                 .setTitle(`Traduction en ${targetLanguage}`)
                 .addFields(
                     { name: 'Texte Original', value: `\`\`\`${message.content.substring(0, 1020)}\`\`\`` },
@@ -423,7 +423,7 @@ async function handleReminderButton(interaction: ButtonInteraction) {
     
     setTimeout(async () => {
         const embed = new EmbedBuilder()
-            .setColor(0x3498DB)
+            .setColor(0xf37349)
             .setTitle('⏰ Rappel (Relance)')
             .setDescription(`${interaction.user}, vous m'avez demandé de vous rappeler ceci <t:${creationTimestamp}:R> :\n\n> ${message}`)
             .setTimestamp();

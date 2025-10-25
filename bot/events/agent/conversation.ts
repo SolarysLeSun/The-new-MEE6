@@ -54,7 +54,7 @@ async function handleFaqScan(message: Message) {
 
         if (result.isConfident && result.answer) {
              const embed = new EmbedBuilder()
-                .setColor(0x3498DB)
+                .setColor(0xf37349)
                 .setTitle(`Réponse possible à votre question`)
                 .setDescription(result.answer)
                 .setFooter({ text: `Basé sur la question : "${result.matchedQuestion}"`});

@@ -51,7 +51,7 @@ const TraduireCommand: Command = {
 
             if (result.translatedText) {
                 const embed = new EmbedBuilder()
-                    .setColor(0x3498DB)
+                    .setColor(0xf37349)
                     .setTitle(`Traduction en ${targetLanguage}`)
                     .addFields(
                         { name: 'Texte Original', value: `\`\`\`${textToTranslate.substring(0, 1020)}\`\`\`` },
@@ -72,5 +72,3 @@ const TraduireCommand: Command = {
 };
 
 export default TraduireCommand;
-
-    

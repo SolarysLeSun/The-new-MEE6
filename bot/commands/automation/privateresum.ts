@@ -45,7 +45,7 @@ const PrivateResumCommand: Command = {
             const result = await transcriptSummaryFlow({ transcript });
 
             const embed = new EmbedBuilder()
-                .setColor(0x3498DB)
+                .setColor(0xf37349)
                 .setTitle(`📝 Résumé IA du salon #${interaction.channel.name}`)
                 .setDescription(result.summary)
                 .setFooter({ text: `Basé sur les ${sortedMessages.length} derniers messages.` });

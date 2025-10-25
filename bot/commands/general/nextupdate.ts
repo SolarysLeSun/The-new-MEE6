@@ -13,7 +13,7 @@ const NextUpdateCommand: Command = {
         const roadmapUrl = process.env.PANEL_BASE_URL ? `${process.env.PANEL_BASE_URL}/roadmap` : "https://marcusbot.fr/roadmap";
 
         const embed = new EmbedBuilder()
-            .setColor(0x3498DB)
+            .setColor(0xf37349)
             .setTitle('🚀 Prochaines Mises à Jour')
             .setDescription("Curieux de savoir ce qui arrive sur Marcus ? Consultez notre feuille de route publique pour voir les prochaines fonctionnalités en cours de développement et celles à venir !")
             .setTimestamp();

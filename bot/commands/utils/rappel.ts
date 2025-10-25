@@ -60,7 +60,7 @@ const RappelCommand: Command = {
 
         setTimeout(async () => {
             const embed = new EmbedBuilder()
-                .setColor(0x3498DB)
+                .setColor(0xf37349)
                 .setTitle('⏰ C\'est l\'heure !')
                 .setDescription(`Rappel demandé <t:${creationTimestamp}:R>:\n\n> ${message}`)
                 .setTimestamp();

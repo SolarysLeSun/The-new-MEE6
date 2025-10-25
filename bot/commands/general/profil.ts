@@ -28,7 +28,7 @@ const ProfilCommand: Command = {
             const totalLevel = getCombinedUserLevel(targetUser.id);
 
             const embed = new EmbedBuilder()
-                .setColor(0x3498DB)
+                .setColor(0xf37349)
                 .setAuthor({ name: `Profil de ${targetUser.username}`, iconURL: targetUser.displayAvatarURL() || undefined })
                 .setThumbnail(targetUser.displayAvatarURL({ size: 256 }) || null);
 

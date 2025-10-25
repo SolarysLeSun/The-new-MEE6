@@ -55,7 +55,7 @@ const DevAdminAnnounceCommand: Command = {
             .setAuthor({ name: rawText })
             .setTitle(title)
             .setDescription(description)
-            .setColor(0x3498DB) // Blue
+            .setColor(0xf37349)
             .setFooter({ text: `Annonce de dev de la part de ${client.user?.username} | dev_admin_announce`, iconURL: client.user?.displayAvatarURL() || undefined })
             .setTimestamp();
         

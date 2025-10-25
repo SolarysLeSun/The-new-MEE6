@@ -47,7 +47,7 @@ const AnnounceCommand: Command = {
             });
 
             const embed = new EmbedBuilder()
-                .setColor(0x3498DB)
+                .setColor(0xf37349)
                 .setTitle(result.title)
                 .setDescription(result.description)
                 .setAuthor({ name: rawText }) // Store original raw text here

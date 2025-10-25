@@ -38,7 +38,7 @@ const AddPrivateCommand: Command = {
             }
 
             const embed = new EmbedBuilder()
-                .setColor(0x3498DB)
+                .setColor(0xf37349)
                 .setTitle(privateRoomsConfig.modal_title || 'Ouvrir un ticket')
                 .setDescription(privateRoomsConfig.embed_message || 'Cliquez sur le bouton ci-dessous pour ouvrir un ticket.')
                 .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() || undefined });

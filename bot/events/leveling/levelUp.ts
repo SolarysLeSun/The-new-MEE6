@@ -50,10 +50,10 @@ export async function execute(user: User, guild: Guild, newLevel: number) {
                 }
 
                 const embed = new EmbedBuilder()
-                    .setColor(config.level_card_bar_color ? parseInt(config.level_card_bar_color.replace('#', ''), 16) : 0x3498DB)
+                    .setColor(config.level_card_bar_color ? parseInt(config.level_card_bar_color.replace('#', ''), 16) : 0xf37349)
                     .setImage(cardUrl.toString());
 
-                await channel.send({ content: messageContent, embeds: [embed] });
+                await channel.send({ content: messageContent, embeds: [embed] }).catch(console.error);
 
             } catch (error) {
                  console.error(`[LevelUp] Could not send level up card to ${channel.id} in ${guild.name}:`, error);

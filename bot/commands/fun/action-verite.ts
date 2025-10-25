@@ -36,7 +36,7 @@ const TruthOrDareCommand: Command = {
         const gameId = uuidv4();
 
         const embed = new EmbedBuilder()
-            .setColor(0x3498DB)
+            .setColor(0xf37349)
             .setTitle('Action ou Vérité !')
             .setDescription(`${interaction.user.toString()} a lancé une partie avec le thème **${theme}** ! Qui veut jouer ?`);
         

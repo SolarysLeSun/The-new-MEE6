@@ -41,7 +41,7 @@ export async function execute(member: GuildMember) {
         }
         
         const embed = new EmbedBuilder()
-            .setColor(config.card_text_color ? parseInt(config.card_text_color.replace('#', ''), 16) : 0x3498DB)
+            .setColor(config.card_text_color ? parseInt(config.card_text_color.replace('#', ''), 16) : 0xf37349)
             .setImage(cardUrl.toString());
 
         if (channel) {
