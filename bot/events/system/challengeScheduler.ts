@@ -1,7 +1,8 @@
+
 import { Client, TextChannel, EmbedBuilder } from 'discord.js';
 import { schedule } from 'node-cron';
 import { getAllBotServers, getServerConfig, setDailyChallenges } from '@/lib/db';
-import { challengeGenerationFlow } from '@/ai/flows/challenge-flow';
+import { challengeGenerationFlow } from '../../../src/ai/flows/challenge-flow';
 
 export function startChallengeScheduler(client: Client) {
     // Schedule to run every day at midnight server time.
