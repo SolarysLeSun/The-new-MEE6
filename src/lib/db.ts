@@ -249,6 +249,20 @@ const upgradeSchema = () => {
             );
         `);
         console.log('[Database] Table "tickets" is ready.');
+        
+         db.exec(`
+            CREATE TABLE IF NOT EXISTS community_activity_stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id TEXT NOT NULL,
+                timestamp_bucket DATETIME NOT NULL,
+                message_count INTEGER DEFAULT 0,
+                active_voice_members_count INTEGER DEFAULT 0,
+                cumulative_voice_minutes INTEGER DEFAULT 0,
+                active_text_members_count INTEGER DEFAULT 0,
+                UNIQUE(guild_id, timestamp_bucket)
+            );
+        `);
+        console.log('[Database] La table "community_activity_stats" est prête.');
 
 
         // Drop deprecated tables
@@ -730,6 +744,10 @@ const defaultConfigs: DefaultConfigs = {
         enabled: false,
         category_id: null,
         channel_format: '📊 Membres : {membres}'
+    },
+    'community-analysis': {
+        enabled: false,
+        premium: true,
     }
 };
 
@@ -1233,23 +1251,23 @@ export async function applyReferral(referralCode: string, referredGuildId: strin
 
 // --- Delegated Permissions ---
 
-export function grantPermission(userId: string, permissionKey: 'genpremium' | 'botrestart', grantedBy: string): void {
+export function grantPermission(userId: string, permissionKey: 'genpremium' | 'botrestart' | 'system', grantedBy: string): void {
     const stmt = db.prepare('INSERT OR REPLACE INTO delegated_permissions (user_id, permission_key, granted_by) VALUES (?, ?, ?)');
     stmt.run(userId, permissionKey, grantedBy);
 }
 
-export function revokePermission(userId: string, permissionKey: 'genpremium' | 'botrestart'): void {
+export function revokePermission(userId: string, permissionKey: 'genpremium' | 'botrestart' | 'system'): void {
     const stmt = db.prepare('DELETE FROM delegated_permissions WHERE user_id = ? AND permission_key = ?');
     stmt.run(userId, permissionKey);
 }
 
-export function hasPermission(userId: string, permissionKey: 'genpremium' | 'botrestart'): boolean {
+export function hasPermission(userId: string, permissionKey: 'genpremium' | 'botrestart' | 'system'): boolean {
     const stmt = db.prepare('SELECT 1 FROM delegated_permissions WHERE user_id = ? AND permission_key = ?');
     const result = stmt.get(userId, permissionKey);
     return !!result;
 }
 
-export function getDelegatedUsersForPermission(permissionKey: 'genpremium' | 'botrestart'): string[] {
+export function getDelegatedUsersForPermission(permissionKey: 'genpremium' | 'botrestart' | 'system'): string[] {
     const stmt = db.prepare('SELECT user_id FROM delegated_permissions WHERE permission_key = ?');
     const rows = stmt.all(permissionKey) as { user_id: string }[];
     return rows.map(row => row.user_id);
@@ -1404,26 +1422,35 @@ export function getUserLevel(userId: string, guildId: string): UserLevel {
     };
 }
 
-export const updateUserXP = db.transaction((userId: string, guildId: string, amount: number, mode: 'add' | 'set' = 'add') => {
-    const getStmt = db.prepare('SELECT xp, level FROM user_levels WHERE user_id = ? AND guild_id = ?');
-    const user = getStmt.get(userId, guildId) as { xp: number; level: number } | undefined;
-
-    let currentXp = user ? user.xp : 0;
-    let newXp = mode === 'add' ? currentXp + amount : amount;
-
-    if (newXp < 0) {
-        newXp = 0;
+export function updateUserXP(userId: string, guildId: string, amount: number, mode: 'add' | 'set' = 'add') {
+    if (!db) {
+        console.error("[Database] Tentative d'accès à la base de données avant initialisation (updateUserXP).");
+        return;
     }
+    const transaction = db.transaction(() => {
+        const getStmt = db.prepare('SELECT xp, level FROM user_levels WHERE user_id = ? AND guild_id = ?');
+        const user = getStmt.get(userId, guildId) as { xp: number; level: number } | undefined;
 
-    const upsertStmt = db.prepare(`
-        INSERT INTO user_levels (user_id, guild_id, xp, level)
-        VALUES (?, ?, ?, 0)
-        ON CONFLICT(user_id, guild_id) DO UPDATE SET xp = ?;
-    `);
-    upsertStmt.run(userId, guildId, newXp, newXp);
+        let currentXp = user ? user.xp : 0;
+        let newXp = mode === 'add' ? currentXp + amount : amount;
 
-    checkLevel(userId, guildId);
-});
+        if (newXp < 0) {
+            newXp = 0;
+        }
+
+        const upsertStmt = db.prepare(`
+            INSERT INTO user_levels (user_id, guild_id, xp, level)
+            VALUES (?, ?, ?, 0)
+            ON CONFLICT(user_id, guild_id) DO UPDATE SET xp = ?;
+        `);
+        upsertStmt.run(userId, guildId, newXp, newXp);
+
+        checkLevel(userId, guildId);
+    });
+
+    transaction();
+}
+
 
 export const setUserLevel = db.transaction((userId: string, guildId: string, targetLevel: number) => {
     const levelingConfig = getServerConfig(guildId, 'leveling') as LevelingConfig | null;
@@ -1637,3 +1664,6 @@ export function listApiBans(): { user_id: string, reason: string | null }[] {
     return db.prepare('SELECT user_id, reason FROM api_bans').all() as any;
 }
   
+
+// --- Activity Stats ---
+export { db };
