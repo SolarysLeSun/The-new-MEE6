@@ -20,6 +20,7 @@ import ms from 'ms';
 import { startAntiAfkInterval } from './events/moderation/antiAfk';
 import { startStatsChannelInterval } from './events/system/statsChannels';
 import { transcriptSummaryFlow } from '@/ai/flows/transcript-summary-flow';
+import { startCommunityAnalysisInterval } from './events/activity/communityAnalysis';
 
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -133,6 +134,10 @@ client.once(Events.ClientReady, async (readyClient) => {
 
     // Start interval for Stats Channels
     startStatsChannelInterval(client);
+    
+    // Start interval for community analysis
+    startCommunityAnalysisInterval(client);
+
 
     // Start the API for the web panel
     startApi(client);
@@ -1038,4 +1043,5 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
+
 

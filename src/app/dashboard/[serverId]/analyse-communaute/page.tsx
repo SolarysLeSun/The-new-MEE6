@@ -1,0 +1,203 @@
+
+
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import { useParams } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { AreaChart, Loader2, ServerCrash } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { PremiumFeatureWrapper } from '@/components/premium-wrapper';
+import { useServerInfo } from '@/hooks/use-server-info';
+import { Badge } from '@/components/ui/badge';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { subHours, format, startOfHour } from 'date-fns';
+import { fr } from 'date-fns/locale';
+
+const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
+
+interface AnalysisConfig {
+    enabled: boolean;
+    premium: boolean;
+}
+
+interface ActivityStat {
+    timestamp_bucket: string;
+    message_count: number;
+    active_voice_members_count: number;
+    cumulative_voice_minutes: number;
+    active_text_members_count: number;
+}
+
+function PageSkeleton() {
+    return (
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-72 mt-2" />
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <Skeleton className="h-10 w-full" />
+                <Separator />
+                <Skeleton className="h-64 w-full" />
+            </CardContent>
+        </Card>
+    );
+}
+
+function CommunityAnalysisContent({ isPremium, serverId }: { isPremium: boolean, serverId: string }) {
+    const { toast } = useToast();
+    const [config, setConfig] = useState<AnalysisConfig | null>(null);
+    const [activityData, setActivityData] = useState<ActivityStat[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!serverId) return;
+        const fetchData = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const [configRes, activityRes] = await Promise.all([
+                    fetch(`${API_URL}/get-config/${serverId}/community-analysis`),
+                    fetch(`${API_URL}/get-activity-stats/${serverId}`),
+                ]);
+                if (!configRes.ok) throw new Error("Impossible de charger la configuration.");
+                const configData = await configRes.json();
+                setConfig(configData);
+
+                if (activityRes.ok) {
+                    const activityData = await activityRes.json();
+                    setActivityData(activityData);
+                } else {
+                     setError("Impossible de charger les données d'activité.");
+                }
+
+            } catch (err: any) {
+                setError(err.message);
+                toast({ title: "Erreur", description: "Impossible de charger les données.", variant: "destructive" });
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, [serverId, toast]);
+
+    const saveConfig = async (newConfig: AnalysisConfig) => {
+        setConfig(newConfig);
+        try {
+            await fetch(`${API_URL}/update-config/${serverId}/community-analysis`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newConfig),
+            });
+        } catch (error) {
+            toast({ title: "Erreur de sauvegarde", variant: "destructive" });
+        }
+    };
+
+    const formattedData = useMemo(() => {
+        if (activityData.length === 0) return [];
+        
+        return activityData.map(stat => ({
+            time: format(new Date(stat.timestamp_bucket), 'HH:mm'),
+            Messages: stat.message_count,
+            'Utilisateurs en vocal': stat.active_voice_members_count,
+            'Minutes en vocal': stat.cumulative_voice_minutes,
+        })).reverse();
+    }, [activityData]);
+    
+
+    if (!config) {
+        return <PageSkeleton />;
+    }
+
+    return (
+        <PremiumFeatureWrapper isPremium={isPremium}>
+            <PageTransitionWrapper className="space-y-8">
+                 <Card>
+                    <CardHeader>
+                         <div className="flex items-center justify-between">
+                            <CardTitle>Activation de la Collecte de Données</CardTitle>
+                            <Switch checked={config.enabled} onCheckedChange={(val) => saveConfig({...config, enabled: val})} />
+                        </div>
+                        <CardDescription>
+                            Activez ce module pour commencer à enregistrer l'activité de votre serveur. Les données commenceront à apparaître après 30 minutes.
+                        </CardDescription>
+                    </CardHeader>
+                </Card>
+                
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Activité des 24 dernières heures</CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[400px] w-full">
+                        {loading ? (
+                            <div className="flex items-center justify-center h-full"><Loader2 className="w-8 h-8 animate-spin"/></div>
+                        ) : error ? (
+                             <div className="flex flex-col items-center justify-center h-full text-destructive"><ServerCrash className="w-10 h-10 mb-2"/>{error}</div>
+                        ) : formattedData.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full text-muted-foreground"><AreaChart className="w-10 h-10 mb-2"/>Aucune donnée disponible.</div>
+                        ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart
+                                    data={formattedData}
+                                    margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                                    <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))"/>
+                                    <YAxis yAxisId="left" stroke="#8884d8" label={{ value: 'Messages / Membres', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))' }} />
+                                    <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" label={{ value: 'Minutes', angle: -90, position: 'insideRight', fill: 'hsl(var(--muted-foreground))' }}/>
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: 'hsl(var(--card))',
+                                            borderColor: 'hsl(var(--border))',
+                                        }}
+                                    />
+                                    <Legend />
+                                    <Line yAxisId="left" type="monotone" dataKey="Messages" stroke="#8884d8" strokeWidth={2} activeDot={{ r: 8 }} />
+                                    <Line yAxisId="left" type="monotone" dataKey="Utilisateurs en vocal" stroke="#f37349" strokeWidth={2} />
+                                    <Line yAxisId="right" type="monotone" dataKey="Minutes en vocal" stroke="#82ca9d" strokeWidth={2} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        )}
+                    </CardContent>
+                </Card>
+
+            </PageTransitionWrapper>
+        </PremiumFeatureWrapper>
+    );
+}
+
+export default function CommunityAnalysisPage() {
+  const { serverInfo, loading } = useServerInfo();
+  const params = useParams();
+  const serverId = params.serverId as string;
+
+  return (
+    <PageTransitionWrapper className="space-y-8 text-white max-w-7xl mx-auto">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            Analyse de Communauté
+            <Badge className="bg-yellow-400 text-yellow-900">Premium</Badge>
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          Visualisez l'activité de votre serveur pour identifier les pics d'activité et les périodes creuses.
+        </p>
+      </div>
+      
+      <Separator />
+
+      {loading ? (
+        <PageSkeleton />
+      ) : (
+        <CommunityAnalysisContent isPremium={serverInfo?.isPremium || false} serverId={serverId} />
+      )}
+    </PageTransitionWrapper>
+  );
+}

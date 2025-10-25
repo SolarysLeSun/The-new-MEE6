@@ -46,6 +46,7 @@ import {
   UserX,
   Rss,
   BarChart,
+  AreaChart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -75,13 +76,20 @@ export const navCategories = [
         ]
     },
     {
+        name: 'Analyse & Données',
+        items: [
+            { href: 'analyse-communaute', label: 'Analyse de Communauté', icon: AreaChart, isPremium: true, keywords: ['stats', 'activité', 'graphiques', 'analyse'] },
+            { href: 'logs', label: 'Logs', icon: FileClock, keywords: ['journaux', 'événements', 'audit'] },
+            { href: 'statistiques', label: 'Salons de Statistiques', icon: BarChart, keywords: ['stats', 'compteur', 'membres', 'vocal', 'boosts'] },
+        ]
+    },
+    {
         name: 'Modération',
         items: [
             { href: 'moderation', label: 'Bans & Kicks', icon: Hammer, keywords: ['sanctions', 'avertir', 'warn', 'mute', 'timeout', 'unban', 'kickvoc', 'listwarns'] },
             { href: 'auto-moderation', label: 'Auto-Modération', icon: Bot, keywords: ['filtres', 'mots-clés', 'automod', 'gif'] },
             { href: 'anti-afk', label: 'Anti-AFK', icon: UserX, keywords: ['inactif', 'vocal', 'déconnecter'] },
             { href: 'lock', label: 'Lock/Unlock', icon: Lock, keywords: ['verrouiller', 'déverrouiller', 'salon', 'unlock'] },
-            { href: 'logs', label: 'Logs', icon: FileClock, keywords: ['journaux', 'événements', 'audit'] },
         ]
     },
     {
@@ -104,7 +112,6 @@ export const navCategories = [
             { href: 'salons-prives', label: 'Tickets', icon: Ticket, keywords: ['tickets', 'support', 'groupes', 'addticket', 'privateresum', 'salons privés'] },
             { href: 'evenements', label: 'Événements & Calendrier', icon: Calendar, keywords: ['events', 'planning', 'organisation', 'event-create', 'event-list'] },
             { href: 'accueil-integration', label: 'Accueil & Intégration', icon: UserPlus, keywords: ['bienvenue', 'welcome', 'autorole', 'questionnaire'] },
-            { href: 'statistiques', label: 'Salons de Statistiques', icon: BarChart, keywords: ['stats', 'compteur', 'membres', 'vocal', 'boosts'] },
         ]
     },
      {
