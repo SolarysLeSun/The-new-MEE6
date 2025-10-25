@@ -63,7 +63,8 @@ export type Module =
     | 'anti-afk'
     | 'integrations'
     | 'stats-channels'
-    | 'partnership';
+    | 'partnership'
+    | 'giveaways';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale
@@ -332,4 +333,16 @@ export interface Partnership {
     guild1_icon?: string | null;
     guild2_name?: string;
     guild2_icon?: string | null;
+}
+
+export interface Giveaway {
+    id: string;
+    guild_id: string;
+    prize: string;
+    winner_count: number;
+    reward_type: 'role' | 'xp' | 'custom';
+    reward_value: string | null;
+    duration: number; // in minutes
+    status: 'scheduled' | 'active' | 'ended';
+    schedule?: string | null; // cron-like string
 }

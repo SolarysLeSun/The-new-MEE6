@@ -4,7 +4,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder, TextChannel } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile, RoadmapItem, Partnership } from '../types';
+import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile, RoadmapItem, Partnership, Giveaway } from '../types';
 import { randomBytes } from 'crypto';
 import ms from 'ms';
 
@@ -223,6 +223,25 @@ const upgradeSchema = () => {
             );
         `);
         console.log('[Database] Table "partnerships" is ready.');
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS giveaways (
+                id TEXT PRIMARY KEY,
+                guild_id TEXT NOT NULL,
+                channel_id TEXT,
+                message_id TEXT,
+                prize TEXT NOT NULL,
+                winner_count INTEGER NOT NULL,
+                reward_type TEXT CHECK(reward_type IN ('role', 'xp', 'custom')),
+                reward_value TEXT,
+                duration INTEGER,
+                ends_at DATETIME,
+                status TEXT CHECK(status IN ('scheduled', 'active', 'ended')),
+                schedule TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log('[Database] Table "giveaways" is ready.');
 
         // Drop deprecated tables
         db.exec(`DROP TABLE IF EXISTS ai_personas;`);
@@ -691,7 +710,7 @@ const defaultConfigs: DefaultConfigs = {
         partner_rewards: [],
     },
     'giveaways': {
-        enabled: false,
+        enabled: true,
         premium: true,
         command_permissions: {},
     },
