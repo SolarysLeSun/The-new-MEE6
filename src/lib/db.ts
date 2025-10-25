@@ -193,6 +193,27 @@ const upgradeSchema = () => {
         `);
         console.log('[Database] Table "roadmap_items" is ready.');
 
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS api_keys (
+                key TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                guild_id TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_used_at DATETIME
+            );
+        `);
+        console.log('[Database] Table "api_keys" is ready.');
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS api_bans (
+                user_id TEXT PRIMARY KEY,
+                banned_by TEXT NOT NULL,
+                reason TEXT,
+                banned_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log('[Database] Table "api_bans" is ready.');
+
 
         // Drop deprecated tables
         db.exec(`DROP TABLE IF EXISTS ai_personas;`);
@@ -603,6 +624,7 @@ const defaultConfigs: DefaultConfigs = {
             rappel: null,
             setprofil: null,
             profil: null,
+            apikey: null,
         },
          command_enabled: {
             save: true,
@@ -610,6 +632,7 @@ const defaultConfigs: DefaultConfigs = {
             rappel: true,
             setprofil: true,
             profil: true,
+            apikey: true,
         },
     },
      'referral': {
@@ -1464,4 +1487,45 @@ export function getCombinedUserLevel(userId: string): number {
     return rows.reduce((sum, row) => sum + row.level, 0);
 }
 
+// --- Public API Key System ---
+
+export function generateApiKey(userId: string, guildId: string): string {
+    const key = `marcus_pub_${randomBytes(24).toString('hex')}`;
+    const stmt = db.prepare(`
+        INSERT INTO api_keys (key, user_id, guild_id) VALUES (?, ?, ?)
+        ON CONFLICT(user_id, guild_id) DO UPDATE SET key = excluded.key, created_at = CURRENT_TIMESTAMP;
+    `);
+    stmt.run(key, userId, guildId);
+    return key;
+}
+
+export function getApiKeyInfo(key: string): { userId: string, guildId: string, isBanned: boolean } | null {
+    const keyStmt = db.prepare('SELECT user_id, guild_id FROM api_keys WHERE key = ?');
+    const keyInfo = keyStmt.get(key) as { user_id: string; guild_id: string; } | undefined;
+    
+    if (!keyInfo) return null;
+
+    const banStmt = db.prepare('SELECT 1 FROM api_bans WHERE user_id = ?');
+    const isBanned = !!banStmt.get(keyInfo.user_id);
+
+    // Update last used timestamp
+    db.prepare('UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE key = ?').run(key);
+
+    return { ...keyInfo, isBanned };
+}
+
+export function addApiBan(userId: string, bannedBy: string, reason: string | null) {
+    const stmt = db.prepare('INSERT OR REPLACE INTO api_bans (user_id, banned_by, reason) VALUES (?, ?, ?)');
+    stmt.run(userId, bannedBy, reason);
+}
+
+export function removeApiBan(userId: string) {
+    const stmt = db.prepare('DELETE FROM api_bans WHERE user_id = ?');
+    stmt.run(userId);
+}
+
+export function listApiBans(): { user_id: string, reason: string | null }[] {
+    return db.prepare('SELECT user_id, reason FROM api_bans').all() as any;
+}
   
+

@@ -3,7 +3,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType, DiscordAPIError } from 'discord.js';
-import { updateServerConfig, getServerConfig, getAllBotServers, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem } from '@/lib/db';
+import { updateServerConfig, getServerConfig, getAllBotServers, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem, getApiKeyInfo } from '@/lib/db';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { updateGuildCommands } from './handlers/commandHandler';
@@ -123,6 +123,28 @@ export function startApi(client: Client) {
         if (providedPassword !== ADMIN_PASSWORD) {
             return res.status(401).json({ error: 'Mot de passe administrateur invalide.' });
         }
+        next();
+    };
+
+    // --- Public API Auth Middleware ---
+    const checkApiKey = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Unauthorized: Missing API key.' });
+        }
+        const key = authHeader.split(' ')[1];
+        const keyInfo = getApiKeyInfo(key);
+
+        if (!keyInfo) {
+            return res.status(401).json({ error: 'Unauthorized: Invalid API key.' });
+        }
+        if (keyInfo.isBanned) {
+            return res.status(403).json({ error: 'Forbidden: This API key has been suspended.' });
+        }
+
+        // Attach user and guild info to the request for later use in endpoints
+        (req as any).apiKeyInfo = keyInfo;
+        
         next();
     };
 
@@ -702,7 +724,64 @@ export function startApi(client: Client) {
         }
     });
 
-    // --- Public Leaderboard API ---
+    // --- Public API Endpoints ---
+
+    const publicApiRouter = express.Router();
+    publicApiRouter.use(checkApiKey);
+
+    publicApiRouter.get('/leaderboard/:guildId', async (req, res) => {
+        const { guildId } = req.params;
+        const { limit = '10' } = req.query;
+
+        // Check if the API key's guildId matches the requested guildId
+        if ((req as any).apiKeyInfo.guildId !== guildId) {
+            return res.status(403).json({ error: 'Forbidden: This API key is not authorized for the requested server.' });
+        }
+
+        try {
+            const leaderboardData = getGuildLeaderboard(guildId, parseInt(limit as string, 10));
+            const enrichedLeaderboard = await Promise.all(
+                leaderboardData.map(async (entry, index) => {
+                    try {
+                        const user = await client.users.fetch(entry.user_id);
+                        return {
+                            rank: index + 1,
+                            user: {
+                                id: user.id,
+                                username: user.username,
+                                tag: user.tag,
+                                avatar: user.displayAvatarURL({ size: 128 }),
+                            },
+                            level: entry.level,
+                            xp: entry.xp,
+                            requiredXp: entry.requiredXp,
+                        };
+                    } catch (error) {
+                        return {
+                            rank: index + 1,
+                            user: {
+                                id: entry.user_id,
+                                username: 'Utilisateur Inconnu',
+                                tag: '????',
+                                avatar: null,
+                            },
+                            level: entry.level,
+                            xp: entry.xp,
+                            requiredXp: entry.requiredXp,
+                        };
+                    }
+                })
+            );
+            res.json(enrichedLeaderboard);
+        } catch (error) {
+            console.error(`[Public API] Error fetching leaderboard for ${guildId}:`, error);
+            res.status(500).json({ error: 'Erreur interne du serveur.' });
+        }
+    });
+
+    app.use('/api/public', publicApiRouter);
+
+    // --- OLD Public Leaderboard API (deprecated, will be removed) ---
     app.get('/api/leaderboard/:guildId', async (req, res) => {
         const { guildId } = req.params;
         const { limit = '10' } = req.query;

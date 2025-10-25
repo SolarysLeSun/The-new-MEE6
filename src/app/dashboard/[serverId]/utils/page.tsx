@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import { Wrench, User } from 'lucide-react';
+import { Wrench, User, KeyRound } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Combobox } from '@/components/ui/combobox';
@@ -32,6 +32,7 @@ const utilCommands = [
     { name: '/rappel', key: 'rappel', description: 'Définit un rappel personnel.' },
     { name: '/setprofil', key: 'setprofil', description: 'Définit votre biographie et vos liens de profil.', icon: User, defaultEveryone: true },
     { name: '/profil', key: 'profil', description: 'Affiche le profil d\'un utilisateur.', icon: User, defaultEveryone: true },
+    { name: '/apikey', key: 'apikey', description: 'Génère une clé pour utiliser l\'API publique de Marcus.', icon: KeyRound, defaultEveryone: false },
 ];
 
 function PageSkeleton() {
