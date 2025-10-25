@@ -76,6 +76,12 @@ export type DefaultConfigs = {
 
 // --- Types pour les modules spécifiques ---
 
+export interface StatsChannelsConfig {
+    enabled: boolean;
+    category_id: string | null;
+    channel_format: string;
+}
+
 export interface AutoModConfig {
     enabled: boolean;
     rules: any[]; // Remplacez `any` par un type plus spécifique si vous le souhaitez
