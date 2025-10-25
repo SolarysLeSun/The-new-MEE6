@@ -18,7 +18,6 @@ import { handleOnboardingResponse } from './events/onboarding/aiOnboarding';
 import { patchNoteFlow } from '@/ai/flows/patchnote-flow';
 import ms from 'ms';
 import { startAntiAfkInterval } from './events/moderation/antiAfk';
-import { musicPlayer } from './music/player';
 import { startStatsChannelInterval } from './events/system/statsChannels';
 
 
@@ -67,10 +66,6 @@ client.commands = new Collection<string, Command>();
 
 // Pass client instance to the database module for event emitting
 setClientInstance(client);
-
-// Initialize the music player with the client instance
-musicPlayer.initialize(client);
-
 
 // Load Event Handlers
 const loadEvents = (client: Client) => {
@@ -816,17 +811,6 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         console.error(`No command matching ${interaction.commandName} was found.`);
         return;
     }
-
-    // Pass the music player instance to the command if it's a music command
-    const musicCommands = ['play', 'stop'];
-    if (musicCommands.includes(interaction.commandName)) {
-        try {
-            await (command.execute as any)(interaction, musicPlayer);
-        } catch (error) {
-            console.error(`[Music Command Error] Error executing command '${interaction.commandName}':`, error);
-        }
-        return;
-    }
     
     try {
         await command.execute(interaction as any);
@@ -879,4 +863,3 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
-(global as any).musicPlayer = musicPlayer;

@@ -55,11 +55,6 @@ const manualVoiceCommands = [
   }
 ];
 
-const musicCommands = [
-    { name: '/play', key: 'play', description: 'Joue une chanson ou l\'ajoute à la file d\'attente.' },
-    { name: '/stop', key: 'stop', description: 'Arrête la musique et vide la file d\'attente.' },
-]
-
 function ManualControlPageSkeleton() {
     return (
         <div className="space-y-8">
@@ -137,9 +132,9 @@ export default function ManualControlPage() {
   return (
     <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Contrôle Vocal & Musique</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Contrôle Vocal</h1>
         <p className="text-muted-foreground mt-2">
-          Invitez, déconnectez, faites parler ou jouer de la musique au bot.
+          Invitez, déconnectez ou faites parler le bot en vocal.
         </p>
       </div>
 
@@ -206,50 +201,6 @@ export default function ManualControlPage() {
                 Une future fonctionnalité permettra au bot de traduire en temps réel les paroles des membres entre différentes langues, unifiant ainsi votre communauté internationale.
             </AlertDescription>
         </Alert>
-      </div>
-      
-      <Separator/>
-
-      {/* Section Commandes Musicales */}
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-xl font-bold">Commandes Musicales</h2>
-          <p className="text-muted-foreground">
-            Gérez les permissions pour les nouvelles commandes musicales.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {musicCommands.map((command) => (
-            <Card key={command.name}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Music className="w-5 h-5 text-primary" />
-                  <span>{command.name}</span>
-                </CardTitle>
-                <CardDescription>{command.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor={`role-select-${command.key}`}
-                    className="text-sm font-medium"
-                  >
-                    Rôle minimum requis
-                  </Label>
-                  <Combobox
-                    options={roleOptions}
-                    value={config.command_permissions?.[command.key] || 'none'}
-                    onChange={(value) => handlePermissionChange(command.key, value)}
-                    placeholder="Sélectionner un rôle"
-                    searchPlaceholder="Rechercher un rôle..."
-                    emptyPlaceholder="Aucun rôle trouvé."
-                    className="w-full"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
       </div>
     </PageTransitionWrapper>
   );
