@@ -35,7 +35,8 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     const rank = parseInt(searchParams.get('rank') || '0', 10);
     const barColor = searchParams.get('barColor') || '#e597c4'
     const textColor = searchParams.get('textColor') || '#e597c4'
-    const backgroundUrl = searchParams.get('backgroundUrl') || 'https://nightproject.nationquest.fr/levelbw.jpg';
+    const backgroundUrl = searchParams.get('backgroundUrl');
+    const defaultBackgroundUrl = 'https://nightproject.nationquest.fr/levelbw.jpg';
 
     // Decide which name to display
     const nameToDisplay = hasSpecialChars(displayName) ? username : displayName;
@@ -48,18 +49,28 @@ export async function GET(req: NextRequest, { params }: { params: { serverId: st
     const ctx = canvas.getContext('2d')
 
     // 2. Fond
-    if (backgroundUrl) {
+    const drawBackground = async (url: string | null) => {
         try {
-            const background = await loadImage(backgroundUrl);
+            if (!url) throw new Error('No URL provided');
+            const background = await loadImage(url);
             ctx.drawImage(background, 0, 0, width, height);
+            return true;
         } catch (e) {
-            console.warn(`[Card] Could not load background image: ${backgroundUrl}. Using solid color.`);
+            return false;
+        }
+    };
+
+    let backgroundDrawn = false;
+    if (backgroundUrl) {
+        backgroundDrawn = await drawBackground(backgroundUrl);
+    }
+    if (!backgroundDrawn) {
+        const fallbackDrawn = await drawBackground(defaultBackgroundUrl);
+        if (!fallbackDrawn) {
+            console.warn(`[Card] Could not load default background image. Using solid color.`);
             ctx.fillStyle = '#23272A';
             ctx.fillRect(0, 0, width, height);
         }
-    } else {
-        ctx.fillStyle = '#23272A'; // Dark background
-        ctx.fillRect(0, 0, width, height);
     }
     
     // Overlay semi-transparent
