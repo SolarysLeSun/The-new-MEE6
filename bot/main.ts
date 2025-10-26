@@ -1076,8 +1076,3 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
-
-
-
-
-
