@@ -216,12 +216,12 @@ const upgradeSchema = () => {
 
         db.exec(`
             CREATE TABLE IF NOT EXISTS api_keys (
-                key TEXT PRIMARY KEY,
+                key TEXT NOT NULL,
                 user_id TEXT NOT NULL,
                 guild_id TEXT NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 last_used_at DATETIME,
-                UNIQUE(user_id, guild_id)
+                PRIMARY KEY (user_id, guild_id)
             );
         `);
         console.log('[Database] Table "api_keys" is ready.');
@@ -1095,15 +1095,6 @@ export function giveTesterStatus(userId: string, guildId: string, expiresAt: Dat
     }
 }
 
-export function revokeTesterStatus(userId: string, guildId: string) {
-    try {
-        const stmt = db.prepare('DELETE FROM testers WHERE user_id = ? AND guild_id = ?');
-        stmt.run(userId, guildId);
-    } catch (error) {
-        console.error(`[Database] Erreur lors de la révocation du statut de testeur pour ${userId}:`, error);
-    }
-}
-
 export function checkTesterStatus(userId: string, guildId: string): { isTester: boolean; expires_at: Date | null } {
     try {
         const stmt = db.prepare('SELECT expires_at FROM testers WHERE user_id = ? AND guild_id = ?');
@@ -1634,10 +1625,10 @@ export function getCombinedUserLevel(userId: string): number {
 export function generateApiKey(userId: string, guildId: string): string {
     const key = `marcus_pub_${randomBytes(24).toString('hex')}`;
     const stmt = db.prepare(`
-        INSERT INTO api_keys (key, user_id, guild_id) VALUES (?, ?, ?)
+        INSERT INTO api_keys (user_id, guild_id, key) VALUES (?, ?, ?)
         ON CONFLICT(user_id, guild_id) DO UPDATE SET key = excluded.key, created_at = CURRENT_TIMESTAMP;
     `);
-    stmt.run(key, userId, guildId);
+    stmt.run(userId, guildId, key);
     return key;
 }
 
