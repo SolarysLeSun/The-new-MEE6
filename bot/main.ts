@@ -1,4 +1,5 @@
 
+
 import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction, ButtonStyle, DiscordAPIError, ButtonBuilder, AnyThreadChannel, User } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -355,7 +356,7 @@ async function handlePrivateRoomModal(interaction: ModalSubmitInteraction) {
         await interaction.deferReply({ ephemeral: true });
 
         const sanitizedUsername = interaction.user.username.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20) || 'user';
-        let channelName = config.channel_name_format || 'ticket-{user}';
+        let channelName = config.channel_name_format || 'ticket-{user}-{id}';
 
         const formData: Record<string, string> = {};
         if (config.custom_fields && config.custom_fields.length > 0) {
@@ -374,8 +375,7 @@ async function handlePrivateRoomModal(interaction: ModalSubmitInteraction) {
         
         channelName = channelName
             .replace('{user}', sanitizedUsername)
-            .replace('{mention}', interaction.user.toString())
-            .replace('{id}', interaction.user.id)
+            .replace('{id}', interaction.user.id.slice(-4)) // Use last 4 digits of ID for shortness
             .replace('{random}', Math.random().toString(36).substring(2, 8));
         
         const existingChannel = interaction.guild.channels.cache.find(c => c.name === channelName && c.parentId === config.category_id);
@@ -718,6 +718,34 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
         if (customId.startsWith('reschedule_reminder::')) {
             await handleReminderButton(interaction);
+            return;
+        }
+
+        if (customId.startsWith('claim_ticket_')) {
+            const channelId = customId.split('_')[2];
+            const ticket = getTicketByChannelId(channelId);
+            if (!ticket) {
+                await interaction.reply({ content: "Ticket introuvable.", ephemeral: true });
+                return;
+            }
+            const config = await getServerConfig(interaction.guild!.id, 'private-rooms');
+            const member = interaction.member as GuildMember;
+            const isModerator = member.roles.cache.some(r => config.moderator_roles.includes(r.id));
+            if (!isModerator) {
+                await interaction.reply({ content: "Seul un modérateur peut réclamer un ticket.", ephemeral: true });
+                return;
+            }
+            updateTicket(channelId, { claimed_by: interaction.user.id });
+            const ticketOwner = await client.users.fetch(ticket.owner_id).catch(() => null);
+            await interaction.reply(`<@${ticketOwner?.id}>, ${interaction.user} a pris en charge votre ticket.`);
+            return;
+        }
+
+        if (customId.startsWith('manage_members_')) {
+            await interaction.reply({
+                content: "Utilisez les commandes suivantes pour gérer les membres de ce ticket :\n- `/ticket add [utilisateur]`\n- `/ticket remove [utilisateur]`",
+                ephemeral: true
+            });
             return;
         }
 

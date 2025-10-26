@@ -480,7 +480,7 @@ const defaultConfigs: DefaultConfigs = {
         moderator_roles: [],
         mention_moderators: true,
         embed_message: 'Cliquez sur le bouton pour créer un nouveau ticket.',
-        channel_name_format: 'ticket-{user}',
+        channel_name_format: 'ticket-{user}-{id}',
         archive_summary: true,
         auto_delete_on_close: false,
         modal_title: 'Créer un ticket',
