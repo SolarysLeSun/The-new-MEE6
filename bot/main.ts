@@ -1,6 +1,6 @@
 
 
-import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction, ButtonStyle, DiscordAPIError, ButtonBuilder, AnyThreadChannel } from 'discord.js';
+import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction, ButtonStyle, DiscordAPIError, ButtonBuilder, AnyThreadChannel, User } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -572,7 +572,7 @@ async function handleDeleteTicket(interaction: ButtonInteraction, channelId: str
         await interaction.reply({ content: "Vous n'avez pas la permission de supprimer ce ticket.", ephemeral: true });
         return;
     }
-    
+
     const channel = await interaction.guild.channels.fetch(channelId).catch(() => null) as TextChannel;
     if (!channel) return;
 
@@ -581,6 +581,8 @@ async function handleDeleteTicket(interaction: ButtonInteraction, channelId: str
     }
 
     try {
+        const ticketOwner = await client.users.fetch(ticket.owner_id).catch(() => null);
+        
         // --- Archive Summary ---
         if (config.archive_summary) {
             const modConfig = await getServerConfig(interaction.guild.id, 'moderation');
@@ -604,17 +606,28 @@ async function handleDeleteTicket(interaction: ButtonInteraction, channelId: str
                 }
             }
         }
+        
+        // --- Notify User ---
+        if (ticketOwner) {
+            try {
+                await ticketOwner.send(`Votre ticket **#${channel.name}** sur le serveur **${interaction.guild.name}** a été supprimé par un modérateur.`);
+            } catch (dmError) {
+                console.warn(`[Ticket Delete] Could not send DM to user ${ticketOwner.id}.`);
+            }
+        }
 
+        // --- Delete Channel and DB entry ---
         await channel.delete('Ticket fermé et supprimé.');
         deleteTicket(channelId);
 
         if (!isAutoDelete) {
-            await interaction.editReply({ content: "Ticket supprimé avec succès." });
+             // Use followUp because we deferred the reply
+            await interaction.followUp({ content: "Ticket supprimé avec succès.", ephemeral: true });
         }
     } catch (error) {
         console.error("Failed to delete ticket:", error);
         if (!isAutoDelete) {
-             await interaction.editReply({ content: "Une erreur est survenue lors de la suppression du ticket." });
+             await interaction.followUp({ content: "Une erreur est survenue lors de la suppression du ticket.", ephemeral: true });
         }
     }
 }
