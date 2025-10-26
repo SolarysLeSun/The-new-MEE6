@@ -52,11 +52,7 @@ const AdminXpCommand: Command = {
                 .addIntegerOption(option =>
                     option.setName('xp')
                         .setDescription("Le montant total d'XP à définir pour l'utilisateur.")
-                        .setMinValue(0)))
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('purge_activity')
-                .setDescription("Purge toutes les données d'activité de la communauté pour ce serveur.")),
+                        .setMinValue(0))),
 
     async execute(interaction: ChatInputCommandInteraction) {
         if (!interaction.guild || !interaction.member) {
@@ -75,19 +71,6 @@ const AdminXpCommand: Command = {
         await interaction.deferReply({ ephemeral: true });
 
         const subcommand = interaction.options.getSubcommand();
-
-        if (subcommand === 'purge_activity') {
-            try {
-                db.prepare('DELETE FROM community_activity_stats WHERE guild_id = ?').run(interaction.guild.id);
-                db.prepare('DELETE FROM member_join_leave_events WHERE guild_id = ?').run(interaction.guild.id);
-                await interaction.editReply({ content: '✅ Toutes les données d\'activité de la communauté pour ce serveur ont été purgées.' });
-            } catch (error) {
-                console.error('[AdminXpCommand] Error purging activity data:', error);
-                await interaction.editReply({ content: 'Une erreur est survenue lors de la purge des données.' });
-            }
-            return;
-        }
-        
         const targetUser = interaction.options.getUser('utilisateur', true);
         
         if (targetUser.bot) {
