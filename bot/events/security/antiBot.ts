@@ -44,7 +44,13 @@ export async function execute(member: GuildMember) {
 
     if (antibotConfig.mode === 'approval-required') {
         if (!antibotConfig.approval_channel_id) {
-            console.error(`[Anti-Bot] Approval mode is on but no approval channel is set for guild ${member.guild.id}.`);
+            console.error(`[Anti-Bot] Approval mode is on but no approval channel is set for guild ${member.guild.id}. Kicking the bot as a fallback.`);
+            try {
+                await member.kick('Politique Anti-Bot : Mode approbation activé mais aucun salon n\'est configuré.');
+                console.log(`[Anti-Bot] Kicked bot ${member.user.tag} from ${member.guild.name} due to missing configuration.`);
+            } catch (error) {
+                console.error(`[Anti-Bot] Failed to kick bot ${member.user.tag} after configuration error:`, error);
+            }
             return;
         }
 
