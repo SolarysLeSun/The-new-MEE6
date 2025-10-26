@@ -514,6 +514,12 @@ const defaultConfigs: DefaultConfigs = {
         default_channel_name: "Vocal intéractif",
         custom_instructions: ''
     },
+    'voice-hubs': {
+        enabled: false,
+        hub_category_id: null,
+        dest_category_id: null,
+        hubs: [],
+    },
     'content-ai': { 
         enabled: false, 
         premium: true,

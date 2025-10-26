@@ -63,7 +63,8 @@ export type Module =
     | 'anti-afk'
     | 'integrations'
     | 'stats-channels'
-    | 'community-analysis';
+    | 'community-analysis'
+    | 'voice-hubs';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale
@@ -75,6 +76,21 @@ export type DefaultConfigs = {
 
 
 // --- Types pour les modules spécifiques ---
+
+export interface VoiceHub {
+    id: string;
+    creator_channel_id: string;
+    name_format: string;
+    user_limit: number;
+    enable_smart_voice: boolean;
+}
+
+export interface VoiceHubsConfig {
+    enabled: boolean;
+    hub_category_id: string | null;
+    dest_category_id: string | null;
+    hubs: VoiceHub[];
+}
 
 export interface StatsChannelsConfig {
     enabled: boolean;
