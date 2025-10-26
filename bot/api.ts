@@ -12,6 +12,7 @@ import { knowledgeCreationFlow } from '@/ai/flows/knowledge-creation-flow';
 import { randomBytes } from 'crypto';
 import { exec } from 'child_process';
 import { fixEmbedJson } from '@/ai/flows/embed-json-fixer';
+import { createStatsChannels } from './events/system/statsChannels';
 
 const API_PORT = process.env.BOT_API_PORT || 3630;
 const OWNER_ID = '556529963877138442';
@@ -813,6 +814,23 @@ export function startApi(client: Client) {
     });
 
     app.use('/api/public', publicApiRouter);
+    
+    // --- Stats Channels ---
+    app.post('/api/stats-channels/create/:guildId', async (req, res) => {
+        const { guildId } = req.params;
+        try {
+            const guild = await client.guilds.fetch(guildId);
+            if (!guild) {
+                return res.status(404).json({ error: "Serveur non trouvé." });
+            }
+            await createStatsChannels(guild);
+            res.status(200).json({ message: "La catégorie de statistiques a été créée/mise à jour." });
+        } catch (error) {
+            console.error(`[API Stats Channels] Error creating channels for ${guildId}:`, error);
+            res.status(500).json({ error: "Impossible de créer les salons. Vérifiez les permissions du bot." });
+        }
+    });
+
 
     // --- OLD Public Leaderboard API (deprecated, will be removed) ---
     app.get('/api/leaderboard/:guildId', async (req, res) => {

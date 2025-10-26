@@ -2,84 +2,135 @@
 
 'use server';
 
-import { Client, ChannelType, OverwriteResolvable, GuildChannel } from 'discord.js';
-import { getServerConfig } from '@/lib/db';
+import { Client, ChannelType, GuildChannel, Guild, CategoryChannel } from 'discord.js';
 
+const API_URL = process.env.BOT_API_URL || 'http://localhost:3001/api';
 const INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 // Map to store the IDs of the managed stat channels for each guild
-const managedChannels = new Map<string, string>();
+interface ManagedChannels {
+    categoryId?: string;
+    membersChannelId?: string;
+    voiceChannelId?: string;
+    boostsChannelId?: string;
+}
+const managedChannels = new Map<string, ManagedChannels>();
 
-async function updateStats(client: Client) {
-    for (const guild of client.guilds.cache.values()) {
-        try {
-            const config = await getServerConfig(guild.id, 'stats-channels');
-            if (!config?.enabled || !config.category_id || !config.channel_format) {
-                continue;
-            }
-            
-            // Fetch fresh data
-            await guild.members.fetch(); 
-            const memberCount = guild.memberCount;
-            const boostCount = guild.premiumSubscriptionCount || 0;
-            const voiceCount = guild.voiceStates.cache.size;
-
-            let channelName = config.channel_format
-                .replace('{membres}', memberCount.toString())
-                .replace('{boosts}', boostCount.toString())
-                .replace('{en_vocal}', voiceCount.toString());
-
-            let channelId = managedChannels.get(guild.id);
-            let channel: GuildChannel | undefined;
-
-            if (channelId) {
-                channel = await guild.channels.fetch(channelId).catch(() => undefined) as GuildChannel;
-            }
-
-            if (!channel) {
-                // Channel doesn't exist or ID is not cached, try to find it by a template name part
-                const baseName = config.channel_format.split('{')[0] || '📊';
-                channel = guild.channels.cache.find(c => c.parentId === config.category_id && c.name.startsWith(baseName)) as GuildChannel;
-                
-                // If still not found, create it
-                if (!channel) {
-                    console.log(`[Stats-Channels] Creating stats channel in ${guild.name}`);
-                    const newChannel = await guild.channels.create({
-                        name: channelName,
-                        type: ChannelType.GuildVoice,
-                        parent: config.category_id,
-                        permissionOverwrites: [
-                            {
-                                id: guild.id, // @everyone
-                                deny: ['Connect'],
-                            },
-                        ],
-                        reason: "Canal de statistiques du bot Marcus"
-                    });
-                    managedChannels.set(guild.id, newChannel.id);
-                    continue; // Skip rename on first creation
-                } else {
-                    // Found an existing channel, cache its ID
-                    managedChannels.set(guild.id, channel.id);
-                }
-            }
-
-            // If the name needs updating, update it
-            if (channel.name !== channelName) {
-                await channel.setName(channelName, "Mise à jour des statistiques");
-            }
-            
-        } catch (error) {
-            console.error(`[Stats-Channels] Failed to update stats for guild ${guild.id}:`, error);
-        }
+async function getOrCreateChannel(guild: Guild, category: CategoryChannel, currentChannelId: string | undefined, name: string): Promise<GuildChannel> {
+    let channel: GuildChannel | undefined;
+    if (currentChannelId) {
+        channel = await guild.channels.fetch(currentChannelId).catch(() => undefined) as GuildChannel;
     }
+    
+    if (!channel) {
+        channel = guild.channels.cache.find(c => c.parentId === category.id && c.name.startsWith(name.split(':')[0])) as GuildChannel;
+    }
+    
+    if (channel) {
+        if (channel.name !== name) {
+            await channel.setName(name);
+        }
+        return channel;
+    }
+    
+    return await guild.channels.create({
+        name,
+        type: ChannelType.GuildVoice,
+        parent: category,
+        permissionOverwrites: [
+            {
+                id: guild.id, // @everyone
+                deny: ['Connect'],
+            },
+        ],
+        reason: "Canal de statistiques du bot Marcus"
+    });
 }
 
+async function updateGuildStats(guild: Guild): Promise<void> {
+    await guild.members.fetch(); 
+    const memberCount = guild.memberCount;
+    const boostCount = guild.premiumSubscriptionCount || 0;
+    const voiceCount = guild.voiceStates.cache.size;
+
+    let channels = managedChannels.get(guild.id) || {};
+    let category: CategoryChannel | undefined;
+
+    const categoryName = `- ${guild.name} - ${memberCount} membres -`;
+
+    if (channels.categoryId) {
+        category = await guild.channels.fetch(channels.categoryId).catch(() => undefined) as CategoryChannel;
+    }
+    
+    if (!category) {
+        category = guild.channels.cache.find(c => c.type === ChannelType.GuildCategory && c.name.includes(guild.name)) as CategoryChannel;
+    }
+    
+    if (!category || category.name !== categoryName) {
+        // If category exists but name is wrong, or doesn't exist, create/update
+        if (category) {
+            await category.setName(categoryName);
+        } else {
+             // Creating a new one because it might have been deleted.
+             // We won't try to auto-create categories to avoid spamming. This should be done from the panel.
+             return;
+        }
+    }
+    
+    channels.categoryId = category.id;
+
+    const membersChannel = await getOrCreateChannel(guild, category, channels.membersChannelId, `👤 Membres : ${memberCount}`);
+    channels.membersChannelId = membersChannel.id;
+    
+    const voiceChannel = await getOrCreateChannel(guild, category, channels.voiceChannelId, `🔊 En vocal : ${voiceCount}`);
+    channels.voiceChannelId = voiceChannel.id;
+
+    const boostsChannel = await getOrCreateChannel(guild, category, channels.boostsChannelId, `💎 Boosts : ${boostCount}`);
+    channels.boostsChannelId = boostsChannel.id;
+    
+    managedChannels.set(guild.id, channels);
+}
 
 export function startStatsChannelInterval(client: Client) {
     console.log('[+] Stats Channel Interval started.');
-    // Initial run after a short delay
-    setTimeout(() => updateStats(client), 10000); 
-    // Set interval for periodic updates
-    setInterval(() => updateStats(client), INTERVAL);
+    setInterval(async () => {
+        for (const guild of client.guilds.cache.values()) {
+            // We only update guilds that have initiated the setup via the panel
+            if (managedChannels.has(guild.id)) {
+                try {
+                    await updateGuildStats(guild);
+                } catch (error) {
+                    console.error(`[Stats-Channels] Failed to update stats for guild ${guild.id}:`, error);
+                    // If a channel was deleted, clear the cache to force recreation
+                    if ((error as any).code === 10003) { // Unknown Channel
+                        managedChannels.delete(guild.id);
+                    }
+                }
+            }
+        }
+    }, INTERVAL);
+}
+
+export async function createStatsChannels(guild: Guild): Promise<ManagedChannels> {
+    const memberCount = guild.memberCount;
+    const categoryName = `- ${guild.name} - ${memberCount} membres -`;
+
+    let category = guild.channels.cache.find(c => c.type === ChannelType.GuildCategory && c.name.includes(guild.name)) as CategoryChannel | undefined;
+
+    if (category) {
+        await category.setName(categoryName);
+    } else {
+        category = await guild.channels.create({
+            name: categoryName,
+            type: ChannelType.GuildCategory,
+            position: 0
+        });
+    }
+
+    // Force update immediately, which will also create the channels
+    const channels: ManagedChannels = { categoryId: category.id };
+    managedChannels.set(guild.id, channels);
+    await updateGuildStats(guild);
+    
+    return managedChannels.get(guild.id)!;
 }
