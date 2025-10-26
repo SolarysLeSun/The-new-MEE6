@@ -146,6 +146,46 @@ client.once(Events.ClientReady, async (readyClient) => {
     startApi(client);
 });
 
+async function handleSimpleEmbedModal(interaction: ModalSubmitInteraction) {
+    if (!interaction.channel) return;
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+        const content = interaction.fields.getTextInputValue('embed_content');
+        const title = interaction.fields.getTextInputValue('embed_title');
+        const description = interaction.fields.getTextInputValue('embed_description');
+        const footer = interaction.fields.getTextInputValue('embed_footer');
+        const imageUrl = interaction.fields.getTextInputValue('embed_image_url');
+        const colorHex = interaction.fields.getTextInputValue('embed_color');
+
+        const embed = new EmbedBuilder();
+
+        if (title) embed.setTitle(title);
+        if (description) embed.setDescription(description);
+        if (footer) embed.setFooter({ text: footer });
+        if (imageUrl) embed.setImage(imageUrl);
+        if (colorHex) {
+            try {
+                embed.setColor(colorHex as any);
+            } catch (e) {
+                await interaction.editReply({ content: "Couleur invalide. Veuillez utiliser un format hexadécimal (ex: #FF5733)." });
+                return;
+            }
+        }
+
+        if (!title && !description && !footer && !imageUrl) {
+             await interaction.editReply({ content: "L'embed ne peut pas être vide. Veuillez remplir au moins un champ." });
+             return;
+        }
+
+        await interaction.channel.send({ content: content || undefined, embeds: [embed] });
+        await interaction.editReply({ content: "Embed envoyé avec succès !" });
+    } catch (error) {
+        console.error("Failed to send simple embed", error);
+        await interaction.editReply({ content: "Une erreur est survenue lors de la création de l'embed." });
+    }
+}
+
 async function handleSuggestionModal(interaction: ModalSubmitInteraction) {
     if (!interaction.guild) return;
 
@@ -762,6 +802,8 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
             await handlePrivateRoomModal(interaction);
         } else if (interaction.customId === 'setprofil_modal') {
             await handleSetProfilModal(interaction);
+        } else if (interaction.customId === 'simple_embed_modal') {
+            await handleSimpleEmbedModal(interaction);
         }
         return;
     }
@@ -1209,5 +1251,6 @@ startBot();
     
 
     
+
 
 

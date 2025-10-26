@@ -89,6 +89,7 @@ export interface VoiceHubsConfig {
     enabled: boolean;
     hub_category_id: string | null;
     dest_category_id: string | null;
+    log_channel_id: string | null;
     hubs: VoiceHub[];
 }
 
