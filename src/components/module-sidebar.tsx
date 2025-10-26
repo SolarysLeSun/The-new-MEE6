@@ -47,6 +47,7 @@ import {
   Rss,
   BarChart,
   AreaChart,
+  Grid,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -126,6 +127,7 @@ export const navCategories = [
         name: 'Vocaux',
         items: [
              { href: 'controle-manuel', label: 'Contrôle manuel', icon: Voicemail, keywords: ['join', 'leave', 'parle', 'vocal'] },
+             { href: 'hubs-vocaux', label: 'Hubs Vocaux', icon: Grid, keywords: ['hub', 'vocal', 'création', 'temporaire', 'salon'] },
              { href: 'vocaux-ia', label: 'IA Vocaux', icon: Mic, isPremium: true, keywords: ['smart voice', 'nom dynamique', 'vocal intelligent'] },
              { href: 'webcam-control', label: 'Contrôle Vidéo', icon: Camera, keywords: ['caméra', 'stream', 'partage écran'] },
         ]
