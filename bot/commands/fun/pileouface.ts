@@ -2,6 +2,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
 import type { Command } from '@/types';
 import { getServerConfig, getUserLevel, updateUserXP } from '@/lib/db';
+import { setTimeout } from 'timers/promises';
 
 const CoinFlipCommand: Command = {
     data: new SlashCommandBuilder()
@@ -49,6 +50,10 @@ const CoinFlipCommand: Command = {
             return;
         }
         
+        await interaction.reply("La pièce tourne... 🪙");
+
+        await setTimeout(2000); // Wait for 2 seconds to build suspense
+
         const result = Math.random() < 0.5 ? 'pile' : 'face';
         const win = result === choice;
 
@@ -62,14 +67,14 @@ const CoinFlipCommand: Command = {
 
         const embed = new EmbedBuilder()
             .setTitle('Pile ou Face')
-            .setDescription(`La pièce tourne... et elle atterrit sur **${result.toUpperCase()}** !`)
+            .setDescription(`La pièce est retombée sur **${result.toUpperCase()}** !`)
             .setColor(win ? 0x00FF00 : 0xFF0000)
             .addFields({
                 name: win ? '🎉 Victoire ! 🎉' : '💀 Défaite... 💀',
                 value: `Vous avez ${win ? 'gagné' : 'perdu'} **${amount.toLocaleString()}** XP. Votre nouveau solde est de **${newUserLevel.totalXp.toLocaleString()}** XP.`
             });
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.editReply({ content: "", embeds: [embed] });
     },
 };
 
