@@ -195,6 +195,15 @@ export default function VoiceHubsPage() {
                             <Combobox options={categoryOptions} value={config.dest_category_id || 'none'} onChange={(val) => handleValueChange('dest_category_id', val === 'none' ? null : val)} placeholder="Catégorie des salons créés" />
                         </div>
                     </div>
+                     <div className="space-y-2">
+                        <Label>Salon des logs</Label>
+                        <p className="text-sm text-muted-foreground/80">Un message sera envoyé dans ce salon lors de la création d'un salon temporaire.</p>
+                        <Combobox 
+                            options={channels.filter(c => c.type === 0).map(c => ({ value: c.id, label: `# ${c.name}` }))} 
+                            value={config.log_channel_id || 'none'} 
+                            onChange={(val) => handleValueChange('log_channel_id', val === 'none' ? null : val)} 
+                            placeholder="Aucun" />
+                    </div>
                 </CardContent>
             </Card>
 

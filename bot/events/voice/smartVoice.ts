@@ -11,7 +11,7 @@ import { getServerConfig, getGlobalAiStatus, VoiceHubsConfig } from '../../../sr
 const channelUpdateCache = new Collection<string, number>();
 const UPDATE_COOLDOWN = 60000; // 1 minute (60,000 ms)
 
-async function updateChannelName(channel: NonThreadGuildBasedChannel) {
+export async function updateChannelName(channel: NonThreadGuildBasedChannel, force = false) {
     if (channel.type !== ChannelType.GuildVoice) return;
     
     // Global AI check
@@ -41,7 +41,7 @@ async function updateChannelName(channel: NonThreadGuildBasedChannel) {
     // --- Cooldown check to prevent API spam ---
     const now = Date.now();
     const lastUpdate = channelUpdateCache.get(channel.id);
-    if (lastUpdate && now - lastUpdate < UPDATE_COOLDOWN) {
+    if (!force && lastUpdate && now - lastUpdate < UPDATE_COOLDOWN) {
         // Allow rename for empty channels to reset them, bypassing cooldown
         if (channel.members.size > 0) {
             return;

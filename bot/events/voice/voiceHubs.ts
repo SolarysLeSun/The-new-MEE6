@@ -3,6 +3,7 @@
 import { Events, VoiceState, GuildChannel, ChannelType, OverwriteResolvable, PermissionsBitField, Collection, EmbedBuilder } from 'discord.js';
 import { getServerConfig, VoiceHub, updateServerConfig } from '@/lib/db';
 import type { VoiceHubsConfig } from '@/types';
+import { updateChannelName } from './smartVoice';
 
 // Collection to track channels created by this module to prevent race conditions
 const managedChannels = new Collection<string, { userId: string, hubId: string }>(); // <channelId, { userId, hubId }>
@@ -25,8 +26,7 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     const allConfiguredHubs = config.hubs || [];
     const hubConfig = allConfiguredHubs.find(h => h.creator_channel_id === newState.channelId);
 
-    // This logic triggers if the user enters a channel that is specifically configured as a hub creator, and it's a new channel for them.
-    if (newState.channelId && hubConfig && newState.channelId !== oldState.channelId) {
+    if (hubConfig && newState.channelId && newState.channelId !== oldState.channelId) {
         console.log(`[VoiceHubs] User ${member.user.tag} joined a configured hub channel: ${newState.channel?.name} (${newState.channelId})`);
         await createAndMove(newState, hubConfig);
         return;
@@ -122,6 +122,14 @@ async function createAndMove(newState: VoiceState, hubConfig: VoiceHub) {
 
         console.log(`[VoiceHubs] Moving ${member.user.tag} to new channel: ${tempChannel.name}`);
         await newState.setChannel(tempChannel);
+        
+        // If Smart Voice is enabled for this hub, trigger an initial update.
+        if (hubConfig.enable_smart_voice) {
+             console.log(`[VoiceHubs] Smart Voice is enabled for this hub. Triggering initial name update.`);
+             // A short delay might be needed for presence/activity data to be available.
+             setTimeout(() => updateChannelName(tempChannel, true), 2000);
+        }
+
 
         const welcomeEmbed = new EmbedBuilder()
             .setColor(0x57F287)
@@ -138,7 +146,7 @@ async function createAndMove(newState: VoiceState, hubConfig: VoiceHub) {
         if (logChannelId) {
             const logChannel = await guild.channels.fetch(logChannelId).catch(() => null);
             if (logChannel && logChannel.isTextBased()) {
-                await logChannel.send({ embeds: [welcomeEmbed] });
+                await logChannel.send({ content: member.toString(), embeds: [welcomeEmbed] });
             }
         }
 
