@@ -4,7 +4,7 @@
 
 import { Events, VoiceState, ActivityType, Collection, ChannelType, GuildChannel, NonThreadGuildBasedChannel, VoiceChannel } from 'discord.js';
 import { smartVoiceFlow } from '../../../src/ai/flows/smart-voice-flow';
-import { getServerConfig, getGlobalAiStatus } from '../../../src/lib/db';
+import { getServerConfig, getGlobalAiStatus, VoiceHubsConfig } from '../../../src/lib/db';
 
 
 // Simple cache to prevent spamming the API for the same channel within a short time
@@ -19,10 +19,22 @@ async function updateChannelName(channel: NonThreadGuildBasedChannel) {
     if (globalAiStatus.disabled) return;
 
     const smartVoiceConfig = await getServerConfig(channel.guild.id, 'smart-voice');
+    const voiceHubsConfig = await getServerConfig(channel.guild.id, 'voice-hubs') as VoiceHubsConfig;
     const isPremium = smartVoiceConfig?.premium || false;
+
+    // --- Determine if the channel should be managed ---
+    let isManagedBySmartVoice = smartVoiceConfig?.enabled && isPremium && channel.parentId === smartVoiceConfig.interactive_category_id;
+    let hubConfigSource = null;
+
+    if (!isManagedBySmartVoice && voiceHubsConfig?.enabled) {
+        const hub = voiceHubsConfig.hubs.find(h => channel.name.startsWith(h.name_format.split(' ')[0])); // Simple check
+        if (hub && hub.enable_smart_voice) {
+            isManagedBySmartVoice = true;
+            hubConfigSource = hub;
+        }
+    }
     
-    // Check if the module is enabled, premium, and if the channel is in the interactive category
-    if (!smartVoiceConfig?.enabled || !isPremium || !smartVoiceConfig.interactive_category_id || channel.parentId !== smartVoiceConfig.interactive_category_id) {
+    if (!isManagedBySmartVoice) {
         return;
     }
     
@@ -36,20 +48,24 @@ async function updateChannelName(channel: NonThreadGuildBasedChannel) {
         }
     }
     
-    const defaultChannelName = smartVoiceConfig.default_channel_name || "Vocal intéractif";
+    const defaultChannelName = hubConfigSource?.name_format.replace(/\{.*\}/g, '').trim() || smartVoiceConfig.default_channel_name || "Vocal intéractif";
 
     // --- Reset channel if empty ---
     if (channel.members.size === 0) {
-        if (channel.name !== defaultChannelName) {
-            console.log(`[Smart-Voice] Channel "${channel.name}" is empty. Resetting.`);
-            try {
-                await channel.setName(defaultChannelName);
-                if (channel instanceof VoiceChannel) {
-                    await channel.setTopic('');
+        // For hubs, we don't reset, we delete (handled in voiceHubs.ts)
+        const isHubChannel = voiceHubsConfig.hubs.some(h => h.creator_channel_id === channel.id);
+        if(!isHubChannel) {
+            if (channel.name !== defaultChannelName) {
+                console.log(`[Smart-Voice] Channel "${channel.name}" is empty. Resetting.`);
+                try {
+                    await channel.setName(defaultChannelName);
+                    if (channel instanceof VoiceChannel) {
+                        await channel.setTopic('');
+                    }
+                    channelUpdateCache.delete(channel.id); // Clear cache on reset
+                } catch (error) {
+                    console.error(`[Smart-Voice] Failed to reset channel ${channel.id}.`, error);
                 }
-                channelUpdateCache.delete(channel.id); // Clear cache on reset
-            } catch (error) {
-                console.error(`[Smart-Voice] Failed to reset channel ${channel.id}. It might have been deleted or a race condition occurred.`, error);
             }
         }
         return;
@@ -68,7 +84,6 @@ async function updateChannelName(channel: NonThreadGuildBasedChannel) {
         members.forEach(member => {
             if (member.voice.streaming) streamingCount++;
             if (member.voice.selfVideo) webcamCount++;
-            // Gracefully handle cases where presence or activities might be null/undefined
             const game = member.presence?.activities.find(activity => activity.type === ActivityType.Playing)?.name;
             if (game) {
                 activityCounts[game] = (activityCounts[game] || 0) + 1;
@@ -88,22 +103,19 @@ async function updateChannelName(channel: NonThreadGuildBasedChannel) {
 
         const result = await smartVoiceFlow({
             currentName: channel.name,
-            theme: channel.name,
+            theme: hubConfigSource?.name_format || channel.name,
             memberCount: memberCount,
             memberNames: memberNames,
             activities: activitiesString,
             customInstructions: smartVoiceConfig.custom_instructions
         });
 
-        // Only rename if the new name is different and not empty
         if (result.channelName && result.channelName !== channel.name) {
             await channel.setName(result.channelName);
             if (channel instanceof VoiceChannel && result.channelBio) {
                 await channel.setTopic(result.channelBio);
             }
             console.log(`[Smart-Voice] Renamed channel ${channel.id} to "${result.channelName}". Bio: "${result.channelBio}"`);
-            
-            // Update cache timestamp after a successful rename
             channelUpdateCache.set(channel.id, now);
         } else {
             console.log(`[Smart-Voice] AI proposed the same name or an empty name. No change made for channel ${channel.id}.`);
@@ -121,10 +133,6 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     const oldChannel = oldState.channel;
     const newChannel = newState.channel;
 
-    // A user's state changed (e.g., streaming, camera on/off, activity change) but they stayed in the same channel.
-    // This is hard to detect with VoiceStateUpdate alone, but we catch joins/leaves/switches.
-    // A PresenceUpdate event handler would be needed for perfect activity tracking.
-
     // User joined a channel or switched from another one
     if (newChannel && newChannel.id !== oldChannel?.id) {
         await updateChannelName(newChannel);
@@ -135,4 +143,3 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
         await updateChannelName(oldChannel);
     }
 }
-

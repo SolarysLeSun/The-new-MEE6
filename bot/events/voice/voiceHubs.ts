@@ -5,7 +5,7 @@ import { getServerConfig, VoiceHub, updateServerConfig } from '@/lib/db';
 import type { VoiceHubsConfig } from '@/types';
 
 // Collection to track channels created by this module to prevent race conditions
-const managedChannels = new Collection<string, string>(); // <channelId, userId>
+const managedChannels = new Collection<string, { userId: string, hubId: string }>(); // <channelId, { userId, hubId }>
 
 export const name = Events.VoiceStateUpdate;
 
@@ -14,7 +14,7 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     if (!member || member.user.bot) return;
 
     // Log for debugging all voice state updates
-    // console.log(`[VoiceHubs] Voice state update detected for ${member.user.tag} in ${guild.name}. Old channel: ${oldState.channel?.name}, New channel: ${newState.channel?.name}`);
+    console.log(`[VoiceHubs] Voice state update detected for ${member.user.tag} in ${guild.name}. Old channel: ${oldState.channel?.name}, New channel: ${newState.channel?.name}`);
 
     const config = await getServerConfig(guild.id, 'voice-hubs') as VoiceHubsConfig;
     if (!config || !config.enabled) {
@@ -26,14 +26,14 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     const hubConfig = allConfiguredHubs.find(h => h.creator_channel_id === newState.channelId);
 
     // This logic triggers if the user enters a channel that is specifically configured as a hub creator, and it's a new channel for them.
-    if (newState.channelId && newState.channelId !== oldState.channelId && hubConfig) {
+    if (newState.channelId && hubConfig && newState.channelId !== oldState.channelId) {
         console.log(`[VoiceHubs] User ${member.user.tag} joined a configured hub channel: ${newState.channel?.name} (${newState.channelId})`);
         await createAndMove(newState, hubConfig);
         return;
     }
     
     // --- User Leaves a Temp Channel (check for deletion) ---
-    if (oldState.channelId && oldState.channel?.parentId === config.dest_category_id && managedChannels.has(oldState.channelId)) {
+    if (oldState.channelId && managedChannels.has(oldState.channelId)) {
         const tempChannel = oldState.channel;
         
         // Use a small delay to account for users switching channels quickly
@@ -118,38 +118,30 @@ async function createAndMove(newState: VoiceState, hubConfig: VoiceHub) {
             reason: `Hub vocal créé par ${member.user.tag}`
         });
         
-        managedChannels.set(tempChannel.id, member.id);
+        managedChannels.set(tempChannel.id, { userId: member.id, hubId: hubConfig.id });
 
         console.log(`[VoiceHubs] Moving ${member.user.tag} to new channel: ${tempChannel.name}`);
         await newState.setChannel(tempChannel);
 
-        // Send a welcome embed in the newly created channel's associated text channel if possible
         const welcomeEmbed = new EmbedBuilder()
             .setColor(0x57F287)
             .setTitle(`Salon de ${member.displayName}`)
             .setDescription(`Bienvenue dans votre salon privé, ${member.toString()} !`)
             .addFields(
-                { name: 'Permissions', value: 'Vous pouvez renommer ce salon, déplacer, rendre muet et expulser des membres à l'intérieur.' },
+                { name: 'Permissions', value: 'Vous pouvez renommer ce salon, déplacer, rendre muet et expulser des membres à l\'intérieur.' },
                 { name: 'Disparition', value: 'Ce salon sera automatiquement supprimé lorsqu\'il sera vide.' }
             )
             .setFooter({ text: `Créé via le hub : ${newState.channel?.name}`})
             .setTimestamp();
         
-        // Try to find a general text channel to post this, or the log channel.
-        const logChannel = config.log_channel_id ? await guild.channels.fetch(config.log_channel_id).catch(() => null) : null;
-        if (logChannel && logChannel.isTextBased()) {
-            await logChannel.send({ embeds: [welcomeEmbed] });
-        }
-        
-        if (hubConfig.enable_smart_voice) {
-            const smartVoiceConfig = await getServerConfig(guild.id, 'smart-voice');
-            if (smartVoiceConfig && smartVoiceConfig.interactive_category_id !== config.dest_category_id) {
-                // Ensure the smart voice module watches this category
-                smartVoiceConfig.interactive_category_id = config.dest_category_id;
-                await updateServerConfig(guild.id, 'smart-voice', smartVoiceConfig);
-                console.log(`[VoiceHubs] Smart Voice a été activé pour la catégorie de destination des hubs.`);
+        const logChannelId = config.log_channel_id;
+        if (logChannelId) {
+            const logChannel = await guild.channels.fetch(logChannelId).catch(() => null);
+            if (logChannel && logChannel.isTextBased()) {
+                await logChannel.send({ embeds: [welcomeEmbed] });
             }
         }
+
 
     } catch (error) {
         console.error(`[VoiceHubs] Failed to create or move user to temporary channel:`, error);
