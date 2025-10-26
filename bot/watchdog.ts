@@ -11,7 +11,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 const WATCHDOG_PORT = 4400;
 const TARGET_API_URL = `https://marcusbot.fr/api/ping`;
 const CHECK_INTERVAL_MS = 60 * 1000; // 60 secondes
-const WEBHOOK_URL = 'https://discord.com/api/webhooks/1431575144526119085/YqdTfpW9VKDLr4k8n9R6m6p7YS5Bz2vBd8eKSNhKwsI-0WsjFBJO7_KL53u7rFbhckjJ';
+const WEBHOOK_URL = 'https://discord.com/api/webhooks/1431973762693206027/Nv8TjoWgrx0m19vj-JBrhRxFW5Tmp4ZdmVC5VqTLuQHTI0fpVcoPG5AAhcL5Dc92qTjC';
 const OWNER_ID_TO_PING = '556529963877138442';
 const WATCHDOG_SECRET = process.env.WATCHDOG_SECRET;
 
