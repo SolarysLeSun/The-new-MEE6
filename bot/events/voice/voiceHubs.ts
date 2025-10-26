@@ -78,19 +78,20 @@ async function createAndMove(newState: VoiceState, hubConfig: VoiceHub) {
     const { member, guild } = newState;
     if (!member || !guild) return;
 
-    const destCategoryId = (await getServerConfig(guild.id, 'voice-hubs') as VoiceHubsConfig).dest_category_id;
-     if (!destCategoryId) {
+    const config = await getServerConfig(guild.id, 'voice-hubs') as VoiceHubsConfig;
+     if (!config || !config.dest_category_id) {
         console.error(`[VoiceHubs] Destination category not configured for guild ${guild.id}.`);
         return;
     }
     
     const activityName = member.presence?.activities.find(a => a.type === 0)?.name || 'Discussion';
+    const memberCount = (newState.channel?.members.size || 1).toString();
 
     // Replace variables in channel name
     const channelName = hubConfig.name_format
         .replace('{user}', member.displayName)
         .replace('{activite}', activityName)
-        .replace('{mb.connect}', '1');
+        .replace('{mb.connect}', memberCount);
 
 
     try {
@@ -105,20 +106,23 @@ async function createAndMove(newState: VoiceState, hubConfig: VoiceHub) {
                     PermissionsBitField.Flags.DeafenMembers,
                     PermissionsBitField.Flags.MoveMembers,
                     PermissionsBitField.Flags.Stream,
-                    PermissionsBitField.Flags.PrioritySpeaker
+                    PermissionsBitField.Flags.PrioritySpeaker,
+                    PermissionsBitField.Flags.ViewChannel,
+                    PermissionsBitField.Flags.Connect
                 ]
             },
             {
                 id: guild.roles.everyone,
-                allow: [PermissionsBitField.Flags.Connect]
+                allow: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.ViewChannel],
+                 deny: [PermissionsBitField.Flags.Speak]
             }
         ];
         
         const tempChannel = await guild.channels.create({
             name: channelName,
             type: ChannelType.GuildVoice,
-            parent: destCategoryId,
-            userLimit: hubConfig.user_limit,
+            parent: config.dest_category_id,
+            userLimit: hubConfig.user_limit > 0 ? hubConfig.user_limit : undefined,
             permissionOverwrites: permissionOverwrites,
             reason: `Hub vocal créé par ${member.user.tag}`
         });
@@ -133,10 +137,8 @@ async function createAndMove(newState: VoiceState, hubConfig: VoiceHub) {
             if (smartVoiceConfig) {
                 const updatedConfig = {
                     ...smartVoiceConfig,
-                    interactive_category_id: destCategoryId, 
+                    interactive_category_id: config.dest_category_id, 
                 };
-                // This doesn't directly "activate" it, but ensures the category is watched
-                // The smart-voice event handler will pick it up.
                 console.log(`[VoiceHubs] Smart Voice is enabled for hub-created channel ${tempChannel.name}`);
             }
         }
@@ -144,6 +146,6 @@ async function createAndMove(newState: VoiceState, hubConfig: VoiceHub) {
     } catch (error) {
         console.error(`[VoiceHubs] Failed to create or move user to temporary channel:`, error);
         // Kick the user from the hub channel to prevent them from being stuck
-        await newState.setChannel(null);
+        await newState.setChannel(null).catch(e => console.error(`[VoiceHubs] Failed to disconnect user after creation error:`, e));
     }
 }
