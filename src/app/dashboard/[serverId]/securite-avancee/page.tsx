@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Combobox } from '@/components/ui/combobox';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
+import { AlertTriangle } from 'lucide-react';
 
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';

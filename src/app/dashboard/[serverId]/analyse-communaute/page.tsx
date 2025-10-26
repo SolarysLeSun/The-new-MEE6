@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { AreaChart, Loader2, ServerCrash, Users, MessagesSquare, Ratio, Activity, UserMinus, UserPlus, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
+import { AreaChart, Loader2, ServerCrash, Users, MessagesSquare, Ratio, Activity, UserMinus, UserPlus, TrendingUp, TrendingDown, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
