@@ -1,5 +1,4 @@
 
-
 import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction, ButtonStyle, DiscordAPIError, ButtonBuilder, AnyThreadChannel, User } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -662,12 +661,14 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     const { execute: smartVoiceHandler } = await import('./events/voice/smartVoice');
     const { execute: voiceStateUpdateAutoroleHandler } = await import('./events/voice/voiceStateUpdateAutorole');
     const { execute: voiceWebcamControlHandler } = await import('./events/security/voiceStateUpdate');
+    const { execute: voiceHubsHandler } = await import('./events/voice/voiceHubs');
 
     await Promise.all([
         smartVoiceHandler(oldState, newState),
         voiceStateUpdateAutoroleHandler(oldState, newState),
         voiceWebcamControlHandler(oldState, newState),
-        communityAnalysisVoiceStateUpdateHandler(oldState, newState)
+        communityAnalysisVoiceStateUpdateHandler(oldState, newState),
+        voiceHubsHandler(oldState, newState)
     ]);
 });
 
@@ -1089,3 +1090,5 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
+
+    
