@@ -2,7 +2,7 @@
 
 import express from 'express';
 import cors from 'cors';
-import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType, DiscordAPIError } from 'discord.js';
+import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType, DiscordAPIError, VoiceChannel } from 'discord.js';
 import { updateServerConfig, getServerConfig, getAllBotServers, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem, getApiKeyInfo, db, getJoinLeaveStats } from '@/lib/db';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
@@ -281,7 +281,7 @@ export function startApi(client: Client) {
                 icon: guild.iconURL(),
                 memberCount: guild.memberCount,
                 isPremium: isPremium,
-                channels: Array.from(guild.channels.cache.values()).map(c => ({ id: c.id, name: c.name, type: c.type })),
+                channels: Array.from(guild.channels.cache.values()).map(c => ({ id: c.id, name: c.name, type: c.type, parentId: c.parentId })),
                 roles: Array.from(guild.roles.cache.values()).map(r => ({ id: r.id, name: r.name, color: r.color })),
                 emojis: Array.from(guild.emojis.cache.values()).map(e => ({ id: e.id, name: e.name, animated: e.animated, url: e.imageURL({ size: 64 }) })),
             };
@@ -828,6 +828,46 @@ export function startApi(client: Client) {
         } catch (error) {
             console.error(`[API Stats Channels] Error creating channels for ${guildId}:`, error);
             res.status(500).json({ error: "Impossible de créer les salons. Vérifiez les permissions du bot." });
+        }
+    });
+    
+    // --- Voice Hubs API ---
+    app.post('/api/voice-hubs/create-channel', async (req, res) => {
+        const { guildId, categoryId, name } = req.body;
+        if (!guildId || !categoryId || !name) {
+            return res.status(400).json({ error: "Guild ID, Category ID, and Name are required." });
+        }
+        try {
+            const guild = await client.guilds.fetch(guildId);
+            const newChannel = await guild.channels.create({
+                name,
+                type: ChannelType.GuildVoice,
+                parent: categoryId,
+                reason: "Hub vocal créé via le panel"
+            });
+            res.status(201).json({ id: newChannel.id, name: newChannel.name });
+        } catch (error) {
+            console.error('[API Voice Hubs] Error creating channel:', error);
+            res.status(500).json({ error: "Impossible de créer le salon. Vérifiez les permissions du bot." });
+        }
+    });
+
+    app.patch('/api/voice-hubs/rename-channel', async (req, res) => {
+        const { guildId, channelId, name } = req.body;
+        if (!guildId || !channelId || !name) {
+            return res.status(400).json({ error: "Guild ID, Channel ID, and Name are required." });
+        }
+        try {
+            const guild = await client.guilds.fetch(guildId);
+            const channel = await guild.channels.fetch(channelId) as VoiceChannel;
+            if (!channel || channel.type !== ChannelType.GuildVoice) {
+                return res.status(404).json({ error: "Salon vocal non trouvé." });
+            }
+            await channel.setName(name);
+            res.status(200).json({ success: true });
+        } catch (error) {
+            console.error('[API Voice Hubs] Error renaming channel:', error);
+            res.status(500).json({ error: "Impossible de renommer le salon." });
         }
     });
 
