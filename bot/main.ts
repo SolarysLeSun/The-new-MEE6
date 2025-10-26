@@ -537,6 +537,42 @@ async function handleCloseTicket(interaction: ButtonInteraction) {
     }
 
     await interaction.deferUpdate();
+    
+    const channel = await interaction.guild.channels.fetch(channelId).catch(() => null) as TextChannel;
+    if (!channel) {
+        // Le salon a peut-être déjà été supprimé. On nettoie la DB.
+        deleteTicket(channelId);
+        await interaction.followUp({ content: "Le salon de ce ticket n'existe plus. Il a été retiré de la base de données.", ephemeral: true});
+        return;
+    }
+
+    // --- Archive Summary ---
+    if (config.archive_summary) {
+        const modConfig = await getServerConfig(interaction.guild.id, 'moderation');
+        const logChannelId = modConfig?.log_channel_id || config.log_channel_id;
+
+        if (logChannelId) {
+            const logChannel = await interaction.guild.channels.fetch(logChannelId).catch(() => null) as TextChannel;
+            if (logChannel) {
+                try {
+                    const messages = await channel.messages.fetch({ limit: 100 });
+                    const transcript = Array.from(messages.values()).reverse().map(msg => `${msg.author.tag}: ${msg.content}`).join('\n');
+                    if (transcript) {
+                        const { summary } = await transcriptSummaryFlow({ transcript });
+                        const summaryEmbed = new EmbedBuilder()
+                            .setColor(0x95a5a6)
+                            .setTitle(`📝 Transcription du Ticket #${channel.name}`)
+                            .setDescription(summary || "Impossible de générer un résumé.")
+                            .setFooter({ text: `Ticket fermé par ${interaction.user.tag}` })
+                            .setTimestamp();
+                        await logChannel.send({ embeds: [summaryEmbed] });
+                    }
+                } catch (summaryError) {
+                    console.error("Failed to generate and send transcript summary:", summaryError);
+                }
+            }
+        }
+    }
 
     // Update the embed
     const originalEmbed = interaction.message.embeds[0];
@@ -558,6 +594,7 @@ async function handleCloseTicket(interaction: ButtonInteraction) {
         setTimeout(() => handleDeleteTicket(interaction, channelId, true), 10000);
     }
 }
+
 
 async function handleDeleteTicket(interaction: ButtonInteraction, channelId: string, isAutoDelete = false) {
     if (!interaction.guild) return;
@@ -582,30 +619,6 @@ async function handleDeleteTicket(interaction: ButtonInteraction, channelId: str
 
     try {
         const ticketOwner = await client.users.fetch(ticket.owner_id).catch(() => null);
-        
-        // --- Archive Summary ---
-        if (config.archive_summary) {
-            const modConfig = await getServerConfig(interaction.guild.id, 'moderation');
-            const logChannelId = modConfig?.log_channel_id || config.log_channel_id;
-
-            if (logChannelId) {
-                const logChannel = await interaction.guild.channels.fetch(logChannelId).catch(() => null) as TextChannel;
-                if (logChannel) {
-                    const messages = await channel.messages.fetch({ limit: 100 });
-                    const transcript = Array.from(messages.values()).reverse().map(msg => `${msg.author.tag}: ${msg.content}`).join('\n');
-                    if (transcript) {
-                        const { summary } = await transcriptSummaryFlow({ transcript });
-                        const summaryEmbed = new EmbedBuilder()
-                            .setColor(0x95a5a6)
-                            .setTitle(`📝 Transcription du Ticket #${channel.name}`)
-                            .setDescription(summary || "Impossible de générer un résumé.")
-                            .setFooter({ text: `Ticket fermé par ${interaction.user.tag}` })
-                            .setTimestamp();
-                        await logChannel.send({ embeds: [summaryEmbed] });
-                    }
-                }
-            }
-        }
         
         // --- Notify User ---
         if (ticketOwner) {
@@ -1119,5 +1132,7 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
+
+    
 
     
