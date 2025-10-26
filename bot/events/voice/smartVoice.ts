@@ -26,9 +26,16 @@ export async function updateChannelName(channel: NonThreadGuildBasedChannel, for
     let isManagedBySmartVoice = smartVoiceConfig?.enabled && isPremium && channel.parentId === smartVoiceConfig.interactive_category_id;
     let hubConfigSource = null;
 
-    if (!isManagedBySmartVoice && voiceHubsConfig?.enabled) {
-        const hub = voiceHubsConfig.hubs.find(h => channel.name.startsWith(h.name_format.split(' ')[0])); // Simple check
-        if (hub && hub.enable_smart_voice) {
+    if (!isManagedBySmartVoice && voiceHubsConfig?.enabled && voiceHubsConfig.hubs.length > 0) {
+        // Check if the channel was created by a hub that has smart voice enabled
+        // This is a proxy check, assuming the channel name format is somewhat preserved.
+        // A more robust system would involve tagging channels on creation.
+        const hub = voiceHubsConfig.hubs.find(h => {
+            const tempChannelName = h.name_format.split('{')[0].trim();
+            return channel.name.includes(tempChannelName) && h.enable_smart_voice;
+        });
+
+        if (hub) {
             isManagedBySmartVoice = true;
             hubConfigSource = hub;
         }
@@ -52,8 +59,8 @@ export async function updateChannelName(channel: NonThreadGuildBasedChannel, for
 
     // --- Reset channel if empty ---
     if (channel.members.size === 0) {
-        // For hubs, we don't reset, we delete (handled in voiceHubs.ts)
-        const isHubChannel = voiceHubsConfig.hubs.some(h => h.creator_channel_id === channel.id);
+        // We let the voiceHubs handler delete hub-created channels
+        const isHubChannel = voiceHubsConfig?.hubs.some(h => channel.name.startsWith(h.name_format.split('{')[0].trim()));
         if(!isHubChannel) {
             if (channel.name !== defaultChannelName) {
                 console.log(`[Smart-Voice] Channel "${channel.name}" is empty. Resetting.`);

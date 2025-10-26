@@ -1,6 +1,6 @@
 
 
-import { Events, VoiceState, GuildChannel, ChannelType, OverwriteResolvable, PermissionsBitField, Collection, EmbedBuilder } from 'discord.js';
+import { Events, VoiceState, GuildChannel, ChannelType, OverwriteResolvable, PermissionsBitField, Collection, EmbedBuilder, TextChannel } from 'discord.js';
 import { getServerConfig, VoiceHub, updateServerConfig } from '@/lib/db';
 import type { VoiceHubsConfig } from '@/types';
 import { updateChannelName } from './smartVoice';
@@ -13,9 +13,6 @@ export const name = Events.VoiceStateUpdate;
 export async function execute(oldState: VoiceState, newState: VoiceState) {
     const { member, guild } = newState;
     if (!member || member.user.bot) return;
-
-    // Log for debugging all voice state updates
-    console.log(`[VoiceHubs] Voice state update detected for ${member.user.tag} in ${guild.name}. Old channel: ${oldState.channel?.name}, New channel: ${newState.channel?.name}`);
 
     const config = await getServerConfig(guild.id, 'voice-hubs') as VoiceHubsConfig;
     if (!config || !config.enabled) {
@@ -130,22 +127,20 @@ async function createAndMove(newState: VoiceState, hubConfig: VoiceHub) {
              setTimeout(() => updateChannelName(tempChannel, true), 2000);
         }
 
-
-        const welcomeEmbed = new EmbedBuilder()
-            .setColor(0x57F287)
-            .setTitle(`Salon de ${member.displayName}`)
-            .setDescription(`Bienvenue dans votre salon privé, ${member.toString()} !`)
-            .addFields(
-                { name: 'Permissions', value: 'Vous pouvez renommer ce salon, déplacer, rendre muet et expulser des membres à l\'intérieur.' },
-                { name: 'Disparition', value: 'Ce salon sera automatiquement supprimé lorsqu\'il sera vide.' }
-            )
-            .setFooter({ text: `Créé via le hub : ${newState.channel?.name}`})
-            .setTimestamp();
-        
         const logChannelId = config.log_channel_id;
         if (logChannelId) {
-            const logChannel = await guild.channels.fetch(logChannelId).catch(() => null);
+            const logChannel = await guild.channels.fetch(logChannelId).catch(() => null) as TextChannel | null;
             if (logChannel && logChannel.isTextBased()) {
+                const welcomeEmbed = new EmbedBuilder()
+                    .setColor(0x57F287)
+                    .setTitle(`Salon de ${member.displayName}`)
+                    .setDescription(`Bienvenue dans votre salon privé, ${member.toString()} !`)
+                    .addFields(
+                        { name: 'Permissions', value: 'Vous pouvez renommer ce salon, déplacer, rendre muet et expulser des membres à l\'intérieur.' },
+                        { name: 'Disparition', value: 'Ce salon sera automatiquement supprimé lorsqu\'il sera vide.' }
+                    )
+                    .setFooter({ text: `Créé via le hub : ${newState.channel?.name}`})
+                    .setTimestamp();
                 await logChannel.send({ content: member.toString(), embeds: [welcomeEmbed] });
             }
         }
