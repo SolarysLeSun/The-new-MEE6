@@ -3,7 +3,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType, DiscordAPIError } from 'discord.js';
-import { updateServerConfig, getServerConfig, getAllBotServers, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem, getApiKeyInfo, db } from '@/lib/db';
+import { updateServerConfig, getServerConfig, getAllBotServers, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem, getApiKeyInfo, db, getJoinLeaveStats } from '@/lib/db';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { updateGuildCommands } from './handlers/commandHandler';
@@ -740,6 +740,18 @@ export function startApi(client: Client) {
             res.status(200).json(stats);
         } catch (error) {
              console.error(`[Bot API] Error fetching activity stats for ${guildId}:`, error);
+            res.status(500).json({ error: 'Erreur interne du serveur.' });
+        }
+    });
+
+    app.get('/api/get-join-leave-stats/:guildId', (req, res) => {
+        const { guildId } = req.params;
+        try {
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+            const stats = getJoinLeaveStats(guildId, twentyFourHoursAgo);
+            res.status(200).json(stats);
+        } catch (error) {
+            console.error(`[Bot API] Error fetching join/leave stats for ${guildId}:`, error);
             res.status(500).json({ error: 'Erreur interne du serveur.' });
         }
     });

@@ -1,11 +1,14 @@
 
 
 import { Events, GuildMember, EmbedBuilder, TextChannel, AuditLogEvent, User } from 'discord.js';
-import { getServerConfig } from '../../../src/lib/db';
+import { getServerConfig, recordJoinLeaveEvent } from '../../../src/lib/db';
 
 export const name = Events.GuildMemberRemove;
 
 export async function execute(member: GuildMember) {
+    // Record leave event regardless of logging config
+    recordJoinLeaveEvent(member.guild.id, member.id, 'leave');
+
     const config = await getServerConfig(member.guild.id, 'logs');
     if (!config?.enabled || !config.log_settings?.members?.enabled) return;
 

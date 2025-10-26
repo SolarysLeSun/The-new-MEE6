@@ -225,7 +225,7 @@ const upgradeSchema = () => {
             );
         `);
         console.log('[Database] Table "api_keys" is ready.');
-
+        
         db.exec(`
             CREATE TABLE IF NOT EXISTS api_bans (
                 user_id TEXT PRIMARY KEY,
@@ -264,6 +264,17 @@ const upgradeSchema = () => {
             );
         `);
         console.log('[Database] La table "community_activity_stats" est prête.');
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS member_join_leave_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                event_type TEXT NOT NULL CHECK(event_type IN ('join', 'leave')),
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log('[Database] La table "member_join_leave_events" est prête.');
 
 
         // Drop deprecated tables
@@ -804,6 +815,38 @@ export function deleteTicket(channelId: string) {
     const stmt = db.prepare('DELETE FROM tickets WHERE channel_id = ?');
     stmt.run(channelId);
 }
+
+// --- Join/Leave Event Logging ---
+export function recordJoinLeaveEvent(guildId: string, userId: string, eventType: 'join' | 'leave') {
+    try {
+        const stmt = db.prepare(`
+            INSERT INTO member_join_leave_events (guild_id, user_id, event_type)
+            VALUES (?, ?, ?)
+        `);
+        stmt.run(guildId, userId, eventType);
+    } catch (e) {
+        console.error(`[Database] Failed to record join/leave event for user ${userId} in guild ${guildId}`, e);
+    }
+}
+
+export function getJoinLeaveStats(guildId: string, timeWindowIso: string): { joins: number; leaves: number } {
+    try {
+        const joinStmt = db.prepare("SELECT COUNT(*) as count FROM member_join_leave_events WHERE guild_id = ? AND event_type = 'join' AND timestamp >= ?");
+        const leaveStmt = db.prepare("SELECT COUNT(*) as count FROM member_join_leave_events WHERE guild_id = ? AND event_type = 'leave' AND timestamp >= ?");
+
+        const joinResult = joinStmt.get(guildId, timeWindowIso) as { count: number };
+        const leaveResult = leaveStmt.get(guildId, timeWindowIso) as { count: number };
+
+        return {
+            joins: joinResult?.count || 0,
+            leaves: leaveResult?.count || 0,
+        };
+    } catch (e) {
+        console.error(`[Database] Failed to get join/leave stats for guild ${guildId}`, e);
+        return { joins: 0, leaves: 0 };
+    }
+}
+
 
 // --- Roadmap Functions ---
 export function getRoadmapItems(): RoadmapItem[] {

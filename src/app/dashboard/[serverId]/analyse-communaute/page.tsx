@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { AreaChart, Loader2, ServerCrash, Users, MessagesSquare, Ratio, Activity, UserMinus, UserPlus } from 'lucide-react';
+import { AreaChart, Loader2, ServerCrash, Users, MessagesSquare, Ratio, Activity, UserMinus, UserPlus, TrendingUp, TrendingDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
@@ -32,6 +32,12 @@ interface ActivityStat {
     active_text_members_count: number;
 }
 
+interface JoinLeaveStat {
+    joins: number;
+    leaves: number;
+}
+
+
 function PageSkeleton() {
     return (
         <Card>
@@ -48,7 +54,7 @@ function PageSkeleton() {
     );
 }
 
-function RatioCard({ title, value, description, icon: Icon }: { title: string, value: string, description: string, icon: React.ElementType }) {
+function RatioCard({ title, value, description, icon: Icon, change }: { title: string, value: string, description: string, icon: React.ElementType, change?: {value: number, label: string} }) {
     return (
         <Card className="bg-card/50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -57,7 +63,15 @@ function RatioCard({ title, value, description, icon: Icon }: { title: string, v
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">{value}</div>
-                <p className="text-xs text-muted-foreground">{description}</p>
+                <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground">{description}</p>
+                    {change && (
+                        <div className={`flex items-center text-xs font-semibold ${change.value >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {change.value >= 0 ? <TrendingUp className="h-3 w-3 mr-1"/> : <TrendingDown className="h-3 w-3 mr-1"/>}
+                            {change.value > 0 && '+'}{change.value} ({change.label})
+                        </div>
+                    )}
+                </div>
             </CardContent>
         </Card>
     );
@@ -67,6 +81,7 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
     const { toast } = useToast();
     const [config, setConfig] = useState<AnalysisConfig | null>(null);
     const [activityData, setActivityData] = useState<ActivityStat[]>([]);
+    const [joinLeaveData, setJoinLeaveData] = useState<JoinLeaveStat | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -76,9 +91,10 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
             setLoading(true);
             setError(null);
             try {
-                const [configRes, activityRes] = await Promise.all([
+                const [configRes, activityRes, joinLeaveRes] = await Promise.all([
                     fetch(`${API_URL}/get-config/${serverId}/community-analysis`),
                     fetch(`${API_URL}/get-activity-stats/${serverId}`),
+                    fetch(`${API_URL}/get-join-leave-stats/${serverId}`),
                 ]);
                 if (!configRes.ok) throw new Error("Impossible de charger la configuration.");
                 const configData = await configRes.json();
@@ -90,6 +106,14 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
                 } else {
                      setError("Impossible de charger les données d'activité.");
                 }
+                
+                if (joinLeaveRes.ok) {
+                    const joinLeaveData = await joinLeaveRes.json();
+                    setJoinLeaveData(joinLeaveData);
+                } else {
+                    console.warn("Could not load join/leave stats.");
+                }
+
 
             } catch (err: any) {
                 setError(err.message);
@@ -127,7 +151,7 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
     
     const engagementRatios = useMemo(() => {
         if (!activityData || activityData.length === 0 || !serverInfo) {
-            return { engagement: '0', textVsVoice: '0', msgPerUser: '0' };
+            return { engagement: '0', textVsVoice: '0', msgPerUser: '0', retention: 0, retentionLabel: 'Stable' };
         }
         
         const totalMessages = activityData.reduce((sum, stat) => sum + stat.message_count, 0);
@@ -137,6 +161,10 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
         
         const totalActiveUsers = Math.max(uniqueTextUsers, uniqueVoiceUsers);
 
+        const retentionValue = joinLeaveData ? joinLeaveData.joins - joinLeaveData.leaves : 0;
+        let retentionLabel = 'Stable';
+        if (retentionValue > 0) retentionLabel = `+${retentionValue} membres`;
+        if (retentionValue < 0) retentionLabel = `${retentionValue} membres`;
 
         const engagement = serverInfo.memberCount > 0 ? (totalActiveUsers / serverInfo.memberCount) * 100 : 0;
         const textVsVoice = totalVoiceMinutes > 0 ? totalMessages / totalVoiceMinutes : totalMessages;
@@ -145,9 +173,11 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
         return {
             engagement: engagement.toFixed(1),
             textVsVoice: textVsVoice.toFixed(2),
-            msgPerUser: msgPerUser.toFixed(1)
+            msgPerUser: msgPerUser.toFixed(1),
+            retention: retentionValue,
+            retentionLabel: retentionLabel,
         }
-    }, [activityData, serverInfo]);
+    }, [activityData, serverInfo, joinLeaveData]);
 
     if (!config) {
         return <PageSkeleton />;
@@ -188,10 +218,11 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
                         icon={Activity}
                     />
                     <RatioCard 
-                        title="Rétention (Join/Leave)"
-                        value="N/A"
-                        description="Fonctionnalité en développement"
+                        title="Rétention (24h)"
+                        value={engagementRatios.retention > 0 ? `+${engagementRatios.retention}` : `${engagementRatios.retention}`}
+                        description="Arrivées - Départs"
                         icon={UserPlus}
+                        change={{ value: engagementRatios.retention, label: engagementRatios.retentionLabel }}
                     />
                 </div>
                 
@@ -264,5 +295,3 @@ export default function CommunityAnalysisPage() {
     </PageTransitionWrapper>
   );
 }
-
-    

@@ -1,15 +1,22 @@
 
 
 import { Events, GuildMember, EmbedBuilder, TextChannel } from 'discord.js';
-import { getServerConfig } from '../../../src/lib/db';
+import { getServerConfig, recordJoinLeaveEvent } from '../../../src/lib/db';
 
 export const name = Events.GuildMemberAdd;
 
 export async function execute(member: GuildMember) {
     const config = await getServerConfig(member.guild.id, 'logs');
-    if (!config?.enabled || !config.log_settings?.members?.enabled) return;
+    if (!config?.enabled || !config.log_settings?.members?.enabled) {
+        // Still record the event even if logging is off for the channel
+        recordJoinLeaveEvent(member.guild.id, member.id, 'join');
+        return;
+    }
     
-    // Check for exemptions
+    // Record join event
+    recordJoinLeaveEvent(member.guild.id, member.id, 'join');
+    
+    // Check for exemptions from logging
     if (member.roles.cache.some(r => config.exempt_roles?.includes(r.id))) return;
 
     const targetChannelId = config.log_settings.members.channel_id || config.main_channel_id;
