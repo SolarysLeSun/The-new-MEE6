@@ -492,7 +492,7 @@ const defaultConfigs: DefaultConfigs = {
         private_thread_name_format: 'staff-{user}',
         command_permissions: {
             addticket: null,
-            privateresum: null,
+            iaresume: null,
             ticket: null,
         }
     },

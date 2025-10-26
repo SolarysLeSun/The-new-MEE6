@@ -4,26 +4,26 @@ import type { Command } from '../../../src/types';
 import { getServerConfig } from '../../../src/lib/db';
 import { transcriptSummaryFlow } from '../../../src/ai/flows/transcript-summary-flow';
 
-const PrivateResumCommand: Command = {
+const IaResumeCommand: Command = {
     data: new SlashCommandBuilder()
-        .setName('privateresum')
-        .setDescription('Génère un résumé IA d\'un salon privé avant son archivage.')
-        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+        .setName('iaresume')
+        .setDescription("Génère un résumé IA de la conversation récente dans ce salon.")
+        .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
 
     async execute(interaction: ChatInputCommandInteraction) {
         if (!interaction.guild || !interaction.channel || !(interaction.channel instanceof TextChannel)) {
-            await interaction.reply({ content: 'Cette commande ne peut être utilisée que dans un salon textuel.', flags: MessageFlags.Ephemeral });
+            await interaction.reply({ content: 'Cette commande ne peut être utilisée que dans un salon textuel.', ephemeral: true });
             return;
         }
         
-        await interaction.deferReply({ ephemeral: true });
+        const config = await getServerConfig(interaction.guild.id, 'community-assistant');
 
-        const privateRoomsConfig = await getServerConfig(interaction.guild.id, 'private-rooms');
-
-        if (!privateRoomsConfig?.enabled || !privateRoomsConfig.archive_summary) {
-            await interaction.editReply({ content: "La fonctionnalité de résumé IA pour les salons privés est désactivée." });
+        if (!config?.enabled || !config.premium) {
+            await interaction.reply({ content: "La fonctionnalité de résumé IA est une exclusivité Premium et doit être activée dans le module 'Assistant Communautaire'.", ephemeral: true });
             return;
         }
+
+        await interaction.deferReply({ ephemeral: true });
         
         try {
             await interaction.editReply({ content: 'Lecture du salon en cours... Veuillez patienter.'});
@@ -50,16 +50,14 @@ const PrivateResumCommand: Command = {
                 .setDescription(result.summary)
                 .setFooter({ text: `Basé sur les ${sortedMessages.length} derniers messages.` });
             
-            await interaction.channel.send({ embeds: [embed] });
+            await interaction.channel.send({ content: `Voici un résumé de la conversation demandé par ${interaction.user.toString()} :`, embeds: [embed] });
             await interaction.editReply({ content: `✅ Résumé généré et envoyé dans ${interaction.channel}.` });
 
-            // TODO: Optional - Add a button to the summary embed to confirm channel archival/deletion.
-
         } catch (error) {
-            console.error('[PrivateResum] Error generating summary:', error);
+            console.error('[IaResumeCommand] Error generating summary:', error);
             await interaction.editReply({ content: 'Une erreur est survenue lors de la génération du résumé.' });
         }
     },
 };
 
-export default PrivateResumCommand;
+export default IaResumeCommand;
