@@ -17,6 +17,8 @@ const WATCHDOG_SECRET = process.env.WATCHDOG_SECRET;
 
 
 let isRestarting = false;
+let healthCheckInterval: NodeJS.Timeout | null = null;
+
 
 async function sendWebhookNotification(title: string, reason: string, logs?: string) {
     if (!WEBHOOK_URL) return;
@@ -129,6 +131,13 @@ function executeRemoteCommand(command: string, res: express.Response) {
     let shellCommand = '';
     let notificationTitle = 'Commande à Distance';
 
+    // Suspend health checks during manual operations
+    if (healthCheckInterval) {
+        clearInterval(healthCheckInterval);
+        healthCheckInterval = null;
+        console.log(`[${timestamp}] [Watchdog] Health checks paused due to remote command.`);
+    }
+
     switch (command) {
         case 'pull-and-restart':
             shellCommand = 'git pull && npm run build && pm2 restart all';
@@ -144,6 +153,8 @@ function executeRemoteCommand(command: string, res: express.Response) {
             break;
         default:
             res.status(400).send('Commande invalide.');
+             // Resume checks if command is invalid
+            startHealthCheckInterval(0);
             return;
     }
     
@@ -152,16 +163,21 @@ function executeRemoteCommand(command: string, res: express.Response) {
     sendWebhookNotification(notificationTitle, `Exécution de la commande : \`${shellCommand}\``);
 
     exec(shellCommand, (error, stdout, stderr) => {
+        const completionTimestamp = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
         if (error) {
-            console.error(`[${timestamp}] [Watchdog] Erreur lors de l'exécution de la commande distante '${command}':`, error);
+            console.error(`[${completionTimestamp}] [Watchdog] Erreur lors de l'exécution de la commande distante '${command}':`, error);
             sendWebhookNotification(`Erreur d'exécution de la commande '${command}'`, `Erreur: ${error.message}`, stderr);
-            return;
+        } else {
+            console.log(`[${completionTimestamp}] [Watchdog] Sortie de la commande '${command}':\n${stdout}`);
+            if (stderr) {
+                console.error(`[${completionTimestamp}] [Watchdog] Erreur (stderr) de la commande '${command}':\n${stderr}`);
+            }
+            sendWebhookNotification(`Succès de la commande '${command}'`, `La commande s'est terminée avec succès.`, stdout);
         }
-        console.log(`[${timestamp}] [Watchdog] Sortie de la commande '${command}':\n${stdout}`);
-        if (stderr) {
-            console.error(`[${timestamp}] [Watchdog] Erreur (stderr) de la commande '${command}':\n${stderr}`);
-        }
-        sendWebhookNotification(`Succès de la commande '${command}'`, `La commande s'est terminée avec succès.`, stdout);
+        
+        // Resume health checks after 1 minute, regardless of outcome
+        console.log(`[${completionTimestamp}] [Watchdog] Resuming health checks in 1 minute...`);
+        startHealthCheckInterval(60000);
     });
 }
 
@@ -187,13 +203,22 @@ app.post('/execute', (req, res) => {
     executeRemoteCommand(command, res);
 });
 
+function startHealthCheckInterval(initialDelay: number) {
+    if (healthCheckInterval) {
+        clearInterval(healthCheckInterval);
+    }
+    setTimeout(() => {
+        checkApiHealth(); // Run first check immediately after delay
+        healthCheckInterval = setInterval(checkApiHealth, CHECK_INTERVAL_MS);
+    }, initialDelay);
+}
+
 
 app.listen(WATCHDOG_PORT, () => {
     const timestamp = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
     console.log(`[${timestamp}] [Watchdog] Health check server listening on port ${WATCHDOG_PORT}`);
     console.log(`[${timestamp}] [Watchdog] Starting regular checks on ${TARGET_API_URL} in 1 minute.`);
     
-    // Attendre 1 minute avant le premier check pour laisser le temps au bot de démarrer
-    setTimeout(checkApiHealth, 60000); 
-    setInterval(checkApiHealth, CHECK_INTERVAL_MS);
+    // Démarrer la boucle de vérification après un délai initial de 1 minute
+    startHealthCheckInterval(60000);
 });
