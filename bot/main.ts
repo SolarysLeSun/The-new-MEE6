@@ -595,6 +595,54 @@ async function handleCloseTicket(interaction: ButtonInteraction) {
     }
 }
 
+async function handleReopenTicket(interaction: ButtonInteraction, channelId: string) {
+    if (!interaction.guild || !interaction.member) return;
+    const ticket = getTicketByChannelId(channelId);
+    if (!ticket) {
+        await interaction.reply({ content: "Ce ticket est introuvable dans la base de données.", ephemeral: true });
+        return;
+    }
+
+    const config = await getServerConfig(interaction.guild.id, 'private-rooms');
+    const member = interaction.member as GuildMember;
+    const isModerator = member.roles.cache.some(r => config.moderator_roles.includes(r.id));
+    const isOwner = ticket.owner_id === member.id;
+
+    if (!isModerator && !isOwner) {
+        await interaction.reply({ content: "Vous n'avez pas la permission de rouvrir ce ticket.", ephemeral: true });
+        return;
+    }
+
+    if (ticket.status !== 'closed') {
+        await interaction.reply({ content: "Ce ticket n'est pas fermé.", ephemeral: true });
+        return;
+    }
+    
+    await interaction.deferUpdate();
+
+    // Update DB
+    updateTicket(channelId, { status: 'open', closed_at: null, claimed_by: null });
+    
+    // Update Embed
+    const originalEmbed = interaction.message.embeds[0];
+    const newEmbed = EmbedBuilder.from(originalEmbed)
+        .setColor(0x57F287) // Green
+        .spliceFields(0, 1, { name: 'Statut', value: '🟢 Ouvert', inline: true })
+        .setFooter({ text: `Ticket ré-ouvert par ${interaction.user.tag}` });
+
+    const newRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId(`close_ticket_${channelId}`).setLabel('Fermer le Ticket').setStyle(ButtonStyle.Danger).setEmoji('🔒'),
+        new ButtonBuilder().setCustomId(`claim_ticket_${channelId}`).setLabel('Réclamer le Ticket').setStyle(ButtonStyle.Primary).setEmoji('🙋'),
+        new ButtonBuilder().setCustomId(`manage_members_${channelId}`).setLabel('Gérer les membres').setStyle(ButtonStyle.Secondary).setEmoji('👤')
+    );
+
+    await interaction.message.edit({ embeds: [newEmbed], components: [newRow] });
+    await interaction.followUp({ content: `${interaction.user} a ré-ouvert ce ticket.` });
+
+    // Emit event for logging
+    interaction.client.emit('ticketStatusUpdate', { ...ticket, status: 'open' }, 'reopened', interaction.user);
+}
+
 
 async function handleDeleteTicket(interaction: ButtonInteraction, channelId: string, isAutoDelete = false) {
     if (!interaction.guild) return;
@@ -750,7 +798,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
             }
             updateTicket(channelId, { claimed_by: interaction.user.id });
             const ticketOwner = await client.users.fetch(ticket.owner_id).catch(() => null);
-            await interaction.reply(`<@${ticketOwner?.id}>, ${interaction.user} a pris en charge votre ticket.`);
+            await interaction.reply(`${interaction.user} a pris en charge le ticket de <@${ticketOwner?.id}>.`);
             return;
         }
 
@@ -764,6 +812,12 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
         if (customId.startsWith('close_ticket_')) {
             await handleCloseTicket(interaction);
+            return;
+        }
+        
+        if (customId.startsWith('reopen_ticket_')) {
+            const channelId = customId.split('_')[2];
+            await handleReopenTicket(interaction, channelId);
             return;
         }
         
