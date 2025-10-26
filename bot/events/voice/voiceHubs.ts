@@ -22,7 +22,7 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     const destCategoryId = config.dest_category_id;
 
     // --- User Joins a Hub Channel ---
-    if (newState.channelId && newState.channel?.parentId === hubCategoryId) {
+    if (newState.channel?.parentId === hubCategoryId && oldState.channel?.parentId !== hubCategoryId) {
         const hubChannel = newState.channel;
         
         // Find hub config (if it's a configured hub channel)
