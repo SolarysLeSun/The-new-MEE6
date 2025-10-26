@@ -3,7 +3,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType, DiscordAPIError } from 'discord.js';
-import { updateServerConfig, getServerConfig, getAllBotServers, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem, getApiKeyInfo } from '@/lib/db';
+import { updateServerConfig, getServerConfig, getAllBotServers, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem, getApiKeyInfo, db } from '@/lib/db';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { updateGuildCommands } from './handlers/commandHandler';
@@ -278,6 +278,7 @@ export function startApi(client: Client) {
                 id: guild.id,
                 name: guild.name,
                 icon: guild.iconURL(),
+                memberCount: guild.memberCount,
                 isPremium: isPremium,
                 channels: Array.from(guild.channels.cache.values()).map(c => ({ id: c.id, name: c.name, type: c.type })),
                 roles: Array.from(guild.roles.cache.values()).map(r => ({ id: r.id, name: r.name, color: r.color })),
@@ -724,6 +725,26 @@ export function startApi(client: Client) {
         }
     });
 
+    // --- Community Analysis ---
+    app.get('/api/get-activity-stats/:guildId', async (req, res) => {
+        const { guildId } = req.params;
+        try {
+            // Fetch stats for the last 24 hours (48 buckets of 30 mins)
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+            const stmt = db.prepare(`
+                SELECT * FROM community_activity_stats
+                WHERE guild_id = ? AND timestamp_bucket >= ?
+                ORDER BY timestamp_bucket DESC
+            `);
+            const stats = stmt.all(guildId, twentyFourHoursAgo);
+            res.status(200).json(stats);
+        } catch (error) {
+             console.error(`[Bot API] Error fetching activity stats for ${guildId}:`, error);
+            res.status(500).json({ error: 'Erreur interne du serveur.' });
+        }
+    });
+
+
     // --- Public API Endpoints ---
 
     const publicApiRouter = express.Router();
@@ -866,4 +887,5 @@ export function startApi(client: Client) {
     });
 }
 
+    
     

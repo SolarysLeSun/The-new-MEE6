@@ -127,18 +127,20 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
     
     const engagementRatios = useMemo(() => {
         if (!activityData || activityData.length === 0 || !serverInfo) {
-            return { engagement: 0, textVsVoice: 0, msgPerUser: 0 };
+            return { engagement: '0', textVsVoice: '0', msgPerUser: '0' };
         }
         
         const totalMessages = activityData.reduce((sum, stat) => sum + stat.message_count, 0);
         const totalVoiceMinutes = activityData.reduce((sum, stat) => sum + stat.cumulative_voice_minutes, 0);
-        const uniqueTextUsers = new Set(activityData.flatMap(stat => Array(stat.active_text_members_count).keys())); // Simplified representation
-        const uniqueVoiceUsers = new Set(activityData.flatMap(stat => Array(stat.active_voice_members_count).keys()));
-        const totalActiveUsers = new Set([...uniqueTextUsers, ...uniqueVoiceUsers]).size;
+        const uniqueTextUsers = new Set(activityData.map(s => s.active_text_members_count).filter(Boolean)).size;
+        const uniqueVoiceUsers = new Set(activityData.map(s => s.active_voice_members_count).filter(Boolean)).size;
+        
+        const totalActiveUsers = Math.max(uniqueTextUsers, uniqueVoiceUsers);
+
 
         const engagement = serverInfo.memberCount > 0 ? (totalActiveUsers / serverInfo.memberCount) * 100 : 0;
         const textVsVoice = totalVoiceMinutes > 0 ? totalMessages / totalVoiceMinutes : totalMessages;
-        const msgPerUser = uniqueTextUsers.size > 0 ? totalMessages / uniqueTextUsers.size : 0;
+        const msgPerUser = uniqueTextUsers > 0 ? totalMessages / uniqueTextUsers : 0;
 
         return {
             engagement: engagement.toFixed(1),
@@ -262,3 +264,5 @@ export default function CommunityAnalysisPage() {
     </PageTransitionWrapper>
   );
 }
+
+    
