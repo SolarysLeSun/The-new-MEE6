@@ -12,9 +12,10 @@ const FLUSH_INTERVAL = 5 * 60 * 1000;   // 5 minutes
 const activityState = new Collection<string, {
     messageCount: number;
     activeTextUsers: Set<string>;
-    activeVoiceUsers: Set<string>;
+    // Track users currently in voice
     voiceTimeTracker: Collection<string, { joinTime: number }>;
-    cumulativeVoiceMinutes: number;
+    // Accumulate time from users who left during the interval
+    completedVoiceSessionsMinutes: number;
 }>();
 
 function getBucketTimestamp(timestamp: number = Date.now()) {
@@ -25,8 +26,30 @@ async function flushActivityToDB(guildId: string) {
     const state = activityState.get(guildId);
     if (!state) return;
 
-    const timestamp = getBucketTimestamp(Date.now() - 1000); // Use previous bucket to avoid race conditions
+    // --- Calculate voice time for currently connected users ---
+    let ongoingVoiceMinutes = 0;
+    const now = Date.now();
+    const guild = state.voiceTimeTracker['guild']; // Hack to get guild object
+    
+    if (guild) {
+         guild.voiceStates.cache.forEach((vs: VoiceState) => {
+            if (vs.member && !vs.member.user.bot && vs.channel && !vs.serverDeaf) {
+                const tracker = state.voiceTimeTracker.get(vs.member.id);
+                if (tracker) {
+                    const timeSpent = (now - tracker.joinTime) / (1000 * 60);
+                    ongoingVoiceMinutes += timeSpent;
+                    // Reset the join time for the next interval
+                    tracker.joinTime = now;
+                }
+            }
+        });
+    }
+   
 
+    const totalVoiceMinutes = state.completedVoiceSessionsMinutes + ongoingVoiceMinutes;
+
+    // --- Save to Database ---
+    const timestamp = getBucketTimestamp(now - 1000); // Use previous bucket to avoid race conditions
     try {
         const stmt = db.prepare(`
             INSERT INTO community_activity_stats (guild_id, timestamp_bucket, message_count, active_voice_members_count, cumulative_voice_minutes, active_text_members_count)
@@ -42,25 +65,21 @@ async function flushActivityToDB(guildId: string) {
             guildId,
             new Date(timestamp).toISOString(),
             state.messageCount,
-            state.activeVoiceUsers.size,
-            Math.round(state.cumulativeVoiceMinutes),
+            guild.voiceStates.cache.filter((vs: VoiceState) => vs.member && !vs.member.user.bot && vs.channel && !vs.serverDeaf).size,
+            Math.round(totalVoiceMinutes),
             state.activeTextUsers.size
         );
         
-        console.log(`[Activity Analysis] Flushed data for guild ${guildId} for bucket ${new Date(timestamp).toISOString()}`);
+        console.log(`[Activity Analysis] Flushed data for guild ${guildId}. Voice Mins: ${totalVoiceMinutes.toFixed(2)}.`);
 
     } catch (e) {
         console.error(`[Activity Analysis] Failed to flush DB for guild ${guildId}:`, e);
     }
 
-    // Reset state for the new interval
-    activityState.set(guildId, {
-        messageCount: 0,
-        activeTextUsers: new Set(),
-        activeVoiceUsers: new Set(),
-        voiceTimeTracker: new Collection(),
-        cumulativeVoiceMinutes: 0,
-    });
+    // --- Reset state for the new interval ---
+    state.messageCount = 0;
+    state.activeTextUsers.clear();
+    state.completedVoiceSessionsMinutes = 0;
 }
 
 export function startCommunityAnalysisInterval(client: Client) {
@@ -71,9 +90,15 @@ export function startCommunityAnalysisInterval(client: Client) {
          activityState.set(guild.id, {
             messageCount: 0,
             activeTextUsers: new Set(),
-            activeVoiceUsers: new Set(),
-            voiceTimeTracker: new Collection(),
-            cumulativeVoiceMinutes: 0,
+            voiceTimeTracker: new Collection<string, { joinTime: number, guild: any }>().set('guild', guild),
+            completedVoiceSessionsMinutes: 0,
+        });
+        
+        // Pre-fill trackers for members already in voice on startup
+        guild.voiceStates.cache.forEach(vs => {
+            if(vs.member && !vs.member.user.bot && vs.channel && !vs.serverDeaf) {
+                 activityState.get(guild.id)!.voiceTimeTracker.set(vs.member.id, { joinTime: Date.now(), guild: guild });
+            }
         });
     });
 
@@ -85,19 +110,6 @@ export function startCommunityAnalysisInterval(client: Client) {
             const state = activityState.get(guild.id);
             if (!state) return;
 
-            // --- Update Cumulative Voice Time ---
-            guild.voiceStates.cache.forEach(vs => {
-                if (vs.member && !vs.member.user.bot && !vs.serverDeaf) {
-                    const tracker = state.voiceTimeTracker.get(vs.member.id);
-                    if (tracker) {
-                        const timeSpent = (Date.now() - tracker.joinTime) / (1000 * 60);
-                        state.cumulativeVoiceMinutes += timeSpent;
-                        tracker.joinTime = Date.now(); // Reset join time for next interval
-                    }
-                }
-            });
-
-            // Flush data to DB
             flushActivityToDB(guild.id);
         });
     }, FLUSH_INTERVAL);
@@ -132,23 +144,16 @@ export const voiceStateUpdateHandler = async (oldState: VoiceState, newState: Vo
     
     // User becomes active in voice
     if (!wasActive && isActive) {
-        state.activeVoiceUsers.add(member.id);
-        state.voiceTimeTracker.set(member.id, { joinTime: Date.now() });
+        state.voiceTimeTracker.set(member.id, { joinTime: Date.now(), guild: newState.guild });
     } 
     // User becomes inactive in voice
     else if (wasActive && !isActive) {
-        state.activeVoiceUsers.delete(member.id);
         const tracker = state.voiceTimeTracker.get(member.id);
         if (tracker) {
              const timeSpent = (Date.now() - tracker.joinTime) / (1000 * 60); // in minutes
-             state.cumulativeVoiceMinutes += timeSpent;
+             state.completedVoiceSessionsMinutes += timeSpent;
              state.voiceTimeTracker.delete(member.id);
         }
     }
 };
-
-// We attach these handlers to the main bot events in main.ts if they are not already there.
-// e.g. client.on(Events.MessageCreate, messageCreateHandler);
-// e.g. client.on(Events.VoiceStateUpdate, voiceStateUpdateHandler);
-
 
