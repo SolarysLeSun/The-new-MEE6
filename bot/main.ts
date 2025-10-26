@@ -92,7 +92,6 @@ const loadEvents = (client: Client) => {
                         } else {
                             client.on(event.name, (...args) => event.execute(...args, client));
                         }
-                        console.log(`[+] Loaded event: ${event.name} from ${path.relative(eventsPath, fullPath)}`);
                      }
                  } catch(e) {
                     console.error(`[E] Failed to require event at ${fullPath}`, e);
@@ -1077,6 +1076,7 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
+
 
 
 
