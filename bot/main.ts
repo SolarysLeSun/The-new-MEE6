@@ -84,8 +84,8 @@ const loadEvents = (client: Client) => {
                     const event = require(fullPath);
                      if (event.name && event.execute) {
                         if (event.name === Events.MessageCreate || event.name === Events.VoiceStateUpdate) {
-                            // These are handled specially below
-                            return;
+                            // These are handled specially below to combine handlers
+                            continue;
                         }
                         if (event.once) {
                             client.once(event.name, (...args) => event.execute(...args, client));
@@ -1076,6 +1076,7 @@ async function startBot() {
 startBot();
 
 (global as any).discordClient = client;
+
 
 
 
