@@ -127,21 +127,29 @@ async function createAndMove(newState: VoiceState, hubConfig: VoiceHub) {
              setTimeout(() => updateChannelName(tempChannel, true), 2000);
         }
 
-        const logChannelId = config.log_channel_id;
-        if (logChannelId) {
-            const logChannel = await guild.channels.fetch(logChannelId).catch(() => null) as TextChannel | null;
-            if (logChannel && logChannel.isTextBased()) {
-                const welcomeEmbed = new EmbedBuilder()
-                    .setColor(0x57F287)
-                    .setTitle(`Salon de ${member.displayName}`)
-                    .setDescription(`Bienvenue dans votre salon privé, ${member.toString()} !`)
-                    .addFields(
-                        { name: 'Permissions', value: 'Vous pouvez renommer ce salon, déplacer, rendre muet et expulser des membres à l\'intérieur.' },
-                        { name: 'Disparition', value: 'Ce salon sera automatiquement supprimé lorsqu\'il sera vide.' }
-                    )
-                    .setFooter({ text: `Créé via le hub : ${newState.channel?.name}`})
-                    .setTimestamp();
-                await logChannel.send({ content: member.toString(), embeds: [welcomeEmbed] });
+        // Send a direct message to the user with the channel info
+        try {
+            const welcomeEmbed = new EmbedBuilder()
+                .setColor(0x57F287)
+                .setTitle(`Salon Privé Créé sur ${guild.name}`)
+                .setDescription(`Bienvenue dans votre salon privé, **${tempChannel.name}** !`)
+                .addFields(
+                    { name: 'Vos Permissions', value: 'Vous pouvez renommer ce salon, déplacer, rendre muet et expulser des membres à l\'intérieur.' },
+                    { name: 'Disparition', value: 'Ce salon sera automatiquement supprimé lorsqu\'il sera vide.' }
+                )
+                .setFooter({ text: `Créé via le hub : ${newState.channel?.name}`})
+                .setTimestamp();
+            await member.send({ embeds: [welcomeEmbed] });
+        } catch (dmError) {
+            console.warn(`[VoiceHubs] Could not send DM to user ${member.user.tag}.`);
+            // Optionally send a temporary message in a public channel if DM fails
+            const logChannelId = config.log_channel_id;
+            if (logChannelId) {
+                const logChannel = await guild.channels.fetch(logChannelId).catch(() => null) as TextChannel | null;
+                 if (logChannel && logChannel.isTextBased()) {
+                     const publicMsg = await logChannel.send(`${member.toString()}, je n'ai pas pu vous envoyer les détails en message privé. Votre salon **${tempChannel.name}** a été créé !`);
+                     setTimeout(() => publicMsg.delete().catch(() => {}), 15000);
+                 }
             }
         }
 
