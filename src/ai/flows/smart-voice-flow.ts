@@ -1,4 +1,5 @@
 
+
 'use server';
 
 /**
@@ -12,6 +13,7 @@ const SmartVoiceInputSchema = z.object({
   currentName: z.string().describe('The current name of the voice channel.'),
   theme: z.string().describe('The general theme of the channel, provided by the user (e.g., "Gaming", "Soirée Film", "QG des développeurs").'),
   memberCount: z.number().describe('The number of members currently in the channel.'),
+  memberNames: z.array(z.string()).describe("An array of the display names of the members in the channel."),
   activities: z.string().describe('A summary of activities (e.g., "3 playing Valorant, 1 streaming", "Just chatting") users are currently engaged in.'),
   customInstructions: z.string().optional().describe('Optional custom instructions from the server admin to guide the naming. These instructions are absolute priorities.'),
 });
@@ -49,6 +51,7 @@ The bio is a fun, short sentence related to the name.
 Current Channel Name: "{{currentName}}"
 Channel Theme: {{{theme}}}
 Number of members: {{{memberCount}}}
+Members present: {{{memberNames}}}
 Current activities summary: {{{activities}}}
 
 {{#if customInstructions}}
@@ -57,14 +60,14 @@ PRIORITY INSTRUCTIONS FROM ADMIN: You must follow these guidelines strictly: "{{
 
 
 Please generate a dynamic name based on the activities summary.
-- If there are games, focus on the most popular one.
+- If there are games, focus on the most popular one. If there's only one or two people, you can include their name.
 - If people are streaming or on webcam, incorporate that.
-- If there are no specific activities ("Just chatting"), generate a name for general conversation that fits the channel's theme.
+- If there are no specific activities ("Just chatting"), generate a name for general conversation that fits the channel's theme and members.
 - The name should feel alive and reflect what's happening RIGHT NOW.
 
-Example for a "Gaming" theme:
-- Activities: "3 playing League of Legends, 1 streaming" -> Name: "🔴 Faille de l'invocateur", Bio: "En direct sur LoL !"
-- Activities: "2 with webcam on, Just chatting" -> Name: "💬 Session blabla", Bio: "Discussions en face à face."
+Example for a "Gaming" theme with members "NightFury" and "Cresus":
+- Activities: "2 playing Valorant" -> Name: "⚔️ Duo sur Valorant", Bio: "NightFury et Cresus en action !"
+- Activities: "1 playing League of Legends" -> Name: "🔴 Faille avec NightFury", Bio: "En direct sur LoL !"
 
 IMPORTANT: Do not just return the current name. Always generate a new, relevant name based on the situation.
 If you cannot come up with a good name, return the default name "Vocal intéractif" and an appropriate bio.

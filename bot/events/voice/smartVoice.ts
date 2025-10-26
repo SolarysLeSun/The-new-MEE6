@@ -58,6 +58,7 @@ async function updateChannelName(channel: NonThreadGuildBasedChannel) {
     try {
         const members = channel.members.filter(m => !m.user.bot);
         const memberCount = members.size;
+        const memberNames = members.map(m => m.displayName);
         
         // --- Enhanced Activity Gathering ---
         const activityCounts: Record<string, number> = {};
@@ -87,8 +88,9 @@ async function updateChannelName(channel: NonThreadGuildBasedChannel) {
 
         const result = await smartVoiceFlow({
             currentName: channel.name,
-            theme: channel.name, // Using channel name as a proxy for theme, can be improved
+            theme: channel.name,
             memberCount: memberCount,
+            memberNames: memberNames, // Pass member names
             activities: activitiesString,
             customInstructions: smartVoiceConfig.custom_instructions
         });
@@ -133,5 +135,3 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
         await updateChannelName(oldChannel);
     }
 }
-
-
