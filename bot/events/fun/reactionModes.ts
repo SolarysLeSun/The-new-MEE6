@@ -1,4 +1,5 @@
 
+
 import { Events, Message } from 'discord.js';
 import { getServerConfig } from '@/lib/db';
 
@@ -21,6 +22,9 @@ export async function execute(message: Message) {
         }
         if (config.poutine_enabled) {
             await message.react('1430663147294953472');
+        }
+        if (config.custom_pride_emoji) {
+            await message.react(config.custom_pride_emoji);
         }
     } catch (error) {
         // Ignore errors if the bot can't react (e.g., permissions, emoji not found)

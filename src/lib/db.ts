@@ -689,6 +689,7 @@ const defaultConfigs: DefaultConfigs = {
         gaypride_enabled: false,
         oktban_enabled: false,
         poutine_enabled: false,
+        custom_pride_emoji: null,
         command_permissions: {
             renameall: null,
             mutemass: null,
