@@ -90,7 +90,7 @@ async function updateChannelName(channel: NonThreadGuildBasedChannel) {
             currentName: channel.name,
             theme: channel.name,
             memberCount: memberCount,
-            memberNames: memberNames, // Pass member names
+            memberNames: memberNames,
             activities: activitiesString,
             customInstructions: smartVoiceConfig.custom_instructions
         });
@@ -135,3 +135,4 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
         await updateChannelName(oldChannel);
     }
 }
+
