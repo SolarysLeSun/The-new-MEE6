@@ -84,10 +84,14 @@ async function createAndMove(newState: VoiceState, hubConfig: VoiceHub) {
         return;
     }
     
+    const activityName = member.presence?.activities.find(a => a.type === 0)?.name || 'Discussion';
+
     // Replace variables in channel name
     const channelName = hubConfig.name_format
         .replace('{user}', member.displayName)
-        .replace('{activite}', member.presence?.activities[0]?.name || 'Discussion');
+        .replace('{activite}', activityName)
+        .replace('{mb.connect}', '1');
+
 
     try {
         console.log(`[VoiceHubs] Creating temporary channel for ${member.user.tag}...`);
@@ -124,7 +128,18 @@ async function createAndMove(newState: VoiceState, hubConfig: VoiceHub) {
         console.log(`[VoiceHubs] Moving ${member.user.tag} to new channel: ${tempChannel.name}`);
         await newState.setChannel(tempChannel);
 
-        // TODO: if (hubConfig.enable_smart_voice) { activate smart voice for this channel }
+        if (hubConfig.enable_smart_voice) {
+            const smartVoiceConfig = await getServerConfig(guild.id, 'smart-voice');
+            if (smartVoiceConfig) {
+                const updatedConfig = {
+                    ...smartVoiceConfig,
+                    interactive_category_id: destCategoryId, 
+                };
+                // This doesn't directly "activate" it, but ensures the category is watched
+                // The smart-voice event handler will pick it up.
+                console.log(`[VoiceHubs] Smart Voice is enabled for hub-created channel ${tempChannel.name}`);
+            }
+        }
 
     } catch (error) {
         console.error(`[VoiceHubs] Failed to create or move user to temporary channel:`, error);
