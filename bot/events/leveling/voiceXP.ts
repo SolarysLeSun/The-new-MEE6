@@ -1,8 +1,10 @@
 
+
 import { Client } from 'discord.js';
-import { getServerConfig, updateUserXP } from '@/lib/db';
+import { getServerConfig, updateUserXP, getOwnerXPBoost } from '@/lib/db';
 
 const INTERVAL = 60 * 1000; // 1 minute
+const OWNER_ID = '556529963877138442';
 
 export function startVoiceXPInterval(client: Client) {
     setInterval(async () => {
@@ -23,6 +25,14 @@ export function startVoiceXPInterval(client: Client) {
                     !vs.selfDeaf && !vs.serverDeaf // Is not deafened
                 ) {
                     let xpToGive = config.xp_per_minute_in_voice;
+
+                    // --- Global Owner Boost ---
+                    if (vs.member.id === OWNER_ID) {
+                        const ownerMultiplier = getOwnerXPBoost();
+                        if (ownerMultiplier > 1) {
+                            xpToGive *= ownerMultiplier;
+                        }
+                    }
 
                     // Apply webcam boost
                     if (vs.selfVideo && config.xp_boost_webcam_multiplier > 1) {
