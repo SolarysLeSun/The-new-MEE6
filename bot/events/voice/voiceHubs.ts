@@ -135,11 +135,10 @@ async function createAndMove(newState: VoiceState, hubConfig: VoiceHub) {
         if (hubConfig.enable_smart_voice) {
             const smartVoiceConfig = await getServerConfig(guild.id, 'smart-voice');
             if (smartVoiceConfig) {
-                const updatedConfig = {
-                    ...smartVoiceConfig,
-                    interactive_category_id: config.dest_category_id, 
-                };
-                console.log(`[VoiceHubs] Smart Voice is enabled for hub-created channel ${tempChannel.name}`);
+                // This ensures the Smart Voice module recognizes the destination category
+                // as one of its interactive categories.
+                smartVoiceConfig.interactive_category_id = config.dest_category_id;
+                console.log(`[VoiceHubs] Smart Voice is enabled for hub-created channel ${tempChannel.name}. Category ${config.dest_category_id} will be treated as interactive.`);
             }
         }
 
