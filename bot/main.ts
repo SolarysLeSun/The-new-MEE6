@@ -256,12 +256,13 @@ async function handleContentModificationModal(interaction: ModalSubmitInteractio
 
     try {
         if (footerText.includes('admin_announce') || footerText.includes('dev_admin_announce')) {
-            const rawText = originalEmbed.author?.name;
-            if (!rawText) {
+            const rawTextData = originalEmbed.fields.find(f => f.name === 'raw_text_data');
+            if (!rawTextData) {
                 await interaction.followUp({ content: 'Erreur : Impossible de trouver le texte original de l\'annonce à modifier.', ephemeral: true });
                 return;
             }
-
+            const rawText = rawTextData.value;
+            
             const result = await announcementFlow({
                 rawText: rawText,
                 authorName: interaction.user.username,

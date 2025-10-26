@@ -52,12 +52,15 @@ const DevAdminAnnounceCommand: Command = {
         const devGuilds = getDevGuilds();
 
         const embed = new EmbedBuilder()
-            .setAuthor({ name: rawText })
+            .setAuthor({ name: "Message officiel de l'équipe Marcus", iconURL: client.user?.displayAvatarURL() || undefined })
             .setTitle(title)
             .setDescription(description)
             .setColor(0xf37349)
-            .setFooter({ text: `Annonce de dev de la part de ${client.user?.username} | dev_admin_announce`, iconURL: client.user?.displayAvatarURL() || undefined })
+            .setFooter({ text: `Annonce Esclusive a partenaire Marcus | dev_admin_announce`, iconURL: client.user?.displayAvatarURL() || undefined })
             .setTimestamp();
+        
+        // Stocker le texte brut dans un champ non visible par l'utilisateur
+        embed.addFields({ name: 'raw_text_data', value: rawText, inline: false });
         
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()
