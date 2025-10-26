@@ -191,8 +191,9 @@ app.post('/execute', (req, res) => {
 app.listen(WATCHDOG_PORT, () => {
     const timestamp = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
     console.log(`[${timestamp}] [Watchdog] Health check server listening on port ${WATCHDOG_PORT}`);
-    console.log(`[${timestamp}] [Watchdog] Starting regular checks on ${TARGET_API_URL}`);
+    console.log(`[${timestamp}] [Watchdog] Starting regular checks on ${TARGET_API_URL} in 1 minute.`);
     
-    setTimeout(checkApiHealth, 5000);
+    // Attendre 1 minute avant le premier check pour laisser le temps au bot de démarrer
+    setTimeout(checkApiHealth, 60000); 
     setInterval(checkApiHealth, CHECK_INTERVAL_MS);
 });
