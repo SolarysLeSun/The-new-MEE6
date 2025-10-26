@@ -133,6 +133,16 @@ const upgradeSchema = () => {
             );
         `);
         console.log('[Database] La table "user_levels" est prête.');
+        
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS daily_claims (
+                guild_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                last_claimed_at DATETIME NOT NULL,
+                PRIMARY KEY (guild_id, user_id)
+            );
+        `);
+        console.log('[Database] La table "daily_claims" est prête.');
 
         db.exec(`
             CREATE TABLE IF NOT EXISTS user_profiles (
@@ -678,6 +688,7 @@ const defaultConfigs: DefaultConfigs = {
             level: null,
             topxp: null,
             webleaderboard: null,
+            journalier: null,
         },
         shop_enabled: false,
         shop_notification_channel_id: null,
@@ -1405,6 +1416,41 @@ export function getAndClearUserRoles(guildId: string, userId: string): string[] 
         return JSON.parse(row.role_ids);
     }
     return null;
+}
+
+// --- Daily Claim System ---
+export function canClaimDaily(guildId: string, userId: string): { canClaim: boolean, timeRemaining?: string } {
+    const stmt = db.prepare('SELECT last_claimed_at FROM daily_claims WHERE guild_id = ? AND user_id = ?');
+    const row = stmt.get(guildId, userId) as { last_claimed_at: string } | undefined;
+
+    if (!row) {
+        return { canClaim: true };
+    }
+
+    const now = new Date();
+    const lastClaimed = new Date(row.last_claimed_at);
+
+    // Reset at midnight UTC
+    const lastClaimedDate = new Date(lastClaimed.getUTCFullYear(), lastClaimed.getUTCMonth(), lastClaimed.getUTCDate());
+    const nowDate = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+
+    if (nowDate > lastClaimedDate) {
+        return { canClaim: true };
+    }
+
+    // Calculate time remaining until next UTC midnight
+    const nextMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+    const timeRemainingMs = nextMidnight.getTime() - now.getTime();
+    
+    const hours = Math.floor(timeRemainingMs / (1000 * 60 * 60));
+    const minutes = Math.floor((timeRemainingMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return { canClaim: false, timeRemaining: `${hours}h ${minutes}m` };
+}
+
+export function recordDailyClaim(guildId: string, userId: string): void {
+    const stmt = db.prepare('INSERT OR REPLACE INTO daily_claims (guild_id, user_id, last_claimed_at) VALUES (?, ?, ?)');
+    stmt.run(guildId, userId, new Date().toISOString());
 }
 
 
