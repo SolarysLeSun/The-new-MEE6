@@ -20,33 +20,14 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     
     const hubCategoryId = config.hub_category_id;
     const destCategoryId = config.dest_category_id;
+    const configuredHubIds = (config.hubs || []).map(h => h.creator_channel_id);
 
     // --- User Joins a Hub Channel ---
-    if (newState.channel?.parentId === hubCategoryId && oldState.channel?.parentId !== hubCategoryId) {
-        const hubChannel = newState.channel;
-        
-        // Find hub config (if it's a configured hub channel)
-        const hubConfig = config.hubs.find(h => h.creator_channel_id === hubChannel.id);
-        
-        // If it's a specific, user-configured hub
-        if(hubConfig) {
-             await createAndMove(newState, hubConfig);
-             return;
-        }
-        
-        // Fallback for generic hubs like "Duo (2)" or "Trio (3)"
-        const nameMatch = hubChannel.name.match(/\((\d+)\)/);
-        const userLimit = nameMatch ? parseInt(nameMatch[1], 10) : 0;
-        
-        if (userLimit > 0) {
-             // Use a generic configuration for this auto-detected hub
-             await createAndMove(newState, {
-                id: hubChannel.id, // Use channel id as a temporary hub id
-                creator_channel_id: hubChannel.id,
-                name_format: "Salon de {user}", // Default format
-                user_limit: userLimit,
-                enable_smart_voice: false, // Default to false for generic hubs
-            });
+    // This logic triggers if the user enters a channel that is specifically configured as a hub creator.
+    if (newState.channelId && configuredHubIds.includes(newState.channelId) && newState.channelId !== oldState.channelId) {
+        const hubConfig = config.hubs.find(h => h.creator_channel_id === newState.channelId);
+        if (hubConfig) {
+            await createAndMove(newState, hubConfig);
         }
         return;
     }
