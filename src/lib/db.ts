@@ -220,7 +220,8 @@ const upgradeSchema = () => {
                 user_id TEXT NOT NULL,
                 guild_id TEXT NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                last_used_at DATETIME
+                last_used_at DATETIME,
+                UNIQUE(user_id, guild_id)
             );
         `);
         console.log('[Database] Table "api_keys" is ready.');
