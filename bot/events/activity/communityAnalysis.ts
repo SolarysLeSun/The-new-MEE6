@@ -34,15 +34,18 @@ async function flushActivityToDB(client: Client, guildId: string) {
     let ongoingVoiceMinutes = 0;
     const now = Date.now();
     
-    guild.voiceStates.cache.forEach((vs: VoiceState) => {
-        if (vs.member && !vs.member.user.bot && vs.channel && !vs.serverDeaf) {
-            const tracker = state.voiceTimeTracker.get(vs.member.id);
-            if (tracker) {
-                const timeSpent = (now - tracker.joinTime) / (1000 * 60);
-                ongoingVoiceMinutes += timeSpent;
-                // Reset the join time for the next interval
-                tracker.joinTime = now;
-            }
+    // Itérer sur les membres actuellement dans les salons vocaux suivis par notre tracker
+    state.voiceTimeTracker.forEach((tracker, memberId) => {
+        const member = guild.voiceStates.cache.get(memberId);
+        // Si le membre est toujours actif en vocal
+        if (member?.channel && !member.serverDeaf) {
+            const timeSpent = (now - tracker.joinTime) / (1000 * 60);
+            ongoingVoiceMinutes += timeSpent;
+            // Reset the join time for the next interval
+            tracker.joinTime = now;
+        } else {
+            // Le membre a quitté le vocal entre-temps, on le retire du tracker
+            state.voiceTimeTracker.delete(memberId);
         }
     });
    
@@ -70,7 +73,7 @@ async function flushActivityToDB(client: Client, guildId: string) {
             state.activeTextUsers.size
         );
         
-        console.log(`[Activity Analysis] Flushed data for guild ${guildId}. Voice Mins: ${totalVoiceMinutes.toFixed(2)}.`);
+        console.log(`[Activity Analysis] Flushed data for guild ${guildId}. Voice Mins: ${totalVoiceMinutes.toFixed(2)}, Messages: ${state.messageCount}.`);
 
     } catch (e) {
         console.error(`[Activity Analysis] Failed to flush DB for guild ${guildId}:`, e);
@@ -122,8 +125,16 @@ export const messageCreateHandler = async (message: Message) => {
     const config = await getServerConfig(message.guild.id, 'community-analysis');
     if (!config?.enabled || !config.premium) return;
 
-    const state = activityState.get(message.guild.id);
-    if (!state) return;
+    let state = activityState.get(message.guild.id);
+    if (!state) { // Initialize state if it doesn't exist for some reason
+        state = {
+            messageCount: 0,
+            activeTextUsers: new Set(),
+            voiceTimeTracker: new Collection<string, { joinTime: number }>(),
+            completedVoiceSessionsMinutes: 0,
+        };
+        activityState.set(message.guild.id, state);
+    }
 
     state.messageCount++;
     state.activeTextUsers.add(message.author.id);
@@ -136,8 +147,16 @@ export const voiceStateUpdateHandler = async (oldState: VoiceState, newState: Vo
     const config = await getServerConfig(newState.guild.id, 'community-analysis');
     if (!config?.enabled || !config.premium) return;
     
-    const state = activityState.get(newState.guild.id);
-    if (!state) return;
+    let state = activityState.get(newState.guild.id);
+    if (!state) { // Initialize state if it doesn't exist
+        state = {
+            messageCount: 0,
+            activeTextUsers: new Set(),
+            voiceTimeTracker: new Collection<string, { joinTime: number }>(),
+            completedVoiceSessionsMinutes: 0,
+        };
+        activityState.set(newState.guild.id, state);
+    }
 
     const wasActive = oldState.channel && !oldState.serverDeaf;
     const isActive = newState.channel && !newState.serverDeaf;
