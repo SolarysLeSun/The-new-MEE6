@@ -964,6 +964,21 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
             await interaction.showModal(modal);
             return;
         }
+        
+        if (customId === 'create_bot_suggestion') {
+            const modal = new ModalBuilder()
+                .setCustomId('suggestion_modal_bot')
+                .setTitle('Suggestion pour le Bot Marcus');
+            const ideaInput = new TextInputBuilder()
+                .setCustomId('suggestion_bot_idea')
+                .setLabel("Votre idée pour améliorer le bot")
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder("Décrivez en détail votre idée d'amélioration pour le bot.")
+                .setRequired(true);
+            modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(ideaInput));
+            await interaction.showModal(modal);
+            return;
+        }
 
         if (customId === 'publish_content' || customId === 'publish_dev_content') {
             if (!interaction.guild || !interaction.channel || !interaction.message.embeds[0]) return;
@@ -1190,3 +1205,4 @@ startBot();
     
 
     
+
