@@ -12,9 +12,7 @@ const FLUSH_INTERVAL = 5 * 60 * 1000;   // 5 minutes
 const activityState = new Collection<string, {
     messageCount: number;
     activeTextUsers: Set<string>;
-    // Track users currently in voice
     voiceTimeTracker: Collection<string, { joinTime: number }>;
-    // Accumulate time from users who left during the interval
     completedVoiceSessionsMinutes: number;
 }>();
 
@@ -22,30 +20,32 @@ function getBucketTimestamp(timestamp: number = Date.now()) {
     return Math.floor(timestamp / BUCKET_DURATION) * BUCKET_DURATION;
 }
 
-async function flushActivityToDB(guildId: string) {
+async function flushActivityToDB(client: Client, guildId: string) {
     const state = activityState.get(guildId);
     if (!state) return;
+
+    const guild = await client.guilds.fetch(guildId).catch(() => null);
+    if (!guild) {
+        console.warn(`[Activity Analysis] Could not find guild ${guildId} during flush.`);
+        return;
+    }
 
     // --- Calculate voice time for currently connected users ---
     let ongoingVoiceMinutes = 0;
     const now = Date.now();
-    const guild = state.voiceTimeTracker['guild']; // Hack to get guild object
     
-    if (guild) {
-         guild.voiceStates.cache.forEach((vs: VoiceState) => {
-            if (vs.member && !vs.member.user.bot && vs.channel && !vs.serverDeaf) {
-                const tracker = state.voiceTimeTracker.get(vs.member.id);
-                if (tracker) {
-                    const timeSpent = (now - tracker.joinTime) / (1000 * 60);
-                    ongoingVoiceMinutes += timeSpent;
-                    // Reset the join time for the next interval
-                    tracker.joinTime = now;
-                }
+    guild.voiceStates.cache.forEach((vs: VoiceState) => {
+        if (vs.member && !vs.member.user.bot && vs.channel && !vs.serverDeaf) {
+            const tracker = state.voiceTimeTracker.get(vs.member.id);
+            if (tracker) {
+                const timeSpent = (now - tracker.joinTime) / (1000 * 60);
+                ongoingVoiceMinutes += timeSpent;
+                // Reset the join time for the next interval
+                tracker.joinTime = now;
             }
-        });
-    }
+        }
+    });
    
-
     const totalVoiceMinutes = state.completedVoiceSessionsMinutes + ongoingVoiceMinutes;
 
     // --- Save to Database ---
@@ -90,14 +90,14 @@ export function startCommunityAnalysisInterval(client: Client) {
          activityState.set(guild.id, {
             messageCount: 0,
             activeTextUsers: new Set(),
-            voiceTimeTracker: new Collection<string, { joinTime: number, guild: any }>().set('guild', guild),
+            voiceTimeTracker: new Collection<string, { joinTime: number }>(),
             completedVoiceSessionsMinutes: 0,
         });
         
         // Pre-fill trackers for members already in voice on startup
         guild.voiceStates.cache.forEach(vs => {
             if(vs.member && !vs.member.user.bot && vs.channel && !vs.serverDeaf) {
-                 activityState.get(guild.id)!.voiceTimeTracker.set(vs.member.id, { joinTime: Date.now(), guild: guild });
+                 activityState.get(guild.id)!.voiceTimeTracker.set(vs.member.id, { joinTime: Date.now() });
             }
         });
     });
@@ -110,7 +110,7 @@ export function startCommunityAnalysisInterval(client: Client) {
             const state = activityState.get(guild.id);
             if (!state) return;
 
-            flushActivityToDB(guild.id);
+            flushActivityToDB(client, guild.id);
         });
     }, FLUSH_INTERVAL);
 }
@@ -144,7 +144,7 @@ export const voiceStateUpdateHandler = async (oldState: VoiceState, newState: Vo
     
     // User becomes active in voice
     if (!wasActive && isActive) {
-        state.voiceTimeTracker.set(member.id, { joinTime: Date.now(), guild: newState.guild });
+        state.voiceTimeTracker.set(member.id, { joinTime: Date.now() });
     } 
     // User becomes inactive in voice
     else if (wasActive && !isActive) {
@@ -156,4 +156,3 @@ export const voiceStateUpdateHandler = async (oldState: VoiceState, newState: Vo
         }
     }
 };
-
