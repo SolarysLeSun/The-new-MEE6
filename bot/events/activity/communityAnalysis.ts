@@ -5,7 +5,7 @@
 import { Client, Collection, Events, Message, VoiceState } from 'discord.js';
 import { getServerConfig, db } from '@/lib/db';
 
-const BUCKET_DURATION = 30 * 60 * 1000; // 30 minutes
+const BUCKET_DURATION = 5 * 60 * 1000; // 5 minutes
 const FLUSH_INTERVAL = 5 * 60 * 1000;   // 5 minutes
 
 // In-memory state
@@ -150,4 +150,5 @@ export const voiceStateUpdateHandler = async (oldState: VoiceState, newState: Vo
 // We attach these handlers to the main bot events in main.ts if they are not already there.
 // e.g. client.on(Events.MessageCreate, messageCreateHandler);
 // e.g. client.on(Events.VoiceStateUpdate, voiceStateUpdateHandler);
+
 
