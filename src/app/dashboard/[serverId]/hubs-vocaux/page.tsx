@@ -46,9 +46,8 @@ export default function VoiceHubsPage() {
     const [loading, setLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
 
-    const fetchConfigData = useCallback(async () => {
+    const fetchAllData = useCallback(async () => {
         if (!serverId) return;
-        setLoading(true);
         try {
             const [configRes, serverDetailsRes] = await Promise.all([
                 fetch(`${API_URL}/get-config/${serverId}/voice-hubs`),
@@ -63,27 +62,30 @@ export default function VoiceHubsPage() {
             setChannels(serverDetailsData.channels);
         } catch (error: any) {
             toast({ title: "Erreur", description: error.message, variant: "destructive" });
-        } finally {
-            setLoading(false);
         }
     }, [serverId, toast]);
 
     useEffect(() => {
-        fetchConfigData();
-    }, [fetchConfigData]);
+        setLoading(true);
+        fetchAllData().finally(() => setLoading(false));
+    }, [fetchAllData]);
 
-    const saveConfig = async (newConfig: VoiceHubsConfig) => {
+    const saveConfig = useCallback(async (newConfig: VoiceHubsConfig): Promise<boolean> => {
         setConfig(newConfig); // Optimistic update
         try {
-            await fetch(`${API_URL}/update-config/${serverId}/voice-hubs`, {
+            const response = await fetch(`${API_URL}/update-config/${serverId}/voice-hubs`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newConfig),
             });
+            if (!response.ok) throw new Error("La sauvegarde a échoué");
+            return true;
         } catch (error) {
             toast({ title: "Erreur de sauvegarde", variant: "destructive" });
+            fetchAllData(); // Re-fetch to revert optimistic update on error
+            return false;
         }
-    };
+    }, [serverId, toast, fetchAllData]);
 
     const handleValueChange = (key: keyof VoiceHubsConfig, value: any) => {
         if (!config) return;
@@ -113,12 +115,12 @@ export default function VoiceHubsPage() {
                 user_limit: 0,
                 enable_smart_voice: false,
             };
-            await saveConfig({ ...config, hubs: [...(config.hubs || []), newHub] });
-            toast({ title: "Succès", description: `Le hub vocal "${newChannel.name}" a été créé sur Discord.`});
-            // Re-fetch all channels to include the new one
-            const serverDetailsRes = await fetch(`${API_URL}/get-server-details/${serverId}`);
-            const serverDetailsData = await serverDetailsRes.json();
-            setChannels(serverDetailsData.channels);
+
+            const success = await saveConfig({ ...config, hubs: [...(config.hubs || []), newHub] });
+            if (success) {
+                toast({ title: "Succès", description: `Le hub vocal "${newChannel.name}" a été créé sur Discord.`});
+                await fetchAllData(); // Force refresh to get all new data
+            }
 
         } catch (error) {
             toast({ title: "Erreur lors de la création", description: (error as Error).message, variant: "destructive" });
@@ -127,26 +129,8 @@ export default function VoiceHubsPage() {
         }
     };
 
-    const handleUpdateHub = async (updatedHub: VoiceHub, oldHub: VoiceHub) => {
+    const handleUpdateHub = async (updatedHub: VoiceHub) => {
         if (!config) return;
-
-        // Find the channel name from the old hub config to compare
-        const oldChannel = channels.find(c => c.id === oldHub.creator_channel_id);
-        const newChannelName = channels.find(c => c.id === updatedHub.creator_channel_id)?.name;
-        
-        // If the name in the input is different from the actual channel name, rename it
-        if (newChannelName && oldChannel && newChannelName !== oldChannel.name) {
-             try {
-                await fetch(`${API_URL}/voice-hubs/rename-channel`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ guildId: serverId, channelId: updatedHub.creator_channel_id, name: newChannelName })
-                });
-            } catch (error) {
-                toast({ title: "Erreur de renommage", variant: "destructive" });
-            }
-        }
-
         const newHubs = config.hubs.map(hub => hub.id === updatedHub.id ? updatedHub : hub);
         await saveConfig({ ...config, hubs: newHubs });
     };
@@ -235,8 +219,10 @@ export default function VoiceHubsPage() {
                         key={hub.id}
                         hub={hub}
                         channels={channels}
-                        onUpdate={(updatedHub) => handleUpdateHub(updatedHub, hub)}
+                        onUpdate={handleUpdateHub}
                         onDelete={() => handleDeleteHub(hub.id)}
+                        serverId={serverId}
+                        toast={toast}
                     />
                 ))}
             </div>
@@ -249,18 +235,41 @@ interface HubConfigCardProps {
     channels: DiscordChannel[];
     onUpdate: (hub: VoiceHub) => void;
     onDelete: () => void;
+    serverId: string;
+    toast: any;
 }
 
-function HubConfigCard({ hub, channels, onUpdate, onDelete }: HubConfigCardProps) {
+function HubConfigCard({ hub, channels, onUpdate, onDelete, serverId, toast }: HubConfigCardProps) {
     const hubChannel = channels.find(c => c.id === hub.creator_channel_id);
+    const [name, setName] = useState(hubChannel?.name || "Hub en chargement...");
+    
+    useEffect(() => {
+        if(hubChannel) setName(hubChannel.name);
+    }, [hubChannel]);
+
+    const handleNameBlur = async () => {
+        if (name !== hubChannel?.name) {
+            try {
+                await fetch(`${API_URL}/voice-hubs/rename-channel`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ guildId: serverId, channelId: hub.creator_channel_id, name })
+                });
+                toast({title: 'Succès', description: 'Le hub a été renommé.'});
+            } catch (error) {
+                toast({ title: "Erreur de renommage", variant: "destructive" });
+            }
+        }
+    };
     
     return (
         <Card className="bg-card/50">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex-row items-center justify-between">
                <CardTitle>
                  <Input 
-                    defaultValue={hubChannel?.name || "Hub en chargement..."}
-                    onBlur={(e) => onUpdate({...hub, creator_channel_id: hubChannel ? (channels.find(c => c.id === hubChannel.id) as DiscordChannel & {name:string}).name = e.target.value : '' })}
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    onBlur={handleNameBlur}
                     className="text-xl font-bold border-none shadow-none focus-visible:ring-0 p-0 h-auto bg-transparent"
                  />
                 </CardTitle>
