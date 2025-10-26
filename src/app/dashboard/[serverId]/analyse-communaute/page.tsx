@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { AreaChart, Loader2, ServerCrash, Users, MessagesSquare, Ratio, Activity, UserMinus, UserPlus, TrendingUp, TrendingDown } from 'lucide-react';
+import { AreaChart, Loader2, ServerCrash, Users, MessagesSquare, Ratio, Activity, UserMinus, UserPlus, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
@@ -16,6 +17,8 @@ import { useServerInfo } from '@/hooks/use-server-info';
 import { Badge } from '@/components/ui/badge';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -85,47 +88,48 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
+    const fetchData = async () => {
         if (!serverId) return;
-        const fetchData = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const [configRes, activityRes, joinLeaveRes] = await Promise.all([
-                    fetch(`${API_URL}/get-config/${serverId}/community-analysis`),
-                    fetch(`${API_URL}/get-activity-stats/${serverId}`),
-                    fetch(`${API_URL}/get-join-leave-stats/${serverId}`),
-                ]);
-                if (!configRes.ok) throw new Error("Impossible de charger la configuration.");
-                const configData = await configRes.json();
-                setConfig(configData);
+        setLoading(true);
+        setError(null);
+        try {
+            const [configRes, activityRes, joinLeaveRes] = await Promise.all([
+                fetch(`${API_URL}/get-config/${serverId}/community-analysis`),
+                fetch(`${API_URL}/get-activity-stats/${serverId}`),
+                fetch(`${API_URL}/get-join-leave-stats/${serverId}`),
+            ]);
+            if (!configRes.ok) throw new Error("Impossible de charger la configuration.");
+            const configData = await configRes.json();
+            setConfig(configData);
 
-                if (activityRes.ok) {
-                    const activityData = await activityRes.json();
-                    setActivityData(activityData);
-                } else {
-                     setError("Impossible de charger les données d'activité.");
-                }
-                
-                if (joinLeaveRes.ok) {
-                    const joinLeaveData = await joinLeaveRes.json();
-                    setJoinLeaveData(joinLeaveData);
-                } else {
-                    console.warn("Could not load join/leave stats.");
-                }
-
-
-            } catch (err: any) {
-                setError(err.message);
-                toast({ title: "Erreur", description: "Impossible de charger les données.", variant: "destructive" });
-            } finally {
-                setLoading(false);
+            if (activityRes.ok) {
+                const activityData = await activityRes.json();
+                setActivityData(activityData);
+            } else {
+                 setError("Impossible de charger les données d'activité.");
             }
-        };
-        fetchData();
-    }, [serverId, toast]);
+            
+            if (joinLeaveRes.ok) {
+                const joinLeaveData = await joinLeaveRes.json();
+                setJoinLeaveData(joinLeaveData);
+            } else {
+                console.warn("Could not load join/leave stats.");
+            }
 
-    const saveConfig = async (newConfig: AnalysisConfig) => {
+
+        } catch (err: any) {
+            setError(err.message);
+            toast({ title: "Erreur", description: "Impossible de charger les données.", variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    useEffect(() => {
+        fetchData();
+    }, [serverId]);
+
+    const saveConfig = async (newConfig: AnalysisConfig, showToast = true) => {
         setConfig(newConfig);
         try {
             await fetch(`${API_URL}/update-config/${serverId}/community-analysis`, {
@@ -133,10 +137,24 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newConfig),
             });
+            if(showToast) {
+                 toast({ title: "Configuration sauvegardée" });
+            }
         } catch (error) {
             toast({ title: "Erreur de sauvegarde", variant: "destructive" });
         }
     };
+
+    const handleResetCollection = async () => {
+        if (!config) return;
+        toast({
+            title: 'Réinitialisation en cours...',
+            description: 'Forcer la (ré)initialisation de la collecte de données pour ce serveur.'
+        });
+        await saveConfig(config, false);
+        setTimeout(fetchData, 2000); // Re-fetch data after a short delay
+    };
+
 
     const formattedData = useMemo(() => {
         if (activityData.length === 0) return [];
@@ -193,7 +211,7 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
                             <Switch checked={config.enabled} onCheckedChange={(val) => saveConfig({...config, enabled: val})} />
                         </div>
                         <CardDescription>
-                            Activez ce module pour commencer à enregistrer l'activité de votre serveur. Les données commenceront à apparaître après 30 minutes.
+                            Activez ce module pour commencer à enregistrer l'activité de votre serveur. Les données commenceront à apparaître après 5-10 minutes.
                         </CardDescription>
                     </CardHeader>
                 </Card>
@@ -236,7 +254,21 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
                         ) : error ? (
                              <div className="flex flex-col items-center justify-center h-full text-destructive"><ServerCrash className="w-10 h-10 mb-2"/>{error}</div>
                         ) : formattedData.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full text-muted-foreground"><AreaChart className="w-10 h-10 mb-2"/>Aucune donnée disponible.</div>
+                             <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-4">
+                                <AreaChart className="w-10 h-10"/>
+                                <p>Aucune donnée disponible.</p>
+                                <Alert variant="default" className="max-w-md">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    <AlertTitle>Problèmes de Données ?</AlertTitle>
+                                    <AlertDescription>
+                                        Si le module est activé et que votre serveur est actif mais qu'aucune donnée n'apparaît après 10 minutes, essayez de réinitialiser la collecte.
+                                        <Button size="sm" className="mt-2 w-full" onClick={handleResetCollection}>
+                                            <RefreshCw className="mr-2 h-4 w-4"/>
+                                            Forcer la Réinitialisation
+                                        </Button>
+                                    </AlertDescription>
+                                </Alert>
+                            </div>
                         ) : (
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart

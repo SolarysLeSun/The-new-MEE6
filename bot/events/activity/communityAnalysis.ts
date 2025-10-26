@@ -122,7 +122,13 @@ export function startCommunityAnalysisInterval(client: Client) {
 
 export const messageCreateHandler = async (message: Message) => {
     if (!message.guild || message.author.bot) return;
-    const config = await getServerConfig(message.guild.id, 'community-analysis');
+    
+    let config = await getServerConfig(message.guild.id, 'community-analysis');
+    if (!config) {
+        setupDefaultConfigs(message.guild.id);
+        config = await getServerConfig(message.guild.id, 'community-analysis');
+    }
+    
     if (!config?.enabled || !config.premium) return;
 
     let state = activityState.get(message.guild.id);
