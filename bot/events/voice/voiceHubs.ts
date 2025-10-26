@@ -27,24 +27,28 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
         
         // Find hub config (if it's a configured hub channel)
         const hubConfig = config.hubs.find(h => h.creator_channel_id === hubChannel.id);
-        if(!hubConfig) {
-             // If not a pre-configured hub, try to parse from name like "Private (2)"
-            const nameMatch = hubChannel.name.match(/\((\d+)\)/);
-            const userLimit = nameMatch ? parseInt(nameMatch[1], 10) : 0;
-            
-            if (userLimit > 0) {
-                 await createAndMove(newState, {
-                    id: hubChannel.id,
-                    creator_channel_id: hubChannel.id,
-                    name_format: "Salon de {user}",
-                    user_limit: userLimit,
-                    enable_smart_voice: false,
-                });
-            }
-            return;
+        
+        // If it's a specific, user-configured hub
+        if(hubConfig) {
+             await createAndMove(newState, hubConfig);
+             return;
         }
         
-        await createAndMove(newState, hubConfig);
+        // Fallback for generic hubs like "Duo (2)" or "Trio (3)"
+        const nameMatch = hubChannel.name.match(/\((\d+)\)/);
+        const userLimit = nameMatch ? parseInt(nameMatch[1], 10) : 0;
+        
+        if (userLimit > 0) {
+             // Use a generic configuration for this auto-detected hub
+             await createAndMove(newState, {
+                id: hubChannel.id, // Use channel id as a temporary hub id
+                creator_channel_id: hubChannel.id,
+                name_format: "Salon de {user}", // Default format
+                user_limit: userLimit,
+                enable_smart_voice: false, // Default to false for generic hubs
+            });
+        }
+        return;
     }
     
     // --- User Leaves a Temp Channel (check for deletion) ---
@@ -113,10 +117,16 @@ async function createAndMove(newState: VoiceState, hubConfig: VoiceHub) {
             },
             {
                 id: guild.roles.everyone,
-                allow: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.ViewChannel],
-                 deny: [PermissionsBitField.Flags.Speak]
+                allow: [PermissionsBitField.Flags.ViewChannel],
+                deny: [PermissionsBitField.Flags.Connect], // Deny connection by default
             }
         ];
+        
+        // Explicitly allow connection for the creator
+        permissionOverwrites.push({
+            id: member.id,
+            allow: [PermissionsBitField.Flags.Connect]
+        });
         
         const tempChannel = await guild.channels.create({
             name: channelName,
