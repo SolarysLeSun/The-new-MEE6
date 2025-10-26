@@ -744,6 +744,30 @@ export function startApi(client: Client) {
             res.status(500).json({ error: 'Erreur interne du serveur.' });
         }
     });
+    
+    app.post('/api/force-reset-activity-stats/:guildId', async (req, res) => {
+        const { guildId } = req.params;
+        try {
+            // Delete existing data for the guild
+            db.prepare('DELETE FROM community_activity_stats WHERE guild_id = ?').run(guildId);
+            db.prepare('DELETE FROM member_join_leave_events WHERE guild_id = ?').run(guildId);
+            
+            // Insert a new, clean starting point
+            const now = new Date().toISOString();
+            const stmt = db.prepare(`
+                INSERT INTO community_activity_stats (guild_id, timestamp_bucket, message_count, active_voice_members_count, cumulative_voice_minutes, active_text_members_count)
+                VALUES (?, ?, 0, 0, 0, 0)
+            `);
+            stmt.run(guildId, now);
+
+            console.log(`[API] Forcibly reset activity stats for guild ${guildId}`);
+            res.status(200).json({ success: true, message: `Les statistiques d'activité pour le serveur ${guildId} ont été réinitialisées.` });
+        } catch (error) {
+             console.error(`[Bot API] Error forcing reset for activity stats for ${guildId}:`, error);
+            res.status(500).json({ error: 'Erreur interne du serveur lors de la réinitialisation.' });
+        }
+    });
+
 
     app.get('/api/get-join-leave-stats/:guildId', (req, res) => {
         const { guildId } = req.params;

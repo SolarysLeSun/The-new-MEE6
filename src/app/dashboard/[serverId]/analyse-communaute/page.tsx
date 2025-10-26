@@ -146,13 +146,26 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
     };
 
     const handleResetCollection = async () => {
-        if (!config) return;
         toast({
             title: 'Réinitialisation en cours...',
             description: 'Forcer la (ré)initialisation de la collecte de données pour ce serveur.'
         });
-        await saveConfig(config, false);
-        setTimeout(fetchData, 2000); // Re-fetch data after a short delay
+        try {
+            const response = await fetch(`${API_URL}/force-reset-activity-stats/${serverId}`, {
+                method: 'POST',
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'La réinitialisation a échoué.');
+            }
+            toast({
+                title: 'Succès',
+                description: 'Les statistiques ont été réinitialisées. Les nouvelles données apparaîtront bientôt.',
+            });
+            setTimeout(fetchData, 2000); // Re-fetch data after a short delay
+        } catch(error: any) {
+             toast({ title: "Erreur", description: error.message, variant: "destructive" });
+        }
     };
 
 
