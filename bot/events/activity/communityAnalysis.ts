@@ -3,7 +3,7 @@
 'use server';
 
 import { Client, Collection, Events, Message, VoiceState } from 'discord.js';
-import { getServerConfig, db } from '@/lib/db';
+import { getServerConfig, db, setupDefaultConfigs } from '@/lib/db';
 
 const BUCKET_DURATION = 5 * 60 * 1000; // 5 minutes
 const FLUSH_INTERVAL = 5 * 60 * 1000;   // 5 minutes
@@ -144,7 +144,13 @@ export const voiceStateUpdateHandler = async (oldState: VoiceState, newState: Vo
     const member = newState.member;
     if (!member || member.user.bot) return;
 
-    const config = await getServerConfig(newState.guild.id, 'community-analysis');
+    let config = await getServerConfig(newState.guild.id, 'community-analysis');
+     // If config doesn't exist, create it. This is the crucial fix.
+    if (!config) {
+        setupDefaultConfigs(newState.guild.id);
+        config = await getServerConfig(newState.guild.id, 'community-analysis');
+    }
+    
     if (!config?.enabled || !config.premium) return;
     
     let state = activityState.get(newState.guild.id);
