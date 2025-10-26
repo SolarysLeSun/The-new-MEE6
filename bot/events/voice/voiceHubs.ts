@@ -13,6 +13,8 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     const { member, guild } = newState;
     if (!member || member.user.bot) return;
 
+    console.log(`[VoiceHubs] Voice state update detected for ${member.user.tag} in ${guild.name}. Old channel: ${oldState.channel?.name}, New channel: ${newState.channel?.name}`);
+
     const config = await getServerConfig(guild.id, 'voice-hubs') as VoiceHubsConfig;
     if (!config || !config.enabled || !config.hub_category_id || !config.dest_category_id) {
         return;
@@ -20,12 +22,15 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     
     const hubCategoryId = config.hub_category_id;
     const destCategoryId = config.dest_category_id;
-    const configuredHubIds = (config.hubs || []).map(h => h.creator_channel_id);
+    
+    const allConfiguredHubs = config.hubs || [];
+    const configuredHubIds = allConfiguredHubs.map(h => h.creator_channel_id);
 
     // --- User Joins a Hub Channel ---
     // This logic triggers if the user enters a channel that is specifically configured as a hub creator.
     if (newState.channelId && configuredHubIds.includes(newState.channelId) && newState.channelId !== oldState.channelId) {
-        const hubConfig = config.hubs.find(h => h.creator_channel_id === newState.channelId);
+        console.log(`[VoiceHubs] User ${member.user.tag} joined a configured hub channel: ${newState.channel?.name} (${newState.channelId})`);
+        const hubConfig = allConfiguredHubs.find(h => h.creator_channel_id === newState.channelId);
         if (hubConfig) {
             await createAndMove(newState, hubConfig);
         }
