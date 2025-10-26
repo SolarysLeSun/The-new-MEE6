@@ -121,8 +121,6 @@ export default function VoiceHubsPage() {
         ...channels.filter(c => c.type === 4).map(c => ({ value: c.id, label: c.name }))
     ];
     
-    const hubCreatorChannels = channels.filter(c => c.type === 2 && c.parentId === config.hub_category_id);
-
     return (
         <PageTransitionWrapper className="space-y-8 text-white max-w-4xl">
             <div>
@@ -199,7 +197,7 @@ export default function VoiceHubsPage() {
                                  <div className="space-y-2">
                                     <Label>Salon Vocal Créateur (dans Catégorie A)</Label>
                                     <Combobox 
-                                        options={hubCreatorChannels.map(c => ({ value: c.id, label: c.name }))}
+                                        options={channels.filter(c => c.type === 2 && c.parentId === config.hub_category_id).map(c => ({ value: c.id, label: c.name }))}
                                         value={hub.creator_channel_id || ''}
                                         onChange={(val) => handleUpdateHub({...hub, creator_channel_id: val})}
                                         placeholder="Choisir un salon vocal..."
