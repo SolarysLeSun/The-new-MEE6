@@ -22,6 +22,7 @@ interface LeaderboardEntry {
     user: {
         id: string;
         username: string;
+        displayName: string;
         tag: string;
         avatar: string | null;
     };
@@ -156,7 +157,7 @@ export default function LevelScoreboardPage() {
                                                                 <AvatarImage src={entry.user.avatar || ''} alt={entry.user.username} />
                                                                 <AvatarFallback>{entry.user.username.charAt(0)}</AvatarFallback>
                                                             </Avatar>
-                                                            <span className="font-medium">{entry.user.username}</span>
+                                                            <span className="font-medium">{entry.user.displayName}</span>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="text-center font-bold text-lg">{entry.level}</TableCell>
@@ -187,3 +188,5 @@ export default function LevelScoreboardPage() {
         </div>
     );
 }
+
+    

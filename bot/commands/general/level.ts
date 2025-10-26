@@ -58,6 +58,7 @@ const LevelCommand: Command = {
                 cardUrl.searchParams.append('textColor', config.level_card_text_color);
             }
 
+            // Using a simple embed with the image URL
             const embed = new EmbedBuilder()
                 .setColor(config.level_card_bar_color ? parseInt(config.level_card_bar_color.replace('#', ''), 16) : 0x3498DB)
                 .setImage(cardUrl.toString());
@@ -72,3 +73,5 @@ const LevelCommand: Command = {
 };
 
 export default LevelCommand;
+
+  

@@ -766,6 +766,10 @@ export function startApi(client: Client) {
     publicApiRouter.get('/leaderboard/:guildId', async (req, res) => {
         const { guildId } = req.params;
         const { limit = '10' } = req.query;
+        const guild = await client.guilds.fetch(guildId).catch(() => null);
+        if (!guild) {
+             return res.status(404).json({ error: 'Server not found by bot.' });
+        }
 
         // Check if the API key's guildId matches the requested guildId
         if ((req as any).apiKeyInfo.guildId !== guildId) {
@@ -777,14 +781,15 @@ export function startApi(client: Client) {
             const enrichedLeaderboard = await Promise.all(
                 leaderboardData.map(async (entry, index) => {
                     try {
-                        const user = await client.users.fetch(entry.user_id);
+                        const member = await guild.members.fetch(entry.user_id!);
                         return {
                             rank: index + 1,
                             user: {
-                                id: user.id,
-                                username: user.username,
-                                tag: user.tag,
-                                avatar: user.displayAvatarURL({ size: 128 }),
+                                id: member.id,
+                                username: member.user.username,
+                                displayName: member.displayName,
+                                tag: member.user.tag,
+                                avatar: member.displayAvatarURL({ size: 128 }),
                             },
                             level: entry.level,
                             xp: entry.xp,
@@ -796,6 +801,7 @@ export function startApi(client: Client) {
                             user: {
                                 id: entry.user_id,
                                 username: 'Utilisateur Inconnu',
+                                displayName: 'Utilisateur Inconnu',
                                 tag: '????',
                                 avatar: null,
                             },
@@ -876,6 +882,10 @@ export function startApi(client: Client) {
     app.get('/api/leaderboard/:guildId', async (req, res) => {
         const { guildId } = req.params;
         const { limit = '10' } = req.query;
+        const guild = await client.guilds.fetch(guildId).catch(() => null);
+        if (!guild) {
+             return res.status(404).json({ error: 'Server not found by bot.' });
+        }
 
         if (!guildId) {
             return res.status(400).json({ error: 'Guild ID is required.' });
@@ -887,14 +897,15 @@ export function startApi(client: Client) {
             const enrichedLeaderboard = await Promise.all(
                 leaderboardData.map(async (entry, index) => {
                     try {
-                        const user = await client.users.fetch(entry.user_id);
+                        const member = await guild.members.fetch(entry.user_id!);
                         return {
                             rank: index + 1,
                             user: {
-                                id: user.id,
-                                username: user.username,
-                                tag: user.tag,
-                                avatar: user.displayAvatarURL({ size: 128 }),
+                                id: member.id,
+                                username: member.user.username,
+                                displayName: member.displayName,
+                                tag: member.user.tag,
+                                avatar: member.displayAvatarURL({ size: 128 }),
                             },
                             level: entry.level,
                             xp: entry.xp,
@@ -906,6 +917,7 @@ export function startApi(client: Client) {
                             user: {
                                 id: entry.user_id,
                                 username: 'Utilisateur Inconnu',
+                                displayName: 'Utilisateur Inconnu',
                                 tag: '????',
                                 avatar: null,
                             },
@@ -958,4 +970,6 @@ export function startApi(client: Client) {
 }
 
     
+    
+
     
