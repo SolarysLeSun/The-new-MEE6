@@ -93,7 +93,7 @@ export default function StatsChannelsPage() {
                 <CardHeader>
                     <CardTitle>Mise en place</CardTitle>
                     <CardDescription>
-                        Cliquez sur le bouton ci-dessous pour que le bot crée ou mette à jour la catégorie "Statistiques du Serveur" et les salons vocaux associés. Les noms des salons seront actualisés toutes les 5 minutes.
+                        Cliquez sur le bouton ci-dessous pour que le bot crée ou mette à jour la catégorie "Statistiques du Serveur" et les salons vocaux associés. Les noms des salons seront actualisés automatiquement toutes les 5 minutes.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
