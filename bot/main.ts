@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { loadCommands, updateGuildCommands, deployGlobalCommands } from './handlers/commandHandler';
 import type { Command, CustomField, ProfileLink, Ticket } from '@/types';
-import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds, getGuildWarnHistory, updateUserProfile, createTicket, getTicketByChannelId, updateTicket, deleteTicket } from '@/lib/db';
+import { initializeDatabase, syncGuilds, getServerConfig, setupDefaultConfigs, updateServerConfig, setClientInstance, getAllBotServers, getDevGuilds, getGuildWarnHistory, updateUserProfile, createTicket, getTicketByChannelId, updateTicket, deleteTicket, getGlobalAiStatus } from '@/lib/db';
 import { startApi } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import { startVoiceXPInterval } from './events/leveling/voiceXP';
@@ -548,31 +548,35 @@ async function handleCloseTicket(interaction: ButtonInteraction) {
 
     // --- Archive Summary ---
     if (config.archive_summary) {
-        const modConfig = await getServerConfig(interaction.guild.id, 'moderation');
-        const logChannelId = modConfig?.log_channel_id || config.log_channel_id;
+        const globalAiStatus = getGlobalAiStatus();
+        if (!globalAiStatus.disabled) {
+            const modConfig = await getServerConfig(interaction.guild.id, 'moderation');
+            const logChannelId = modConfig?.log_channel_id || config.log_channel_id;
 
-        if (logChannelId) {
-            const logChannel = await interaction.guild.channels.fetch(logChannelId).catch(() => null) as TextChannel;
-            if (logChannel) {
-                try {
-                    const messages = await channel.messages.fetch({ limit: 100 });
-                    const transcript = Array.from(messages.values()).reverse().map(msg => `${msg.author.tag}: ${msg.content}`).join('\n');
-                    if (transcript) {
-                        const { summary } = await transcriptSummaryFlow({ transcript });
-                        const summaryEmbed = new EmbedBuilder()
-                            .setColor(0x95a5a6)
-                            .setTitle(`📝 Transcription du Ticket #${channel.name}`)
-                            .setDescription(summary || "Impossible de générer un résumé.")
-                            .setFooter({ text: `Ticket fermé par ${interaction.user.tag}` })
-                            .setTimestamp();
-                        await logChannel.send({ embeds: [summaryEmbed] });
+            if (logChannelId) {
+                const logChannel = await interaction.guild.channels.fetch(logChannelId).catch(() => null) as TextChannel;
+                if (logChannel) {
+                    try {
+                        const messages = await channel.messages.fetch({ limit: 100 });
+                        const transcript = Array.from(messages.values()).reverse().map(msg => `${msg.author.tag}: ${msg.content}`).join('\n');
+                        if (transcript) {
+                            const { summary } = await transcriptSummaryFlow({ transcript });
+                            const summaryEmbed = new EmbedBuilder()
+                                .setColor(0x95a5a6)
+                                .setTitle(`📝 Transcription du Ticket #${channel.name}`)
+                                .setDescription(summary || "Impossible de générer un résumé.")
+                                .setFooter({ text: `Ticket fermé par ${interaction.user.tag}` })
+                                .setTimestamp();
+                            await logChannel.send({ embeds: [summaryEmbed] });
+                        }
+                    } catch (summaryError) {
+                        console.error("Failed to generate and send transcript summary:", summaryError);
                     }
-                } catch (summaryError) {
-                    console.error("Failed to generate and send transcript summary:", summaryError);
                 }
             }
         }
     }
+
 
     // Update the embed
     const originalEmbed = interaction.message.embeds[0];
@@ -1205,4 +1209,5 @@ startBot();
     
 
     
+
 

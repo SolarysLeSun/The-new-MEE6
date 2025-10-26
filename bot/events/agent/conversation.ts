@@ -1,7 +1,7 @@
 
 
 import { Events, Message, Collection, EmbedBuilder, TextChannel, AttachmentBuilder, User } from 'discord.js';
-import { getServerConfig, addKnowledgeBaseItem, getUserSanctionHistory, getUserLevel, updateUserXP, recordSanction } from '../../../src/lib/db';
+import { getServerConfig, addKnowledgeBaseItem, getUserSanctionHistory, getUserLevel, updateUserXP, recordSanction, getGlobalAiStatus } from '../../../src/lib/db';
 import { conversationalAgentFlow } from '../../../src/ai/flows/conversational-agent-flow';
 import { knowledgeCreationFlow } from '../../../src/ai/flows/knowledge-creation-flow';
 import { faqFlow } from '../../../src/ai/flows/faq-flow';
@@ -314,6 +314,11 @@ async function handleConversationalAgent(message: Message) {
 export const name = Events.MessageCreate;
 export const once = false;
 export async function execute(message: Message) {
+    const globalAiStatus = getGlobalAiStatus();
+    if (globalAiStatus.disabled) {
+        return; // Silently stop if AI is disabled globally
+    }
+    
     if (message.author.bot || !message.guild) return;
     await handleConversationalAgent(message);
     await handleFaqScan(message);
