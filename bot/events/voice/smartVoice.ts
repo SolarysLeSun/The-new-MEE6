@@ -1,5 +1,7 @@
 
 
+'use server';
+
 import { Events, VoiceState, ActivityType, Collection, ChannelType, GuildChannel, NonThreadGuildBasedChannel, VoiceChannel } from 'discord.js';
 import { smartVoiceFlow } from '../../../src/ai/flows/smart-voice-flow';
 import { getServerConfig, getGlobalAiStatus } from '../../../src/lib/db';
@@ -131,4 +133,5 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
         await updateChannelName(oldChannel);
     }
 }
+
 
