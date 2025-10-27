@@ -16,10 +16,10 @@ const IaResumeCommand: Command = {
             return;
         }
         
-        const config = await getServerConfig(interaction.guild.id, 'community-assistant');
+        const config = await getServerConfig(interaction.guild.id, 'ai-assistant');
 
         if (!config?.enabled || !config.premium) {
-            await interaction.reply({ content: "La fonctionnalité de résumé IA est une exclusivité Premium et doit être activée dans le module 'Assistant Communautaire'.", ephemeral: true });
+            await interaction.reply({ content: "La fonctionnalité de résumé IA est une exclusivité Premium et doit être activée dans le module 'Assistant IA Personnel'.", ephemeral: true });
             return;
         }
 
