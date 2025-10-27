@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import { Wrench, User, KeyRound } from 'lucide-react';
+import { Wrench, User, KeyRound, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Combobox } from '@/components/ui/combobox';
@@ -27,9 +27,9 @@ interface DiscordRole {
 }
 
 const utilCommands = [
-    { name: '/save', key: 'save', description: 'Sauvegarde la conversation du salon actuel en fichier JSON.' },
-    { name: '/patchnote', key: 'patchnote', description: 'Fait corriger ou améliorer un texte par l\'IA.' },
-    { name: '/rappel', key: 'rappel', description: 'Définit un rappel personnel.' },
+    { name: '/save', key: 'save', description: 'Sauvegarde la conversation du salon actuel en fichier JSON.', icon: Wrench, defaultEveryone: false },
+    { name: '/patchnote', key: 'patchnote', description: 'Fait corriger ou améliorer un texte par l\'IA.', icon: Wrench, defaultEveryone: false },
+    { name: '/rappel', key: 'rappel', description: 'Définit un rappel personnel.', icon: Clock, defaultEveryone: true },
     { name: '/setprofil', key: 'setprofil', description: 'Définit votre biographie et vos liens de profil.', icon: User, defaultEveryone: true },
     { name: '/profil', key: 'profil', description: 'Affiche le profil d\'un utilisateur.', icon: User, defaultEveryone: true },
     { name: '/apikey', key: 'apikey', description: 'Génère une clé pour utiliser l\'API publique de Marcus.', icon: KeyRound, defaultEveryone: false },
@@ -144,11 +144,11 @@ export default function UtilsPage() {
         return <PageSkeleton />;
     }
 
-    const roleOptions = [
+    const adminRoleOptions = [
         { value: 'none', label: 'Admin seulement' },
         ...roles.filter(r => r.name !== '@everyone').map(r => ({ value: r.id, label: r.name }))
     ];
-    const everyoneRoleOption = [{ value: 'none', label: '@everyone' }, ...roleOptions.slice(1)];
+    const everyoneRoleOption = [{ value: 'none', label: '@everyone' }, ...adminRoleOptions.slice(1)];
 
 
   return (
@@ -208,7 +208,7 @@ export default function UtilsPage() {
                         <div className="space-y-2">
                             <Label htmlFor={`role-select-${command.key}`} className="text-sm font-medium">Rôle minimum requis</Label>
                             <Combobox
-                                options={command.defaultEveryone ? everyoneRoleOption : roleOptions}
+                                options={command.defaultEveryone ? everyoneRoleOption : adminRoleOptions}
                                 value={config.command_permissions?.[command.key] || 'none'}
                                 onChange={(value) => handlePermissionChange(command.key, value)}
                                 placeholder="Sélectionner un rôle"
