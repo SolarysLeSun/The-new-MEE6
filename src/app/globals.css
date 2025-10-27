@@ -35,7 +35,6 @@ body {
     --border: 220 13% 18%;
     --input: 220 13% 12%;
     --ring: 15 88% 62%;
-    --radius: 0.5rem;
   }
   .dark {
     --background: 220 13% 9%;
@@ -68,25 +67,35 @@ body {
     @apply bg-background text-foreground;
   }
 
-  /* Styles for markdown content */
-  .markdown-content table {
-    @apply w-full my-4 border-collapse border border-border;
+  .prose {
+    h1, h2, h3, h4, h5, h6 {
+      @apply text-white;
+    }
+
+    table {
+        @apply w-full my-4 text-sm;
+    }
+    
+    thead {
+        @apply border-b border-border;
+    }
+
+    th {
+        @apply font-semibold text-left p-2;
+    }
+
+    tbody tr {
+        @apply border-b border-border/50;
+    }
+
+    td {
+        @apply p-2 align-middle;
+    }
+    
+    tbody tr:nth-child(odd) {
+        @apply bg-secondary/20;
+    }
   }
-  .markdown-content th, .markdown-content td {
-    @apply border border-border px-4 py-2 text-left;
-  }
-  .markdown-content th {
-    @apply bg-muted font-semibold;
-  }
-  .markdown-content tr:nth-child(even) {
-    @apply bg-secondary/30;
-  }
-  .markdown-content h1, .markdown-content h2, .markdown-content h3 {
-    @apply font-bold text-white mt-6 mb-3;
-  }
-   .markdown-content h1 { @apply text-3xl; }
-   .markdown-content h2 { @apply text-2xl; }
-   .markdown-content h3 { @apply text-xl; }
 }
 
 @layer utilities {

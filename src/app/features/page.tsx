@@ -3,7 +3,7 @@ import { AppHeader } from "@/components/app-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import RippleGrid from "@/components/ripple-grid";
 import { PageTransitionWrapper } from "@/components/page-transition-wrapper";
-import { ListChecks } from "lucide-react";
+import { Rocket } from "lucide-react";
 import fs from 'fs';
 import path from 'path';
 import { remark } from 'remark';
@@ -36,7 +36,7 @@ export default async function FeaturesPage() {
                     <div className="text-center mb-16">
                          <div className="flex justify-center mb-4">
                             <div className="p-3 bg-primary/10 rounded-full border-2 border-primary/30">
-                                <ListChecks className="h-8 w-8 text-primary"/>
+                                <Rocket className="h-8 w-8 text-primary"/>
                             </div>
                         </div>
                         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white">Fonctionnalités de Marcus</h1>
@@ -48,7 +48,7 @@ export default async function FeaturesPage() {
                     <Card className="bg-card/60 backdrop-blur-sm border-white/10 max-w-5xl mx-auto">
                         <CardContent className="p-6 sm:p-8">
                              <div 
-                                className="prose prose-invert lg:prose-xl markdown-content"
+                                className="prose prose-invert lg:prose-xl max-w-none"
                                 dangerouslySetInnerHTML={{ __html: contentHtml }} 
                              />
                         </CardContent>
