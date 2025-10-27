@@ -8,11 +8,15 @@ import fs from 'fs';
 import path from 'path';
 import { remark } from 'remark';
 import html from 'remark-html';
+import remarkGfm from 'remark-gfm';
 
 async function getMarkdownContent() {
     const filePath = path.join(process.cwd(), 'FEATURES.md');
     const fileContents = fs.readFileSync(filePath, 'utf8');
-    const processedContent = await remark().use(html).process(fileContents);
+    const processedContent = await remark()
+        .use(remarkGfm) // Ajout du plugin pour les tableaux
+        .use(html)
+        .process(fileContents);
     return processedContent.toString();
 }
 
