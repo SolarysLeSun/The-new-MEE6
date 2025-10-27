@@ -35,6 +35,7 @@ body {
     --border: 220 13% 18%;
     --input: 220 13% 12%;
     --ring: 15 88% 62%;
+    --radius: 0.5rem;
   }
   .dark {
     --background: 220 13% 9%;
