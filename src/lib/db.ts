@@ -778,6 +778,11 @@ const defaultConfigs: DefaultConfigs = {
     'community-analysis': {
         enabled: false,
         premium: true,
+    },
+    'invitations': {
+        enabled: true,
+        log_channel_id: null,
+        reward_roles: []
     }
 };
 

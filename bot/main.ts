@@ -1,6 +1,6 @@
 
 
-import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction, ButtonStyle, DiscordAPIError, ButtonBuilder, AnyThreadChannel, User } from 'discord.js';
+import { Client, GatewayIntentBits, Events, ActivityType, Collection, PermissionFlagsBits, MessageFlags, ChannelType, OverwriteType, EmbedBuilder, TextChannel, ModalSubmitInteraction, Interaction, ButtonInteraction, GuildMember, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuInteraction, ContextMenuCommandInteraction, UserContextMenuCommandInteraction, ButtonStyle, DiscordAPIError, ButtonBuilder, AnyThreadChannel, User, Invite } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -61,10 +61,12 @@ const client = new Client({
 declare module "discord.js" {
     export interface Client {
         commands: Collection<string, Command>;
+        invites: Collection<string, Collection<string, Invite>>;
     }
 }
 
 client.commands = new Collection<string, Command>();
+client.invites = new Collection<string, Collection<string, Invite>>();
 
 // Pass client instance to the database module for event emitting
 setClientInstance(client);
@@ -124,6 +126,12 @@ client.once(Events.ClientReady, async (readyClient) => {
     await syncGuilds(readyClient);
     for (const guild of readyClient.guilds.cache.values()) {
         await updateGuildCommands(guild.id, client);
+        try {
+            const invites = await guild.invites.fetch();
+            client.invites.set(guild.id, invites);
+        } catch (e) {
+            console.warn(`[Invites] Could not fetch invites for guild ${guild.id}. Missing permissions?`);
+        }
     }
     
     // Start interval for voice XP gain
@@ -1251,6 +1259,7 @@ startBot();
     
 
     
+
 
 
 

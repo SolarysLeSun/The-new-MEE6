@@ -48,6 +48,7 @@ import {
   BarChart,
   AreaChart,
   Grid,
+  Mail,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -74,6 +75,7 @@ export const navCategories = [
             { href: 'traduction-automatique', label: 'Traduction Auto', icon: Languages, isPremium: true, keywords: ['translate', 'multilingue', 'langue'] },
             { href: 'niveaux', label: 'Niveaux & XP', icon: Award, keywords: ['levels', 'rank', 'classement', 'exp', 'expérience', 'récompenses', 'topxp', 'podium'] },
             { href: 'parrainage', label: 'Parrainage', icon: Gift, keywords: ['récompense', 'premium', 'inviter', 'code'] },
+            { href: 'invitations', label: 'Invitations', icon: Mail, keywords: ['invites', 'tracker', 'suivi', 'récompenses'] },
         ]
     },
     {

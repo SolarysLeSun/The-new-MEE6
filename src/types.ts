@@ -64,7 +64,8 @@ export type Module =
     | 'integrations'
     | 'stats-channels'
     | 'community-analysis'
-    | 'voice-hubs';
+    | 'voice-hubs'
+    | 'invitations';
 
 export interface ModuleConfig {
   [key: string]: any; // Pour une flexibilité maximale
