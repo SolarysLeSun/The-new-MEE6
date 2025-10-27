@@ -1,4 +1,5 @@
 
+
 import { SlashCommandBuilder, ChatInputCommandInteraction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from 'discord.js';
 import type { Command } from '@/types';
 import { getServerConfig } from '@/lib/db';
@@ -74,3 +75,4 @@ const EmbedCommand: Command = {
 };
 
 export default EmbedCommand;
+

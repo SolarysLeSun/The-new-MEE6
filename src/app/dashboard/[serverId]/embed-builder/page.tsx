@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -24,6 +25,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from '@/lib/utils';
+import { Switch as UISwitch } from '@/components/ui/switch';
+
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -337,7 +340,7 @@ export default function EmbedBuilderPage() {
                                          <Input placeholder="Texte du pied de page" value={embed.footer?.text} onChange={(e) => handleNestedEmbedChange(index, 'footer', 'text', e.target.value)} maxLength={2048}/>
                                          <Input placeholder="URL de l'icône du pied de page" value={embed.footer?.icon_url} onChange={(e) => handleNestedEmbedChange(index, 'footer', 'icon_url', e.target.value)} />
                                          <div className="flex items-center gap-2 pt-2">
-                                             <Switch id={`timestamp-${index}`} checked={!!embed.timestamp} onCheckedChange={(val) => handleEmbedChange(index, 'timestamp', val)}/>
+                                             <UISwitch id={`timestamp-${index}`} checked={!!embed.timestamp} onCheckedChange={(val) => handleEmbedChange(index, 'timestamp', val)}/>
                                              <Label htmlFor={`timestamp-${index}`}>Afficher l'horodatage</Label>
                                          </div>
                                      </div>
@@ -351,7 +354,7 @@ export default function EmbedBuilderPage() {
                                                  <Input placeholder="Nom du champ" value={field.name} onChange={(e) => updateField(index, field.id, 'name', e.target.value)} maxLength={256}/>
                                                  <Textarea placeholder="Valeur du champ" value={field.value} onChange={(e) => updateField(index, field.id, 'value', e.target.value)} maxLength={1024}/>
                                                  <div className="flex items-center gap-2">
-                                                     <Switch id={`inline-${field.id}`} checked={field.inline} onCheckedChange={(val) => updateField(index, field.id, 'inline', val)}/>
+                                                     <UISwitch id={`inline-${field.id}`} checked={field.inline} onCheckedChange={(val) => updateField(index, field.id, 'inline', val)}/>
                                                      <Label htmlFor={`inline-${field.id}`}>Afficher en ligne</Label>
                                                  </div>
                                              </div>
