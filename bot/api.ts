@@ -3,7 +3,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Client, CategoryChannel, ChannelType, REST, Routes, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ComponentType, DiscordAPIError, VoiceChannel } from 'discord.js';
-import { updateServerConfig, getServerConfig, getAllBotServers, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem, getApiKeyInfo, db, getJoinLeaveStats } from '@/lib/db';
+import { updateServerConfig, getServerConfig, getAllBotServers, getGlobalAiStatus, addKnowledgeBaseItem, redeemPremiumKey, getPanelMessage, getGuildLeaderboard, getRoadmapItems, addRoadmapItem, updateRoadmapItem, deleteRoadmapItem, getApiKeyInfo, db, getJoinLeaveStats, createPremiumKey } from '@/lib/db';
 import { generatePersonaPrompt, generatePersonaAvatar } from '@/ai/flows/persona-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { updateGuildCommands } from './handlers/commandHandler';
@@ -13,6 +13,8 @@ import { randomBytes } from 'crypto';
 import { exec } from 'child_process';
 import { fixEmbedJson } from '@/ai/flows/embed-json-fixer';
 import { createStatsChannels } from './events/system/statsChannels';
+import ms from 'ms';
+
 
 const API_PORT = process.env.BOT_API_PORT || 3630;
 const OWNER_ID = '556529963877138442';
@@ -95,6 +97,8 @@ export function startApi(client: Client) {
     app.use(cors(corsOptions));
     app.options('*', cors(corsOptions));
     app.use(express.json({ limit: '50mb' }));
+    app.use(express.urlencoded({ extended: true }));
+
 
     app.use((req, res, next) => {
         console.log(`[Bot API] Requête reçue : ${req.method} ${req.path}`);
@@ -148,6 +152,85 @@ export function startApi(client: Client) {
         
         next();
     };
+
+    // --- Ko-fi Webhook ---
+    app.post('/api/kofi-webhook', async (req, res) => {
+        try {
+            const data = JSON.parse(req.body.data);
+            const verificationToken = process.env.KOFI_VERIFICATION_TOKEN;
+
+            if (!verificationToken) {
+                console.error('[Ko-fi] KOFI_VERIFICATION_TOKEN is not set in environment.');
+                return res.status(500).send('Server configuration error.');
+            }
+
+            if (data.verification_token !== verificationToken) {
+                console.warn(`[Ko-fi] Invalid verification token received. Got: ${data.verification_token}`);
+                return res.status(401).send('Unauthorized.');
+            }
+            
+            console.log(`[Ko-fi] Webhook received successfully. Type: ${data.type}`);
+            
+            const { discord_userid, from_name, amount, tier_name, shop_items, type } = data;
+
+            if (!discord_userid) {
+                console.warn('[Ko-fi] Webhook received without a Discord User ID. Cannot process.');
+                return res.status(200).send('OK');
+            }
+
+            let keysToGenerate = 0;
+            let duration: Date | null = null;
+            let reason = `Achat Ko-fi (${type})`;
+
+            if (type === 'Shop Order' && shop_items) {
+                // Logic for specific shop items
+                if (shop_items.some((item: any) => item.direct_link_code === 'MARCUS_LIFETIME')) {
+                    keysToGenerate = 3;
+                    duration = null;
+                    reason = "Achat de 'Marcus Premium - A Vie'";
+                }
+            } else if (type === 'Subscription' || type === 'Donation') {
+                if (parseFloat(amount) >= 10) { // Example: 10€+ donation gives lifetime
+                    keysToGenerate = 3;
+                    duration = null;
+                    reason = "Donation de 10€ ou plus";
+                } else if (parseFloat(amount) >= 5) { // Example: 5€ donation gives 1 month
+                    keysToGenerate = 1;
+                    duration = new Date(Date.now() + ms('30d'));
+                    reason = "Donation de 5€ ou plus";
+                }
+            }
+            
+            if (keysToGenerate > 0) {
+                const generatedKeys: string[] = [];
+                for (let i = 0; i < keysToGenerate; i++) {
+                    generatedKeys.push(createPremiumKey(discord_userid, duration));
+                }
+
+                const user = await client.users.fetch(discord_userid).catch(() => null);
+                if (user) {
+                    const embed = new EmbedBuilder()
+                        .setColor(0xFFD700)
+                        .setTitle("🎉 Merci pour votre soutien sur Ko-fi !")
+                        .setDescription(`Merci beaucoup, **${from_name}** ! Votre soutien est très apprécié.\n\nVoici votre récompense : **${keysToGenerate} clé(s) d'activation Premium** pour Marcus.`)
+                        .addFields(
+                            { name: 'Vos Clés', value: `\`\`\`${generatedKeys.join('\n')}\`\`\``},
+                            { name: 'Validité', value: duration ? `Expire dans ${ms(duration.getTime() - Date.now(), { long: true })}` : 'À vie'},
+                            { name: 'Comment utiliser ?', value: "Allez sur le serveur de votre choix et utilisez la commande `/set premium-key [clé]` pour activer votre statut." }
+                        )
+                        .setFooter({ text: `Raison: ${reason}`});
+                    
+                    await user.send({ embeds: [embed] });
+                    console.log(`[Ko-fi] Sent ${keysToGenerate} premium key(s) to ${user.tag}.`);
+                }
+            }
+
+            res.status(200).send('OK');
+        } catch (error) {
+            console.error('[Ko-fi] Error processing webhook:', error);
+            res.status(500).send('Internal Server Error.');
+        }
+    });
 
 
     app.get('/api/ping', (req, res) => {
@@ -994,6 +1077,8 @@ export function startApi(client: Client) {
 }
 
     
+    
+
     
 
     
