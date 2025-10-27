@@ -27,6 +27,7 @@ import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -212,6 +213,7 @@ export default function PremiumPage() {
         lifetime: 44.99
     };
     const yearlySavings = (prices.monthly * 12 - prices.yearly).toFixed(2);
+    const koFiLink = "https://ko-fi.com/nationquestproject";
     
     return (
         <div className="relative min-h-screen w-full bg-background text-foreground">
@@ -257,17 +259,23 @@ export default function PremiumPage() {
                         <div className="mt-8">
                              <TabsContent value="monthly" className="mt-0">
                                 <PricingCard plan="Mensuel" price={`${prices.monthly.toFixed(2)}€`} period="/mois">
-                                    <Button size="lg" className="w-full h-12 text-lg mt-6">Acheter</Button>
+                                    <a href={koFiLink} target="_blank" rel="noopener noreferrer">
+                                        <Button size="lg" className="w-full h-12 text-lg mt-6">Acheter</Button>
+                                    </a>
                                 </PricingCard>
                             </TabsContent>
                             <TabsContent value="yearly" className="mt-0">
                                 <PricingCard plan="Annuel" price={`${prices.yearly.toFixed(2)}€`} period="/an" description={`Économisez ${yearlySavings}€ par rapport à l'offre mensuelle !`} isBestValue>
-                                    <Button size="lg" className="w-full h-12 text-lg mt-6">Acheter</Button>
+                                    <a href={koFiLink} target="_blank" rel="noopener noreferrer">
+                                        <Button size="lg" className="w-full h-12 text-lg mt-6">Acheter</Button>
+                                    </a>
                                 </PricingCard>
                             </TabsContent>
                             <TabsContent value="lifetime" className="mt-0">
                                  <PricingCard plan="À vie" price={`${prices.lifetime.toFixed(2)}€`} period="paiement unique">
-                                    <Button size="lg" className="w-full h-12 text-lg mt-6">Acheter</Button>
+                                    <a href={koFiLink} target="_blank" rel="noopener noreferrer">
+                                        <Button size="lg" className="w-full h-12 text-lg mt-6">Acheter</Button>
+                                    </a>
                                 </PricingCard>
                             </TabsContent>
                         </div>
