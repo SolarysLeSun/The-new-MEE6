@@ -19,6 +19,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3001/api';
 
@@ -87,6 +88,7 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
     const [joinLeaveData, setJoinLeaveData] = useState<JoinLeaveStat | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [intervalMinutes, setIntervalMinutes] = useState(30);
 
     const fetchData = async () => {
         if (!serverId) return;
@@ -172,13 +174,38 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
     const formattedData = useMemo(() => {
         if (activityData.length === 0) return [];
         
-        return activityData.map(stat => ({
-            time: format(new Date(stat.timestamp_bucket), 'HH:mm'),
-            Messages: stat.message_count,
-            'Utilisateurs en vocal': stat.active_voice_members_count,
-            'Minutes en vocal': Math.round(stat.cumulative_voice_minutes),
-        })).reverse();
-    }, [activityData]);
+        const aggregatedData: { [key: string]: any } = {};
+
+        activityData.forEach(stat => {
+            const date = new Date(stat.timestamp_bucket);
+            const bucketKey = Math.floor(date.getTime() / (intervalMinutes * 60 * 1000));
+            
+            if (!aggregatedData[bucketKey]) {
+                aggregatedData[bucketKey] = {
+                    timestamp: bucketKey * intervalMinutes * 60 * 1000,
+                    Messages: 0,
+                    'Utilisateurs en vocal': [],
+                    'Minutes en vocal': 0,
+                };
+            }
+            
+            aggregatedData[bucketKey].Messages += stat.message_count;
+            aggregatedData[bucketKey]['Utilisateurs en vocal'].push(stat.active_voice_members_count);
+            aggregatedData[bucketKey]['Minutes en vocal'] += stat.cumulative_voice_minutes;
+        });
+
+        return Object.values(aggregatedData).map(bucket => {
+            const voiceUsers = bucket['Utilisateurs en vocal'];
+            const avgVoiceUsers = voiceUsers.length > 0 ? voiceUsers.reduce((a: number,b: number) => a + b, 0) / voiceUsers.length : 0;
+            return {
+                time: format(new Date(bucket.timestamp), 'HH:mm'),
+                Messages: bucket.Messages,
+                'Utilisateurs en vocal': Math.round(avgVoiceUsers),
+                'Minutes en vocal': Math.round(bucket['Minutes en vocal']),
+            }
+        }).sort((a,b) => a.time.localeCompare(b.time));
+
+    }, [activityData, intervalMinutes]);
     
     const engagementRatios = useMemo(() => {
         if (!activityData || activityData.length === 0 || !serverInfo) {
@@ -198,7 +225,7 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
         if (retentionValue < 0) retentionLabel = `${retentionValue} membres`;
 
         const engagement = serverInfo.memberCount > 0 ? (totalActiveUsers / serverInfo.memberCount) * 100 : 0;
-        const textVsVoice = totalVoiceMinutes > 0 ? totalMessages / totalVoiceMinutes : totalMessages;
+        const textVsVoice = totalVoiceMinutes > 0 ? totalMessages / totalVoiceMinutes : 0;
         const msgPerUser = uniqueTextUsers > 0 ? totalMessages / uniqueTextUsers : 0;
 
         return {
@@ -259,7 +286,22 @@ function CommunityAnalysisContent({ serverInfo, isPremium, serverId }: { serverI
                 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Activité des 24 dernières heures</CardTitle>
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                            <CardTitle>Activité des 24 dernières heures</CardTitle>
+                            <div className="flex items-center gap-2">
+                                <Label htmlFor="interval-select">Intervalle</Label>
+                                <Select value={String(intervalMinutes)} onValueChange={(val) => setIntervalMinutes(Number(val))}>
+                                    <SelectTrigger id="interval-select" className="w-[120px]">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="10">10 min</SelectItem>
+                                        <SelectItem value="30">30 min</SelectItem>
+                                        <SelectItem value="60">1 heure</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
                     </CardHeader>
                     <CardContent className="h-[400px] w-full">
                         {loading ? (
