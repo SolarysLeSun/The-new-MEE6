@@ -44,17 +44,15 @@ const EmbedCommand: Command = {
             .setStyle(TextInputStyle.Short)
             .setRequired(false);
 
-        const imageAndColorRow = new ActionRowBuilder<TextInputBuilder>().addComponents(
-             new TextInputBuilder()
-                .setCustomId('embed_image_url')
-                .setLabel("URL de l'image")
-                .setStyle(TextInputStyle.Short)
-                .setRequired(false),
-        );
-        
         const colorInput = new TextInputBuilder()
             .setCustomId('embed_color')
             .setLabel("Couleur (Hex: #ffffff)")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false);
+        
+        const imageInput = new TextInputBuilder()
+            .setCustomId('embed_image_url')
+            .setLabel("URL de l'image")
             .setStyle(TextInputStyle.Short)
             .setRequired(false);
 
@@ -63,11 +61,12 @@ const EmbedCommand: Command = {
             new ActionRowBuilder<TextInputBuilder>().addComponents(contentInput),
             new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
             new ActionRowBuilder<TextInputBuilder>().addComponents(descriptionInput),
+            // The TextInputBuilder can only be in its own ActionRowBuilder
             new ActionRowBuilder<TextInputBuilder>().addComponents(footerInput),
-            new ActionRowBuilder<TextInputBuilder>().addComponents(colorInput),
-            // The image input needs its own row due to Discord limitations
+            new ActionRowBuilder<TextInputBuilder>().addComponents(colorInput)
         );
-         const imageInputRow = new ActionRowBuilder<TextInputBuilder>().addComponents(new TextInputBuilder().setCustomId('embed_image_url').setLabel("URL de l'image").setStyle(TextInputStyle.Short).setRequired(false));
+        // The image input must be in its own row, which was the source of the bug.
+         modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(imageInput));
 
 
         await interaction.showModal(modal);
@@ -75,4 +74,5 @@ const EmbedCommand: Command = {
 };
 
 export default EmbedCommand;
+
 

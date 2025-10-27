@@ -61,7 +61,7 @@ const client = new Client({
 declare module "discord.js" {
     export interface Client {
         commands: Collection<string, Command>;
-        invites: Collection<string, Collection<string, Invite>>;
+        invites: Collection<string, Invite>>;
     }
 }
 
@@ -163,8 +163,9 @@ async function handleSimpleEmbedModal(interaction: ModalSubmitInteraction) {
         const title = interaction.fields.getTextInputValue('embed_title');
         const description = interaction.fields.getTextInputValue('embed_description');
         const footer = interaction.fields.getTextInputValue('embed_footer');
-        const imageUrl = interaction.fields.getTextInputValue('embed_image_url');
         const colorHex = interaction.fields.getTextInputValue('embed_color');
+        const imageUrl = interaction.fields.getTextInputValue('embed_image_url');
+
 
         const embed = new EmbedBuilder();
 
@@ -1259,6 +1260,7 @@ startBot();
     
 
     
+
 
 
 
