@@ -145,7 +145,7 @@ Pour la production, utilisez **PM2** pour une meilleure stabilité et performanc
 - `pm2 stop all` : Arrêter tous les processus gérés par PM2.
 - `pm2 delete all` : Supprimer tous les processus de la liste de PM2.
 
-**Note sur les logs :** Les chemins de logs (`/home/enzo_prados/.pm2/logs/...`) sont spécifiques à votre environnement serveur. `/mnt/marcus` correspond à la racine de votre projet.
+**Note sur les logs :** Les chemins de logs (`/home/user/.pm2/logs/...`) sont spécifiques à votre environnement serveur. `/mnt/marcus` correspond à la racine de votre projet.
 
 ---
 
