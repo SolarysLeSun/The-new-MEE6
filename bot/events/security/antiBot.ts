@@ -1,6 +1,6 @@
 
 
-import { Events, GuildMember, EmbedBuilder, TextChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle, AuditLogEvent, MessageFlags } from 'discord.js';
+import { Events, GuildMember, EmbedBuilder, TextChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle, AuditLogEvent, MessageFlags, ChannelType } from 'discord.js';
 import { getServerConfig } from '../../../src/lib/db';
 
 
@@ -44,12 +44,22 @@ export async function execute(member: GuildMember) {
 
     if (antibotConfig.mode === 'approval-required') {
         if (!antibotConfig.approval_channel_id) {
-            console.error(`[Anti-Bot] Approval mode is on but no approval channel is set for guild ${member.guild.id}. Kicking the bot as a fallback.`);
+            console.warn(`[Anti-Bot] Approval mode is on but no approval channel is set for guild ${member.guild.id}. Notifying admins instead of kicking.`);
             try {
-                await member.kick('Politique Anti-Bot : Mode approbation activé mais aucun salon n\'est configuré.');
-                console.log(`[Anti-Bot] Kicked bot ${member.user.tag} from ${member.guild.name} due to missing configuration.`);
+                // Find a channel to post the warning
+                const channel = member.guild.channels.cache.find(c => c.type === ChannelType.GuildText && c.permissionsFor(member.guild.members.me!)?.has('SendMessages')) as TextChannel;
+                if (channel) {
+                    const warningEmbed = new EmbedBuilder()
+                        .setColor(0xFFA500)
+                        .setTitle("⚠️ Configuration Anti-Bot Incomplète")
+                        .setDescription(`Le bot **${member.user.tag}** a rejoint, mais le module Anti-Bot en mode "approbation" n'a pas de salon configuré. Aucune action n'a été prise.`)
+                        .addFields({ name: "Action requise", value: "Veuillez configurer un salon d'approbation dans le panel pour que la protection soit active." })
+                        .setTimestamp();
+                    
+                    await channel.send({ embeds: [warningEmbed] });
+                }
             } catch (error) {
-                console.error(`[Anti-Bot] Failed to kick bot ${member.user.tag} after configuration error:`, error);
+                 console.error(`[Anti-Bot] Failed to send configuration warning message for guild ${member.guild.id}:`, error);
             }
             return;
         }
