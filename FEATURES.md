@@ -31,6 +31,8 @@ Ce tableau détaille les fonctionnalités disponibles pour chaque version de Mar
 | **Commandes Exclusives**            |         |         |         |                                                                                                         |
 | Commandes de Masse (/moveall)       | ❌      | ✅      | ✅      | Déplacez ou déconnectez en masse tous les utilisateurs d'un ou plusieurs salons vocaux.               |
 | Commandes Testeurs (/mp, /webhook)  | ❌      | ❌      | ✅      | Commandes utilitaires réservées aux utilisateurs ayant le statut "Testeur".                             |
+| Commandes Staff (/system, /owner)  | ❌      | ❌      | ❌      | Commandes utilitaires réservées aux utilisateurs ayant le statut "Staff Marcus".                             |
+| **-  Et bien plus !!  -**            |         |         |         |L'équipe Marcus vous laissez tout décrvrir par vous même !                                                                                                         |
 
 ---
 
