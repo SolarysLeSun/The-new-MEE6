@@ -1,5 +1,5 @@
 
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, Guild } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, Guild, GuildMember } from 'discord.js';
 import type { Command } from '@/types';
 import { db, getAllTesters, getAllPremiumGuilds } from '@/lib/db';
 import { setTimeout } from 'timers/promises';
@@ -36,63 +36,93 @@ const SyncSupportRolesCommand: Command = {
 
         const stats = {
             testersAdded: 0,
-            testersKept: 0,
+            testersRemoved: 0,
             premiumAdded: 0,
-            premiumKept: 0,
+            premiumRemoved: 0,
             errors: 0,
         };
 
         try {
             // --- Sync Testers ---
-            const allTesters = getAllTesters();
-            const testerUserIds = new Set(allTesters.map(t => t.user_id));
+            const actualTesterIds = new Set(getAllTesters().map(t => t.user_id));
+            const testerRole = await supportGuild.roles.fetch(TESTER_ROLE_ID);
+            const membersWithTesterRole = testerRole?.members || new Map<string, GuildMember>();
 
-            for (const userId of testerUserIds) {
-                try {
-                    const member = await supportGuild.members.fetch(userId).catch(() => null);
-                    if (member) {
-                        if (!member.roles.cache.has(TESTER_ROLE_ID)) {
-                            await member.roles.add(TESTER_ROLE_ID);
+            // Add role to new testers
+            for (const userId of actualTesterIds) {
+                if (!membersWithTesterRole.has(userId)) {
+                    try {
+                        const member = await supportGuild.members.fetch(userId).catch(() => null);
+                        if (member) {
+                            await member.roles.add(TESTER_ROLE_ID, 'Synchronisation automatique du statut Testeur');
                             stats.testersAdded++;
-                        } else {
-                            stats.testersKept++;
                         }
+                    } catch(e) {
+                         console.warn(`[SyncRoles] Could not add tester role to ${userId}:`, e);
+                         stats.errors++;
                     }
-                } catch (e) {
-                    console.warn(`[SyncRoles] Could not process tester ${userId}:`, e);
-                    stats.errors++;
                 }
-                 await setTimeout(200); // Rate limit
+                 await setTimeout(200);
             }
+
+            // Remove role from expired testers
+            for (const member of membersWithTesterRole.values()) {
+                if (!actualTesterIds.has(member.id)) {
+                    try {
+                        await member.roles.remove(TESTER_ROLE_ID, 'Le statut Testeur a expiré');
+                        stats.testersRemoved++;
+                    } catch(e) {
+                        console.warn(`[SyncRoles] Could not remove tester role from ${member.id}:`, e);
+                        stats.errors++;
+                    }
+                }
+                 await setTimeout(200);
+            }
+            
 
             // --- Sync Premium Owners ---
             const premiumGuilds = getAllPremiumGuilds();
-            const premiumOwnerIds = new Set<string>();
-            
+            const actualPremiumOwnerIds = new Set<string>();
             for (const guildInfo of premiumGuilds) {
                  try {
                     const guild = await interaction.client.guilds.fetch(guildInfo.guild_id);
-                    premiumOwnerIds.add(guild.ownerId);
+                    actualPremiumOwnerIds.add(guild.ownerId);
                  } catch (e) {
-                    console.warn(`[SyncRoles] Could not fetch guild ${guildInfo.guild_id} to find owner. It might have been deleted.`);
+                    console.warn(`[SyncRoles] Could not fetch guild ${guildInfo.guild_id} to find owner.`);
                  }
-                 await setTimeout(100); // Rate limit
+                 await setTimeout(100);
             }
+            
+            const premiumRole = await supportGuild.roles.fetch(PREMIUM_OWNER_ROLE_ID);
+            const membersWithPremiumRole = premiumRole?.members || new Map<string, GuildMember>();
 
-            for (const ownerId of premiumOwnerIds) {
-                 try {
-                    const member = await supportGuild.members.fetch(ownerId).catch(() => null);
-                    if (member) {
-                        if (!member.roles.cache.has(PREMIUM_OWNER_ROLE_ID)) {
-                            await member.roles.add(PREMIUM_OWNER_ROLE_ID);
+            // Add role to new premium owners
+            for (const ownerId of actualPremiumOwnerIds) {
+                if (!membersWithPremiumRole.has(ownerId)) {
+                    try {
+                        const member = await supportGuild.members.fetch(ownerId).catch(() => null);
+                        if (member) {
+                            await member.roles.add(PREMIUM_OWNER_ROLE_ID, 'Synchronisation automatique du statut Premium');
                             stats.premiumAdded++;
-                        } else {
-                            stats.premiumKept++;
                         }
+                    } catch(e) {
+                        console.warn(`[SyncRoles] Could not add premium role to ${ownerId}:`, e);
+                        stats.errors++;
                     }
-                } catch (e) {
-                    console.warn(`[SyncRoles] Could not process premium owner ${ownerId}:`, e);
-                    stats.errors++;
+                }
+                 await setTimeout(200);
+            }
+            
+            // Remove role from former premium owners
+            for (const member of membersWithPremiumRole.values()) {
+                 if (!actualPremiumOwnerIds.has(member.id)) {
+                    try {
+                         await member.roles.remove(PREMIUM_OWNER_ROLE_ID, 'Le statut Premium a expiré');
+                         stats.premiumRemoved++;
+                    } catch(e) {
+                         console.warn(`[SyncRoles] Could not remove premium role from ${member.id}:`, e);
+                         stats.errors++;
+                    }
                 }
                  await setTimeout(200);
             }
@@ -101,8 +131,8 @@ const SyncSupportRolesCommand: Command = {
                 .setTitle('Rapport de Synchronisation des Rôles')
                 .setColor(0x00FF00)
                 .addFields(
-                    { name: 'Rôle Testeur', value: `> Ajouté à **${stats.testersAdded}** membre(s).\n> Déjà présent sur **${stats.testersKept}** membre(s).`, inline: true },
-                    { name: 'Rôle Premium', value: `> Ajouté à **${stats.premiumAdded}** membre(s).\n> Déjà présent sur **${stats.premiumKept}** membre(s).`, inline: true },
+                    { name: 'Rôle Testeur', value: `> <:Oui:1421563353888723084> Ajouté(s): **${stats.testersAdded}**\n> <:Non:1421563259537850471> Retiré(s): **${stats.testersRemoved}**`, inline: true },
+                    { name: 'Rôle Premium', value: `> <:Oui:1421563353888723084> Ajouté(s): **${stats.premiumAdded}**\n> <:Non:1421563259537850471> Retiré(s): **${stats.premiumRemoved}**`, inline: true },
                     { name: 'Erreurs', value: `**${stats.errors}** erreur(s) rencontrée(s) (voir logs).`, inline: false },
                 )
                 .setTimestamp();
@@ -117,5 +147,3 @@ const SyncSupportRolesCommand: Command = {
 };
 
 export default SyncSupportRolesCommand;
-
-    
