@@ -1,3 +1,4 @@
+
 @font-face {
   font-family: 'VFont';
   src: url('/fonts/Vfont.ttf') format('truetype');
@@ -66,6 +67,26 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Styles for markdown content */
+  .markdown-content table {
+    @apply w-full my-4 border-collapse border border-border;
+  }
+  .markdown-content th, .markdown-content td {
+    @apply border border-border px-4 py-2 text-left;
+  }
+  .markdown-content th {
+    @apply bg-muted font-semibold;
+  }
+  .markdown-content tr:nth-child(even) {
+    @apply bg-secondary/30;
+  }
+  .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+    @apply font-bold text-white mt-6 mb-3;
+  }
+   .markdown-content h1 { @apply text-3xl; }
+   .markdown-content h2 { @apply text-2xl; }
+   .markdown-content h3 { @apply text-xl; }
 }
 
 @layer utilities {

@@ -60,6 +60,9 @@ export function AppHeader() {
                 <Link href={supportServerUrl} target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-white">
                 Support
                 </Link>
+                 <Link href="/features" className="transition-colors hover:text-white">
+                    Fonctionnalités
+                </Link>
                 <Link href="/premium" className="transition-colors hover:text-white">
                 Premium
                 </Link>
