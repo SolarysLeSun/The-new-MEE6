@@ -78,6 +78,11 @@ export type DefaultConfigs = {
 
 // --- Types pour les modules spécifiques ---
 
+export interface InvitationReward {
+    invite_count: number;
+    role_id: string;
+}
+
 export interface VoiceHub {
     id: string;
     creator_channel_id: string;

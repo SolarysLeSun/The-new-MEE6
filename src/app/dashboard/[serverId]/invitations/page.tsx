@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -9,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Mail, PlusCircle, Trash2 } from 'lucide-react';
+import { Mail, PlusCircle, Trash2, Award } from 'lucide-react';
 import { PageTransitionWrapper } from '@/components/page-transition-wrapper';
 import { Combobox } from '@/components/ui/combobox';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,14 @@ function PageSkeleton() {
                 <CardContent className="space-y-6">
                     <Skeleton className="h-10 w-full" />
                     <Skeleton className="h-10 w-full" />
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-48" />
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <Skeleton className="h-24 w-full" />
                 </CardContent>
             </Card>
         </div>
@@ -107,6 +116,25 @@ export default function InvitationsPage() {
         if (!config) return;
         saveConfig({ ...config, [key]: value });
     };
+
+    const handleRewardChange = (index: number, field: 'invite_count' | 'role_id', value: string | number) => {
+        if (!config) return;
+        const newRewards = [...config.reward_roles];
+        (newRewards[index] as any)[field] = value;
+        handleValueChange('reward_roles', newRewards);
+    };
+
+    const addReward = () => {
+        if (!config) return;
+        const newReward: InvitationReward = { invite_count: 5, role_id: '' };
+        handleValueChange('reward_roles', [...(config.reward_roles || []), newReward]);
+    };
+
+    const removeReward = (index: number) => {
+        if (!config) return;
+        const newRewards = config.reward_roles.filter((_, i) => i !== index);
+        handleValueChange('reward_roles', newRewards);
+    };
     
     if (loading || !config) {
         return <PageSkeleton />;
@@ -163,26 +191,28 @@ export default function InvitationsPage() {
                 </CardContent>
             </Card>
 
-            <Card className="opacity-50 pointer-events-none">
+            <Card>
                 <CardHeader>
-                    <CardTitle>Rôles de Récompense (Bientôt)</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Award /> Rôles de Récompense</CardTitle>
                     <CardDescription>
                         Attribuez automatiquement des rôles lorsque les membres atteignent un certain nombre d'invitations.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                     <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 p-4 border rounded-lg bg-card-foreground/5">
-                        <div className="w-full sm:w-32">
-                            <Label className="text-xs">Invitations</Label>
-                            <Input type="number" placeholder="Ex: 5" value="5" disabled/>
+                     {(config.reward_roles || []).map((reward, index) => (
+                         <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 p-4 border rounded-lg bg-card-foreground/5">
+                            <div className="w-full sm:w-32">
+                                <Label className="text-xs">Invitations</Label>
+                                <Input type="number" placeholder="Ex: 5" value={reward.invite_count} onChange={e => handleRewardChange(index, 'invite_count', parseInt(e.target.value) || 0)} />
+                            </div>
+                            <div className="flex-1">
+                                <Label className="text-xs">Rôle à donner</Label>
+                                <Combobox options={roleOptions} value={reward.role_id} onChange={(val) => handleRewardChange(index, 'role_id', val)} placeholder="Sélectionner un rôle..." />
+                            </div>
+                            <Button variant="ghost" size="icon" className="shrink-0" onClick={() => removeReward(index)}><Trash2 className="text-destructive"/></Button>
                         </div>
-                        <div className="flex-1">
-                            <Label className="text-xs">Rôle à donner</Label>
-                            <Combobox options={roleOptions} value="" onChange={() => {}} placeholder="Sélectionner un rôle..." disabled />
-                        </div>
-                        <Button variant="ghost" size="icon" className="shrink-0" disabled><Trash2 className="text-destructive"/></Button>
-                    </div>
-                    <Button variant="outline" className="w-full" disabled><PlusCircle /> Ajouter une récompense</Button>
+                    ))}
+                    <Button variant="outline" className="w-full" onClick={addReward}><PlusCircle /> Ajouter une récompense</Button>
                 </CardContent>
             </Card>
         </PageTransitionWrapper>

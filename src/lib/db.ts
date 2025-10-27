@@ -3,8 +3,8 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder } from 'discord.js';
-import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile, RoadmapItem, ShopItem, Ticket, StatsChannelsConfig, VoiceHubsConfig } from '../types';
+import { Client, Guild, User, PermissionOverwriteManager, PermissionOverwrites, Collection, OverwriteResolvable, EmbedBuilder, TextChannel } from 'discord.js';
+import type { Module, ModuleConfig, DefaultConfigs, SanctionHistoryEntry, KnowledgeBaseItem, SanctionPreset, AutoSanction, RoleReward, XPBoost, UserLevel, PanelMessage, LevelingConfig, WelcomeConfig, ConversationalAgentConfig, UserProfile, RoadmapItem, ShopItem, Ticket, StatsChannelsConfig, VoiceHubsConfig, InvitationReward } from '../types';
 import { randomBytes } from 'crypto';
 import ms from 'ms';
 
@@ -285,6 +285,16 @@ const upgradeSchema = () => {
             );
         `);
         console.log('[Database] La table "member_join_leave_events" est prête.');
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS user_invites (
+                guild_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                invite_count INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (guild_id, user_id)
+            );
+        `);
+        console.log('[Database] La table "user_invites" est prête.');
 
 
         // Drop deprecated tables
@@ -780,7 +790,7 @@ const defaultConfigs: DefaultConfigs = {
         premium: true,
     },
     'invitations': {
-        enabled: true,
+        enabled: false,
         log_channel_id: null,
         reward_roles: []
     }
@@ -1762,6 +1772,21 @@ export function listApiBans(): { user_id: string, reason: string | null }[] {
     return db.prepare('SELECT user_id, reason FROM api_bans').all() as any;
 }
   
+// --- Invite System ---
+export function incrementInviterCount(guildId: string, inviterId: string): number {
+    const stmt_get = db.prepare('SELECT invite_count FROM user_invites WHERE guild_id = ? AND user_id = ?');
+    let currentCount = (stmt_get.get(guildId, inviterId) as { invite_count: number } | undefined)?.invite_count || 0;
+    
+    currentCount++;
+
+    const stmt_upsert = db.prepare(`
+        INSERT INTO user_invites (guild_id, user_id, invite_count) VALUES (?, ?, ?)
+        ON CONFLICT(guild_id, user_id) DO UPDATE SET invite_count = excluded.invite_count;
+    `);
+    stmt_upsert.run(guildId, inviterId, currentCount);
+
+    return currentCount;
+}
 
 // --- Activity Stats ---
 export { db };
