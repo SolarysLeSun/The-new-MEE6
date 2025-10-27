@@ -1197,6 +1197,30 @@ export function checkTesterStatus(userId: string, guildId: string): { isTester: 
     }
 }
 
+export function getAllTesters(): { user_id: string; expires_at: string | null }[] {
+    const stmt = db.prepare('SELECT user_id, expires_at FROM testers');
+    const rows = stmt.all() as { user_id: string; expires_at: string | null }[];
+
+    const now = new Date();
+    // Filter out expired testers and return only active ones
+    return rows.filter(row => {
+        if (row.expires_at === null) return true; // Never expires
+        return new Date(row.expires_at) > now;
+    });
+}
+
+export function getAllPremiumGuilds(): { guild_id: string, premium_expires_at: string | null }[] {
+    const stmt = db.prepare('SELECT DISTINCT guild_id, premium_expires_at FROM server_configs WHERE premium = 1');
+    const rows = stmt.all() as { guild_id: string; premium_expires_at: string | null }[];
+
+    const now = new Date();
+    // Filter out expired guilds
+    return rows.filter(row => {
+        if (row.premium_expires_at === null) return true; // Never expires
+        return new Date(row.premium_expires_at) > now;
+    });
+}
+
 // Deprecated functions for AI Personas are removed.
 
 export function createPremiumKey(generatedBy: string, expiresAt: Date | null): string {
@@ -1790,3 +1814,5 @@ export function incrementInviterCount(guildId: string, inviterId: string): numbe
 
 // --- Activity Stats ---
 export { db };
+
+    
